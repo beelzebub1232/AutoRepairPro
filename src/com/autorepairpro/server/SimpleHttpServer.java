@@ -3,6 +3,7 @@ package com.autorepairpro.server;
 import com.autorepairpro.handler.AdminHandler;
 import com.autorepairpro.handler.AuthHandler;
 import com.autorepairpro.handler.EmployeeHandler;
+import com.autorepairpro.handler.CustomerHandler;
 
 import java.io.*;
 import java.net.ServerSocket;
@@ -89,9 +90,9 @@ public class SimpleHttpServer {
                 }
             }
 
-            // Read the request body if it's a POST request.
+            // Read the request body if it's a POST/PUT request.
             StringBuilder bodyBuilder = new StringBuilder();
-            if (method.equals("POST") && contentLength > 0) {
+            if ((method.equals("POST") || method.equals("PUT")) && contentLength > 0) {
                 char[] bodyChars = new char[contentLength];
                 in.read(bodyChars, 0, contentLength);
                 bodyBuilder.append(bodyChars);
@@ -102,16 +103,20 @@ public class SimpleHttpServer {
             String responseJson = "{\"error\":\"Not Found\"}";
             int statusCode = 404;
 
-            if (path.startsWith("/api/auth/")) {
+            if (path.startsWith("/api/auth/") || path.equals("/api/services")) {
                 AuthHandler handler = new AuthHandler();
                 responseJson = handler.handle(method, path, body);
                 statusCode = responseJson.contains("error") ? 401 : 200;
             } else if (path.startsWith("/api/admin/")) {
                 AdminHandler handler = new AdminHandler();
                 responseJson = handler.handle(method, path, body);
-                 statusCode = responseJson.contains("error") ? 500 : 200;
+                statusCode = responseJson.contains("error") ? 500 : 200;
             } else if (path.startsWith("/api/employee/")) {
                 EmployeeHandler handler = new EmployeeHandler();
+                responseJson = handler.handle(method, path, body);
+                statusCode = responseJson.contains("error") ? 500 : 200;
+            } else if (path.startsWith("/api/customer/")) {
+                CustomerHandler handler = new CustomerHandler();
                 responseJson = handler.handle(method, path, body);
                 statusCode = responseJson.contains("error") ? 500 : 200;
             }
@@ -153,6 +158,8 @@ public class SimpleHttpServer {
             writer.println("Content-Type: " + contentType);
             writer.println("Content-Length: " + content.length);
             writer.println("Access-Control-Allow-Origin: *"); // For development
+            writer.println("Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS");
+            writer.println("Access-Control-Allow-Headers: Content-Type, Authorization");
             writer.println(); // Blank line between headers and content
             writer.flush();
             out.write(content);
