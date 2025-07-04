@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <header>
+        <h1>Admin Dashboard</h1>
+        <div>
+            <span id="user-info"></span>
+            <button id="logout-button">Logout</button>
+        </div>
+    </header>
+    <main class="dashboard-container">
+        <h2>All Repair Jobs</h2>
+        <div id="job-list-container">
+            <table id="job-table">
+                <thead>
+                    <tr>
+                        <th>Job ID</th>
+                        <th>Customer</th>
+                        <th>Vehicle</th>
+                        <th>Service</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody id="job-table-body">
+                    <!-- Job rows will be inserted here by JS -->
+                </tbody>
+            </table>
+        </div>
+    </main>
+    <script src="js/dashboard.js"></script>
+</body>
+</html>

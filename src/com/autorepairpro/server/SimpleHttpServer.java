@@ -1,0 +1,162 @@
+package com.autorepairpro.server;
+
+import com.autorepairpro.handler.AdminHandler;
+import com.autorepairpro.handler.AuthHandler;
+import com.autorepairpro.handler.EmployeeHandler;
+
+import java.io.*;
+import java.net.ServerSocket;
+import java.net.Socket;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
+public class SimpleHttpServer {
+    private final int port;
+    private final ExecutorService pool;
+
+    public SimpleHttpServer(int port) {
+        this.port = port;
+        // Use a thread pool to handle multiple client connections concurrently.
+        this.pool = Executors.newFixedThreadPool(10);
+    }
+
+    public void start() throws IOException {
+        try (ServerSocket serverSocket = new ServerSocket(port)) {
+            System.out.println("Server started on port: " + port);
+            System.out.println("Access the application at http://localhost:" + port);
+
+            while (true) {
+                // Accept new client connections.
+                Socket clientSocket = serverSocket.accept();
+                // Handle each client request in a new thread from the pool.
+                pool.execute(new ClientHandler(clientSocket));
+            }
+        }
+    }
+
+    private static class ClientHandler implements Runnable {
+        private final Socket clientSocket;
+        
+        public ClientHandler(Socket socket) {
+            this.clientSocket = socket;
+        }
+
+        @Override
+        public void run() {
+            try (BufferedReader in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
+                 OutputStream out = clientSocket.getOutputStream()) {
+
+                // Read the HTTP request line.
+                String requestLine = in.readLine();
+                if (requestLine == null || requestLine.isEmpty()) {
+                    return; // Ignore empty requests.
+                }
+
+                String[] requestParts = requestLine.split(" ");
+                String method = requestParts[0];
+                String path = requestParts[1];
+
+                // Simple routing logic.
+                if (path.startsWith("/api/")) {
+                    handleApiRequest(method, path, in, out);
+                } else {
+                    handleFileRequest(path, out);
+                }
+
+            } catch (IOException e) {
+                System.err.println("Error handling client request: " + e.getMessage());
+            } finally {
+                try {
+                    clientSocket.close();
+                } catch (IOException e) {
+                    // Ignore
+                }
+            }
+        }
+
+        private void handleApiRequest(String method, String path, BufferedReader in, OutputStream out) throws IOException {
+            // Read headers to find Content-Length for POST requests.
+            int contentLength = 0;
+            String line;
+            while ((line = in.readLine()) != null && !line.isEmpty()) {
+                if (line.toLowerCase().startsWith("content-length:")) {
+                    contentLength = Integer.parseInt(line.substring(line.indexOf(':') + 1).trim());
+                }
+            }
+
+            // Read the request body if it's a POST request.
+            StringBuilder bodyBuilder = new StringBuilder();
+            if (method.equals("POST") && contentLength > 0) {
+                char[] bodyChars = new char[contentLength];
+                in.read(bodyChars, 0, contentLength);
+                bodyBuilder.append(bodyChars);
+            }
+            String body = bodyBuilder.toString();
+
+            // Route API calls to specific handlers.
+            String responseJson = "{\"error\":\"Not Found\"}";
+            int statusCode = 404;
+
+            if (path.startsWith("/api/auth/")) {
+                AuthHandler handler = new AuthHandler();
+                responseJson = handler.handle(method, path, body);
+                statusCode = responseJson.contains("error") ? 401 : 200;
+            } else if (path.startsWith("/api/admin/")) {
+                AdminHandler handler = new AdminHandler();
+                responseJson = handler.handle(method, path, body);
+                 statusCode = responseJson.contains("error") ? 500 : 200;
+            } else if (path.startsWith("/api/employee/")) {
+                EmployeeHandler handler = new EmployeeHandler();
+                responseJson = handler.handle(method, path, body);
+                statusCode = responseJson.contains("error") ? 500 : 200;
+            }
+
+            sendJsonResponse(out, statusCode, responseJson);
+        }
+        
+        private void handleFileRequest(String path, OutputStream out) throws IOException {
+            // Serve static files (HTML, CSS, JS) from the 'public' directory.
+            if (path.equals("/")) {
+                path = "/index.html";
+            }
+
+            Path filePath = Paths.get("public", path);
+            if (Files.exists(filePath) && !Files.isDirectory(filePath)) {
+                String contentType = Files.probeContentType(filePath);
+                if (contentType == null) {
+                    if (path.endsWith(".css")) contentType = "text/css";
+                    else if (path.endsWith(".js")) contentType = "application/javascript";
+                    else contentType = "application/octet-stream";
+                }
+                
+                byte[] fileBytes = Files.readAllBytes(filePath);
+                sendHttpResponse(out, 200, "OK", contentType, fileBytes);
+            } else {
+                byte[] notFoundContent = "<h1>404 Not Found</h1>".getBytes();
+                sendHttpResponse(out, 404, "Not Found", "text/html", notFoundContent);
+            }
+        }
+        
+        private void sendJsonResponse(OutputStream out, int code, String json) throws IOException {
+            String statusMessage = code == 200 ? "OK" : "Error";
+            sendHttpResponse(out, code, statusMessage, "application/json", json.getBytes());
+        }
+
+        private void sendHttpResponse(OutputStream out, int statusCode, String statusMessage, String contentType, byte[] content) throws IOException {
+            PrintWriter writer = new PrintWriter(out, true);
+            writer.println("HTTP/1.1 " + statusCode + " " + statusMessage);
+            writer.println("Content-Type: " + contentType);
+            writer.println("Content-Length: " + content.length);
+            writer.println("Access-Control-Allow-Origin: *"); // For development
+            writer.println(); // Blank line between headers and content
+            writer.flush();
+            out.write(content);
+            out.flush();
+        }
+    }
+}
