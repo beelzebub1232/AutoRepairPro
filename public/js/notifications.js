@@ -25,8 +25,9 @@ class NotificationManager {
     }
 
     createNotificationBell() {
-        const header = document.querySelector('.header-user, .sidebar-header, .customer-header');
-        if (header) {
+        // Look for the user info section in the header
+        const userInfo = document.querySelector('.user-info, .header-user');
+        if (userInfo && userInfo.parentElement) {
             const bellContainer = document.createElement('div');
             bellContainer.className = 'notification-bell-container';
             bellContainer.innerHTML = `
@@ -39,8 +40,8 @@ class NotificationManager {
                 </button>
             `;
             
-            // Insert at the beginning of header for proper positioning
-            header.insertBefore(bellContainer, header.firstChild);
+            // Insert before user info
+            userInfo.parentElement.insertBefore(bellContainer, userInfo);
 
             // Add click handler for bell
             document.getElementById('notification-bell').addEventListener('click', (e) => {
@@ -233,14 +234,6 @@ class NotificationManager {
         if (countElement) {
             countElement.textContent = unreadCount;
             countElement.style.display = unreadCount > 0 ? 'flex' : 'none';
-        }
-
-        // Update bell animation
-        const bellIcon = document.querySelector('.bell-icon');
-        if (bellIcon && unreadCount > 0) {
-            bellIcon.classList.add('has-notifications');
-        } else if (bellIcon) {
-            bellIcon.classList.remove('has-notifications');
         }
     }
 
