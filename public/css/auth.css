@@ -1,0 +1,293 @@
+/* Authentication Pages Styles */
+
+.auth-page {
+    min-height: 100vh;
+    background: linear-gradient(135deg, var(--primary-600) 0%, var(--primary-800) 100%);
+    position: relative;
+    overflow: hidden;
+}
+
+.auth-hero {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-8);
+    position: relative;
+}
+
+.hero-background {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: 
+        radial-gradient(circle at 20% 80%, rgba(255, 255, 255, 0.1) 0%, transparent 50%),
+        radial-gradient(circle at 80% 20%, rgba(255, 255, 255, 0.1) 0%, transparent 50%);
+    pointer-events: none;
+}
+
+.hero-content {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-16);
+    max-width: 1200px;
+    width: 100%;
+    align-items: center;
+}
+
+.brand-section {
+    color: white;
+    text-align: left;
+}
+
+.brand-logo {
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+    margin-bottom: var(--space-6);
+}
+
+.logo-icon {
+    width: 60px;
+    height: 60px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: var(--radius-xl);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.brand-logo h1 {
+    font-size: var(--text-4xl);
+    font-weight: 700;
+    letter-spacing: -0.025em;
+}
+
+.brand-tagline {
+    font-size: var(--text-xl);
+    opacity: 0.9;
+    margin-bottom: var(--space-8);
+    font-weight: 300;
+}
+
+.feature-highlights {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+}
+
+.feature-item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    font-size: var(--text-lg);
+    opacity: 0.9;
+    animation: slideInRight 0.6s ease forwards;
+}
+
+.feature-item:nth-child(1) { animation-delay: 0.1s; }
+.feature-item:nth-child(2) { animation-delay: 0.2s; }
+.feature-item:nth-child(3) { animation-delay: 0.3s; }
+
+.feature-icon {
+    width: 40px;
+    height: 40px;
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: var(--radius-lg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+}
+
+.auth-container {
+    background: white;
+    border-radius: var(--radius-2xl);
+    padding: var(--space-8);
+    box-shadow: var(--shadow-2xl);
+    width: 100%;
+    max-width: 400px;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    animation: slideUp 0.6s ease;
+}
+
+.auth-header {
+    text-align: center;
+    margin-bottom: var(--space-8);
+}
+
+.auth-header h2 {
+    font-size: var(--text-3xl);
+    font-weight: 700;
+    color: var(--secondary-900);
+    margin-bottom: var(--space-2);
+}
+
+.auth-header p {
+    color: var(--secondary-600);
+    font-size: var(--text-base);
+}
+
+.auth-form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-6);
+}
+
+.auth-footer {
+    text-align: center;
+    margin-top: var(--space-6);
+    padding-top: var(--space-6);
+    border-top: 1px solid var(--secondary-200);
+}
+
+.link-primary {
+    color: var(--primary-600);
+    text-decoration: none;
+    font-weight: 600;
+    transition: color var(--transition-fast);
+}
+
+.link-primary:hover {
+    color: var(--primary-700);
+}
+
+.demo-accounts {
+    margin-top: var(--space-8);
+    padding-top: var(--space-6);
+    border-top: 1px solid var(--secondary-200);
+}
+
+.demo-accounts h4 {
+    font-size: var(--text-sm);
+    font-weight: 600;
+    color: var(--secondary-600);
+    margin-bottom: var(--space-4);
+    text-align: center;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.demo-grid {
+    display: grid;
+    gap: var(--space-2);
+}
+
+.demo-account {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--space-3);
+    background: var(--secondary-50);
+    border: 1px solid var(--secondary-200);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.demo-account:hover {
+    background: var(--secondary-100);
+    border-color: var(--primary-300);
+    transform: translateY(-1px);
+}
+
+.demo-role {
+    font-weight: 600;
+    color: var(--secondary-700);
+    font-size: var(--text-sm);
+}
+
+.demo-credentials {
+    font-family: var(--font-family-mono);
+    font-size: var(--text-xs);
+    color: var(--secondary-500);
+    background: white;
+    padding: var(--space-1) var(--space-2);
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--secondary-200);
+}
+
+.error-message {
+    color: var(--error-600);
+    font-size: var(--text-sm);
+    margin-top: var(--space-4);
+    padding: var(--space-3);
+    background: var(--error-50);
+    border: 1px solid var(--error-200);
+    border-radius: var(--radius-md);
+    display: none;
+    animation: slideDown 0.3s ease;
+}
+
+.error-message.show {
+    display: block;
+}
+
+.success-message {
+    color: var(--success-600);
+    font-size: var(--text-sm);
+    margin-top: var(--space-4);
+    padding: var(--space-3);
+    background: var(--success-50);
+    border: 1px solid var(--success-200);
+    border-radius: var(--radius-md);
+    display: none;
+    animation: slideDown 0.3s ease;
+}
+
+.success-message.show {
+    display: block;
+}
+
+/* Loading Button State */
+.btn-loading {
+    position: relative;
+    color: transparent;
+}
+
+.btn-loading::after {
+    content: '';
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    top: 50%;
+    left: 50%;
+    margin-left: -10px;
+    margin-top: -10px;
+    border: 2px solid transparent;
+    border-top-color: currentColor;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+    .hero-content {
+        grid-template-columns: 1fr;
+        gap: var(--space-8);
+        text-align: center;
+    }
+}
+
+@media (max-width: 768px) {
+    .auth-hero {
+        padding: var(--space-4);
+    }
+    
+    .auth-container {
+        padding: var(--space-6);
+    }
+    
+    .brand-logo h1 {
+        font-size: var(--text-3xl);
+    }
+    
+    .brand-tagline {
+        font-size: var(--text-lg);
+    }
+}

@@ -3,29 +3,115 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Employee Dashboard - AutoRepairPro</title>
-    <link rel="stylesheet" href="css/style.css">
+    <title>Employee Dashboard - RepairHub Pro</title>
+    <link rel="stylesheet" href="css/design-system.css">
+    <link rel="stylesheet" href="css/dashboard.css">
+    <link rel="stylesheet" href="css/modals.css">
+    <link rel="stylesheet" href="css/notifications.css">
+    <link rel="stylesheet" href="css/enhanced-chatbot.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
-    <header>
-        <h1>Employee Dashboard</h1>
-        <div>
-            <span id="user-info"></span>
-            <button id="logout-button">Logout</button>
+    <!-- Mobile Header -->
+    <div class="mobile-header">
+        <button class="mobile-menu-btn" id="mobile-menu-btn">
+            <svg class="icon" viewBox="0 0 24 24">
+                <line x1="3" y1="6" x2="21" y2="6"/>
+                <line x1="3" y1="12" x2="21" y2="12"/>
+                <line x1="3" y1="18" x2="21" y2="18"/>
+            </svg>
+        </button>
+        <div class="brand-logo">
+            <div class="sidebar-logo">
+                <svg class="icon" viewBox="0 0 24 24">
+                    <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
+                </svg>
+            </div>
+            <div>
+                <div class="sidebar-title">RepairHub Pro</div>
+                <div class="sidebar-subtitle">Employee Panel</div>
+            </div>
         </div>
-    </header>
-    
-    <main class="dashboard-container">
-        <!-- Navigation Tabs -->
-        <div class="tab-navigation">
-            <button class="tab-button active" data-tab="assigned-jobs">My Assigned Jobs</button>
-            <button class="tab-button" data-tab="inventory">Inventory</button>
-        </div>
+    </div>
 
-        <!-- Assigned Jobs Tab -->
-        <div id="assigned-jobs-tab" class="tab-content active">
-            <div class="section-header">
-                <h2>My Assigned Jobs</h2>
+    <!-- Sidebar Overlay -->
+    <div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+    <div class="dashboard-layout">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="sidebar-logo">
+                    <svg class="icon" viewBox="0 0 24 24">
+                        <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
+                    </svg>
+                </div>
+                <div>
+                    <div class="sidebar-title">RepairHub Pro</div>
+                    <div class="sidebar-subtitle">Employee Panel</div>
+                </div>
+            </div>
+            
+            <nav class="sidebar-nav">
+                <ul>
+                    <li class="nav-item">
+                        <a href="#" class="nav-link active" data-tab="assigned-jobs">
+                            <svg class="icon" viewBox="0 0 24 24">
+                                <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
+                            </svg>
+                            <span>My Assigned Jobs</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="#" class="nav-link" data-tab="inventory">
+                            <svg class="icon" viewBox="0 0 24 24">
+                                <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+                                <polyline points="3.27,6.96 12,12.01 20.73,6.96"/>
+                                <line x1="12" y1="22.08" x2="12" y2="12"/>
+                            </svg>
+                            <span>Inventory</span>
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+            
+            <div class="sidebar-footer">
+                <div class="user-profile">
+                    <div class="user-avatar">
+                        <svg class="icon" viewBox="0 0 24 24">
+                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                            <circle cx="12" cy="7" r="4"/>
+                        </svg>
+                    </div>
+                    <div class="user-info">
+                        <div class="user-name" id="user-info">Employee</div>
+                        <div class="user-role">Technician</div>
+                    </div>
+                </div>
+                <button id="logout-button" class="btn btn-secondary btn-full">
+                    <svg class="icon" viewBox="0 0 24 24">
+                        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                        <polyline points="16,17 21,12 16,7"/>
+                        <line x1="21" y1="12" x2="9" y2="12"/>
+                    </svg>
+                    <span>Logout</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Assigned Jobs Tab -->
+            <div id="assigned-jobs-tab" class="tab-content active">
+                <div class="page-header">
+                    <div>
+                        <h1 class="page-title">My Assigned Jobs</h1>
+                        <p class="page-subtitle">Manage your assigned repair jobs</p>
+                    </div>
+                </div>
+                
                 <div class="job-stats">
                     <div class="stat-card">
                         <span class="stat-number" id="total-jobs">0</span>
@@ -40,67 +126,104 @@
                         <span class="stat-label">Completed</span>
                     </div>
                 </div>
-            </div>
-            
-            <div class="table-container">
-                <table id="assigned-jobs-table">
-                    <thead>
-                        <tr>
-                            <th>Job ID</th>
-                            <th>Customer</th>
-                            <th>Vehicle</th>
-                            <th>Service</th>
-                            <th>Status</th>
-                            <th>Booking Date</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody id="assigned-jobs-table-body">
-                        <!-- Job rows will be inserted here by JS -->
-                    </tbody>
-                </table>
-            </div>
-        </div>
-
-        <!-- Inventory Tab -->
-        <div id="inventory-tab" class="tab-content">
-            <div class="section-header">
-                <h2>Available Inventory</h2>
-                <div class="search-container">
-                    <input type="text" id="inventory-search" placeholder="Search parts..." class="search-input">
+                
+                <div class="card">
+                    <div class="table-container">
+                        <table class="table" id="assigned-jobs-table">
+                            <thead>
+                                <tr>
+                                    <th>Job ID</th>
+                                    <th>Customer</th>
+                                    <th>Vehicle</th>
+                                    <th>Service</th>
+                                    <th>Status</th>
+                                    <th>Booking Date</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="assigned-jobs-table-body">
+                                <!-- Job rows will be inserted here by JS -->
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
-            
-            <div class="table-container">
-                <table id="inventory-table">
-                    <thead>
-                        <tr>
-                            <th>Part Name</th>
-                            <th>Available Quantity</th>
-                            <th>Price per Unit</th>
-                            <th>Status</th>
-                        </tr>
-                    </thead>
-                    <tbody id="inventory-table-body">
-                        <!-- Inventory rows will be inserted here by JS -->
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </main>
 
-    <!-- Modal for Job Details -->
+            <!-- Inventory Tab -->
+            <div id="inventory-tab" class="tab-content">
+                <div class="page-header">
+                    <div>
+                        <h1 class="page-title">Available Inventory</h1>
+                        <p class="page-subtitle">View available parts and materials</p>
+                    </div>
+                    <div class="header-actions">
+                        <div class="search-container">
+                            <div class="input-group">
+                                <div class="input-icon search-icon">
+                                    <svg class="icon" viewBox="0 0 24 24">
+                                        <circle cx="11" cy="11" r="8"/>
+                                        <path d="m21 21-4.35-4.35"/>
+                                    </svg>
+                                </div>
+                                <input type="text" id="inventory-search" placeholder="Search parts..." class="form-input">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <div class="table-container">
+                        <table class="table" id="inventory-table">
+                            <thead>
+                                <tr>
+                                    <th>Part Name</th>
+                                    <th>Available Quantity</th>
+                                    <th>Price per Unit</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="inventory-table-body">
+                                <!-- Inventory rows will be inserted here by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Job Details Modal -->
     <div id="job-details-modal" class="modal">
         <div class="modal-content large-modal">
             <div class="modal-header">
-                <h3 id="job-details-title">Job Details</h3>
-                <span class="close" id="job-details-close">&times;</span>
+                <h3 class="modal-title" id="job-details-title">
+                    <svg class="icon" viewBox="0 0 24 24">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                        <polyline points="14,2 14,8 20,8"/>
+                        <line x1="16" y1="13" x2="8" y2="13"/>
+                        <line x1="16" y1="17" x2="8" y2="17"/>
+                        <polyline points="10,9 9,9 8,9"/>
+                    </svg>
+                    Job Details
+                </h3>
+                <button class="modal-close" id="job-details-close">
+                    <svg class="icon" viewBox="0 0 24 24">
+                        <line x1="18" y1="6" x2="6" y2="18"/>
+                        <line x1="6" y1="6" x2="18" y2="18"/>
+                    </svg>
+                </button>
             </div>
             <div class="modal-body">
                 <div class="job-details-grid">
                     <!-- Job Information -->
                     <div class="details-section">
-                        <h4>Job Information</h4>
+                        <h4>
+                            <svg class="icon" viewBox="0 0 24 24">
+                                <circle cx="12" cy="12" r="3"/>
+                                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+                            </svg>
+                            Job Information
+                        </h4>
                         <div class="detail-item">
                             <label>Job ID:</label>
                             <span id="detail-job-id"></span>
@@ -145,14 +268,27 @@
 
                     <!-- Status Update -->
                     <div class="details-section">
-                        <h4>Update Status</h4>
+                        <h4>
+                            <svg class="icon" viewBox="0 0 24 24">
+                                <polyline points="23,4 23,10 17,10"/>
+                                <polyline points="1,20 1,14 7,14"/>
+                                <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"/>
+                            </svg>
+                            Update Status
+                        </h4>
                         <div class="status-update-form">
                             <select id="status-select" class="status-dropdown">
                                 <option value="Booked">Booked</option>
                                 <option value="In Progress">In Progress</option>
                                 <option value="Completed">Completed</option>
                             </select>
-                            <button id="update-status-btn" class="btn btn-primary">Update Status</button>
+                            <button id="update-status-btn" class="btn btn-primary">
+                                <svg class="icon icon-sm" viewBox="0 0 24 24">
+                                    <path d="M9 12l2 2 4-4"/>
+                                    <circle cx="12" cy="12" r="9"/>
+                                </svg>
+                                Update Status
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -160,12 +296,25 @@
                 <!-- Parts Usage Section -->
                 <div class="parts-section">
                     <div class="parts-header">
-                        <h4>Parts Used</h4>
-                        <button id="add-part-btn" class="btn btn-sm btn-primary">Use Part</button>
+                        <h4>
+                            <svg class="icon" viewBox="0 0 24 24">
+                                <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+                                <polyline points="3.27,6.96 12,12.01 20.73,6.96"/>
+                                <line x1="12" y1="22.08" x2="12" y2="12"/>
+                            </svg>
+                            Parts Used
+                        </h4>
+                        <button id="add-part-btn" class="btn btn-sm btn-primary">
+                            <svg class="icon icon-sm" viewBox="0 0 24 24">
+                                <line x1="12" y1="5" x2="12" y2="19"/>
+                                <line x1="5" y1="12" x2="19" y2="12"/>
+                            </svg>
+                            Use Part
+                        </button>
                     </div>
                     
                     <div class="table-container">
-                        <table id="used-parts-table">
+                        <table class="table" id="used-parts-table">
                             <thead>
                                 <tr>
                                     <th>Part Name</th>
@@ -188,62 +337,81 @@
         </div>
     </div>
 
-    <!-- Modal for Using Parts -->
+    <!-- Use Part Modal -->
     <div id="use-part-modal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
-                <h3>Use Part for Job</h3>
-                <span class="close" id="use-part-close">&times;</span>
+                <h3 class="modal-title">
+                    <svg class="icon" viewBox="0 0 24 24">
+                        <line x1="12" y1="5" x2="12" y2="19"/>
+                        <line x1="5" y1="12" x2="19" y2="12"/>
+                    </svg>
+                    Use Part for Job
+                </h3>
+                <button class="modal-close" id="use-part-close">
+                    <svg class="icon" viewBox="0 0 24 24">
+                        <line x1="18" y1="6" x2="6" y2="18"/>
+                        <line x1="6" y1="6" x2="18" y2="18"/>
+                    </svg>
+                </button>
             </div>
-            <form id="use-part-form">
-                <input type="hidden" id="use-part-job-id">
-                <div class="form-group">
-                    <label for="part-select">Select Part:</label>
-                    <select id="part-select" required>
-                        <option value="">Choose a part...</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="part-quantity">Quantity to Use:</label>
-                    <input type="number" id="part-quantity" min="1" required>
-                    <small class="form-hint">Available: <span id="available-quantity">0</span></small>
-                </div>
-                <div class="form-actions">
-                    <button type="button" id="use-part-cancel" class="btn btn-secondary">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Use Part</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <!-- Chatbot -->
-    <div id="chatbot-container">
-        <div id="chatbot-toggle" class="chatbot-toggle">
-            <span class="chatbot-icon">💬</span>
-        </div>
-        <div id="chatbot-window" class="chatbot-window">
-            <div class="chatbot-header">
-                <h4>AutoRepairPro Assistant</h4>
-                <button id="chatbot-close" class="chatbot-close">&times;</button>
-            </div>
-            <div id="chatbot-messages" class="chatbot-messages">
-                <div class="chatbot-message bot-message">
-                    <p>Hello! I'm your AutoRepairPro assistant. How can I help you today?</p>
-                    <div class="quick-actions">
-                        <button class="quick-action" data-action="services">View Services</button>
-                        <button class="quick-action" data-action="booking">How to Book</button>
-                        <button class="quick-action" data-action="status">Check Status</button>
+            <div class="modal-body">
+                <form id="use-part-form">
+                    <input type="hidden" id="use-part-job-id">
+                    <div class="form-group">
+                        <label for="part-select" class="form-label">Select Part</label>
+                        <select id="part-select" class="form-input" required>
+                            <option value="">Choose a part...</option>
+                        </select>
                     </div>
-                </div>
-            </div>
-            <div class="chatbot-input">
-                <input type="text" id="chatbot-input-field" placeholder="Type your message...">
-                <button id="chatbot-send">Send</button>
+                    <div class="form-group">
+                        <label for="part-quantity" class="form-label">Quantity to Use</label>
+                        <input type="number" id="part-quantity" class="form-input" min="1" required>
+                        <small class="form-hint">Available: <span id="available-quantity">0</span></small>
+                    </div>
+                    <div class="form-actions">
+                        <button type="button" id="use-part-cancel" class="btn btn-secondary">Cancel</button>
+                        <button type="submit" class="btn btn-primary">
+                            <svg class="icon icon-sm" viewBox="0 0 24 24">
+                                <path d="M9 12l2 2 4-4"/>
+                                <circle cx="12" cy="12" r="9"/>
+                            </svg>
+                            Use Part
+                        </button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>
 
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    <script src="js/notifications.js"></script>
+    <script src="js/enhanced-chatbot.js"></script>
     <script src="js/employee-dashboard.js"></script>
-    <script src="js/chatbot.js"></script>
+    <script>
+        // Initialize Lucide icons
+        lucide.createIcons();
+        
+        // Mobile menu functionality
+        document.addEventListener('DOMContentLoaded', () => {
+            const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+            const sidebar = document.getElementById('sidebar');
+            const sidebarOverlay = document.getElementById('sidebar-overlay');
+            
+            if (mobileMenuBtn) {
+                mobileMenuBtn.addEventListener('click', () => {
+                    sidebar.classList.toggle('open');
+                    sidebarOverlay.classList.toggle('show');
+                });
+            }
+            
+            if (sidebarOverlay) {
+                sidebarOverlay.addEventListener('click', () => {
+                    sidebar.classList.remove('open');
+                    sidebarOverlay.classList.remove('show');
+                });
+            }
+        });
+    </script>
 </body>
 </html>

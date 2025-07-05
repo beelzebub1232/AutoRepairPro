@@ -3,34 +3,101 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Customer Dashboard - AutoRepairPro</title>
-    <link rel="stylesheet" href="css/style.css">
-    <link rel="stylesheet" href="css/map-styles.css">
+    <title>Customer Dashboard - RepairHub Pro</title>
+    <link rel="stylesheet" href="css/design-system.css">
+    <link rel="stylesheet" href="css/customer.css">
+    <link rel="stylesheet" href="css/modals.css">
     <link rel="stylesheet" href="css/notifications.css">
     <link rel="stylesheet" href="css/enhanced-chatbot.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 </head>
-<body>
-    <header>
-        <h1>Customer Dashboard</h1>
-        <div>
-            <span id="user-info"></span>
-            <button id="logout-button">Logout</button>
+<body class="customer-dashboard">
+    <!-- Header -->
+    <header class="customer-header">
+        <div class="header-content">
+            <div class="header-brand">
+                <div class="brand-icon">
+                    <svg class="icon" viewBox="0 0 24 24">
+                        <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
+                    </svg>
+                </div>
+                <div class="brand-text">
+                    <h1>RepairHub Pro</h1>
+                    <p>Customer Dashboard</p>
+                </div>
+            </div>
+            <div class="header-user">
+                <div class="user-info">
+                    <div class="user-name" id="user-info">Welcome!</div>
+                    <div class="user-role">Customer</div>
+                </div>
+                <button id="logout-button" class="btn btn-secondary">
+                    <svg class="icon icon-sm" viewBox="0 0 24 24">
+                        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                        <polyline points="16,17 21,12 16,7"/>
+                        <line x1="21" y1="12" x2="9" y2="12"/>
+                    </svg>
+                    <span>Logout</span>
+                </button>
+            </div>
         </div>
     </header>
-    
-    <main class="dashboard-container">
-        <!-- Navigation Tabs -->
-        <div class="tab-navigation">
-            <button class="tab-button active" data-tab="book-appointment">Book Appointment</button>
-            <button class="tab-button" data-tab="my-jobs">My Jobs</button>
-            <button class="tab-button" data-tab="my-vehicles">My Vehicles</button>
-            <button class="tab-button" data-tab="service-history">Service History</button>
-        </div>
 
+    <!-- Tab Navigation -->
+    <nav class="tab-navigation">
+        <div class="tab-nav-container">
+            <button class="tab-button active" data-tab="book-appointment">
+                <svg class="icon icon-sm" viewBox="0 0 24 24">
+                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                    <line x1="16" y1="2" x2="16" y2="6"/>
+                    <line x1="8" y1="2" x2="8" y2="6"/>
+                    <line x1="3" y1="10" x2="21" y2="10"/>
+                </svg>
+                Book Appointment
+            </button>
+            <button class="tab-button" data-tab="my-jobs">
+                <svg class="icon icon-sm" viewBox="0 0 24 24">
+                    <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
+                </svg>
+                My Jobs
+            </button>
+            <button class="tab-button" data-tab="my-vehicles">
+                <svg class="icon icon-sm" viewBox="0 0 24 24">
+                    <path d="M7 17m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0"/>
+                    <path d="M17 17m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0"/>
+                    <path d="M5 17h-2v-6l2-5h9l4 5h1a2 2 0 0 1 2 2v4h-2"/>
+                    <path d="M9 17v-6h8"/>
+                    <path d="M2 6h15"/>
+                </svg>
+                My Vehicles
+            </button>
+            <button class="tab-button" data-tab="service-history">
+                <svg class="icon icon-sm" viewBox="0 0 24 24">
+                    <path d="M3 3v5h5"/>
+                    <path d="M3.05 13A9 9 0 1 0 6 5.3L3 8"/>
+                    <path d="M12 7v5l4 2"/>
+                </svg>
+                Service History
+            </button>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="dashboard-container">
         <!-- Book Appointment Tab -->
         <div id="book-appointment-tab" class="tab-content active">
             <div class="section-header">
-                <h2>Book New Appointment</h2>
+                <h2>
+                    <svg class="icon" viewBox="0 0 24 24">
+                        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                        <line x1="16" y1="2" x2="16" y2="6"/>
+                        <line x1="8" y1="2" x2="8" y2="6"/>
+                        <line x1="3" y1="10" x2="21" y2="10"/>
+                    </svg>
+                    Book New Appointment
+                </h2>
                 <div class="appointment-stats">
                     <div class="stat-card">
                         <span class="stat-number" id="pending-jobs">0</span>
@@ -50,31 +117,43 @@
                 <form id="booking-form" class="booking-form">
                     <div class="form-row">
                         <div class="form-group">
-                            <label for="booking-vehicle">Select Vehicle:</label>
-                            <select id="booking-vehicle" required>
+                            <label for="booking-vehicle" class="form-label">Select Vehicle</label>
+                            <select id="booking-vehicle" class="form-input" required>
                                 <option value="">Choose your vehicle...</option>
                             </select>
-                            <button type="button" id="add-vehicle-btn" class="btn btn-sm btn-secondary">Add New Vehicle</button>
+                            <button type="button" id="add-vehicle-btn" class="btn btn-secondary btn-sm" style="margin-top: var(--space-2);">
+                                <svg class="icon icon-sm" viewBox="0 0 24 24">
+                                    <line x1="12" y1="5" x2="12" y2="19"/>
+                                    <line x1="5" y1="12" x2="19" y2="12"/>
+                                </svg>
+                                Add New Vehicle
+                            </button>
                         </div>
                         <div class="form-group">
-                            <label for="booking-service">Select Service:</label>
-                            <select id="booking-service" required>
+                            <label for="booking-service" class="form-label">Select Service</label>
+                            <select id="booking-service" class="form-input" required>
                                 <option value="">Choose a service...</option>
                             </select>
                         </div>
                     </div>
                     <div class="form-row">
                         <div class="form-group">
-                            <label for="booking-date">Preferred Date & Time:</label>
-                            <input type="datetime-local" id="booking-date" required>
+                            <label for="booking-date" class="form-label">Preferred Date & Time</label>
+                            <input type="datetime-local" id="booking-date" class="form-input" required>
                         </div>
                         <div class="form-group">
-                            <label for="booking-notes">Additional Notes:</label>
-                            <textarea id="booking-notes" rows="3" placeholder="Describe the issue or any special requirements..."></textarea>
+                            <label for="booking-notes" class="form-label">Additional Notes</label>
+                            <textarea id="booking-notes" class="form-input" rows="3" placeholder="Describe the issue or any special requirements..."></textarea>
                         </div>
                     </div>
                     <div class="service-details" id="service-details" style="display: none;">
-                        <h4>Service Details</h4>
+                        <h4>
+                            <svg class="icon" viewBox="0 0 24 24">
+                                <circle cx="12" cy="12" r="3"/>
+                                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+                            </svg>
+                            Service Details
+                        </h4>
                         <div class="detail-item">
                             <label>Service:</label>
                             <span id="selected-service-name"></span>
@@ -93,7 +172,13 @@
                         </div>
                     </div>
                     <div class="form-actions">
-                        <button type="submit" class="btn btn-primary">Book Appointment</button>
+                        <button type="submit" class="btn btn-primary">
+                            <svg class="icon icon-sm" viewBox="0 0 24 24">
+                                <path d="M9 12l2 2 4-4"/>
+                                <circle cx="12" cy="12" r="9"/>
+                            </svg>
+                            Book Appointment
+                        </button>
                     </div>
                 </form>
             </div>
@@ -102,14 +187,27 @@
         <!-- My Jobs Tab -->
         <div id="my-jobs-tab" class="tab-content">
             <div class="section-header">
-                <h2>My Current Jobs</h2>
+                <h2>
+                    <svg class="icon" viewBox="0 0 24 24">
+                        <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
+                    </svg>
+                    My Current Jobs
+                </h2>
                 <div class="search-container">
-                    <input type="text" id="jobs-search" placeholder="Search jobs..." class="search-input">
+                    <div class="input-group">
+                        <div class="input-icon search-icon">
+                            <svg class="icon" viewBox="0 0 24 24">
+                                <circle cx="11" cy="11" r="8"/>
+                                <path d="m21 21-4.35-4.35"/>
+                            </svg>
+                        </div>
+                        <input type="text" id="jobs-search" placeholder="Search jobs..." class="form-input">
+                    </div>
                 </div>
             </div>
             
             <div class="table-container">
-                <table id="my-jobs-table">
+                <table class="table" id="my-jobs-table">
                     <thead>
                         <tr>
                             <th>Job ID</th>
@@ -131,8 +229,23 @@
         <!-- My Vehicles Tab -->
         <div id="my-vehicles-tab" class="tab-content">
             <div class="section-header">
-                <h2>My Vehicles</h2>
-                <button id="add-vehicle-main-btn" class="btn btn-primary">Add New Vehicle</button>
+                <h2>
+                    <svg class="icon" viewBox="0 0 24 24">
+                        <path d="M7 17m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0"/>
+                        <path d="M17 17m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0"/>
+                        <path d="M5 17h-2v-6l2-5h9l4 5h1a2 2 0 0 1 2 2v4h-2"/>
+                        <path d="M9 17v-6h8"/>
+                        <path d="M2 6h15"/>
+                    </svg>
+                    My Vehicles
+                </h2>
+                <button id="add-vehicle-main-btn" class="btn btn-primary">
+                    <svg class="icon icon-sm" viewBox="0 0 24 24">
+                        <line x1="12" y1="5" x2="12" y2="19"/>
+                        <line x1="5" y1="12" x2="19" y2="12"/>
+                    </svg>
+                    Add New Vehicle
+                </button>
             </div>
             
             <div class="vehicles-grid" id="vehicles-grid">
@@ -143,7 +256,14 @@
         <!-- Service History Tab -->
         <div id="service-history-tab" class="tab-content">
             <div class="section-header">
-                <h2>Service History</h2>
+                <h2>
+                    <svg class="icon" viewBox="0 0 24 24">
+                        <path d="M3 3v5h5"/>
+                        <path d="M3.05 13A9 9 0 1 0 6 5.3L3 8"/>
+                        <path d="M12 7v5l4 2"/>
+                    </svg>
+                    Service History
+                </h2>
                 <div class="filter-container">
                     <select id="history-filter" class="filter-select">
                         <option value="all">All Services</option>
@@ -155,7 +275,7 @@
             </div>
             
             <div class="table-container">
-                <table id="service-history-table">
+                <table class="table" id="service-history-table">
                     <thead>
                         <tr>
                             <th>Date</th>
@@ -174,50 +294,88 @@
         </div>
     </main>
 
-    <!-- All existing modals remain the same -->
-    <!-- Modal for Vehicle Form -->
+    <!-- Vehicle Modal -->
     <div id="vehicle-modal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
-                <h3>Add New Vehicle</h3>
-                <span class="close" id="vehicle-modal-close">&times;</span>
+                <h3 class="modal-title">
+                    <svg class="icon" viewBox="0 0 24 24">
+                        <line x1="12" y1="5" x2="12" y2="19"/>
+                        <line x1="5" y1="12" x2="19" y2="12"/>
+                    </svg>
+                    Add New Vehicle
+                </h3>
+                <button class="modal-close" id="vehicle-modal-close">
+                    <svg class="icon" viewBox="0 0 24 24">
+                        <line x1="18" y1="6" x2="6" y2="18"/>
+                        <line x1="6" y1="6" x2="18" y2="18"/>
+                    </svg>
+                </button>
             </div>
-            <form id="vehicle-form">
-                <div class="form-group">
-                    <label for="vehicle-make">Make:</label>
-                    <input type="text" id="vehicle-make" required placeholder="e.g., Toyota, Honda, Ford">
-                </div>
-                <div class="form-group">
-                    <label for="vehicle-model">Model:</label>
-                    <input type="text" id="vehicle-model" required placeholder="e.g., Camry, Civic, F-150">
-                </div>
-                <div class="form-group">
-                    <label for="vehicle-year">Year:</label>
-                    <input type="number" id="vehicle-year" required min="1900" max="2030" placeholder="e.g., 2020">
-                </div>
-                <div class="form-group">
-                    <label for="vehicle-vin">VIN (Optional):</label>
-                    <input type="text" id="vehicle-vin" placeholder="Vehicle Identification Number">
-                </div>
-                <div class="form-actions">
-                    <button type="button" id="vehicle-cancel-btn" class="btn btn-secondary">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Add Vehicle</button>
-                </div>
-            </form>
+            <div class="modal-body">
+                <form id="vehicle-form">
+                    <div class="form-group">
+                        <label for="vehicle-make" class="form-label">Make</label>
+                        <input type="text" id="vehicle-make" class="form-input" required placeholder="e.g., Toyota, Honda, Ford">
+                    </div>
+                    <div class="form-group">
+                        <label for="vehicle-model" class="form-label">Model</label>
+                        <input type="text" id="vehicle-model" class="form-input" required placeholder="e.g., Camry, Civic, F-150">
+                    </div>
+                    <div class="form-group">
+                        <label for="vehicle-year" class="form-label">Year</label>
+                        <input type="number" id="vehicle-year" class="form-input" required min="1900" max="2030" placeholder="e.g., 2020">
+                    </div>
+                    <div class="form-group">
+                        <label for="vehicle-vin" class="form-label">VIN (Optional)</label>
+                        <input type="text" id="vehicle-vin" class="form-input" placeholder="Vehicle Identification Number">
+                    </div>
+                    <div class="form-actions">
+                        <button type="button" id="vehicle-cancel-btn" class="btn btn-secondary">Cancel</button>
+                        <button type="submit" class="btn btn-primary">
+                            <svg class="icon icon-sm" viewBox="0 0 24 24">
+                                <path d="M9 12l2 2 4-4"/>
+                                <circle cx="12" cy="12" r="9"/>
+                            </svg>
+                            Add Vehicle
+                        </button>
+                    </div>
+                </form>
+            </div>
         </div>
     </div>
 
-    <!-- Modal for Job Details -->
+    <!-- Job Details Modal -->
     <div id="job-details-modal" class="modal">
         <div class="modal-content large-modal">
             <div class="modal-header">
-                <h3>Job Details</h3>
-                <span class="close" id="job-details-close">&times;</span>
+                <h3 class="modal-title">
+                    <svg class="icon" viewBox="0 0 24 24">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                        <polyline points="14,2 14,8 20,8"/>
+                        <line x1="16" y1="13" x2="8" y2="13"/>
+                        <line x1="16" y1="17" x2="8" y2="17"/>
+                        <polyline points="10,9 9,9 8,9"/>
+                    </svg>
+                    Job Details
+                </h3>
+                <button class="modal-close" id="job-details-close">
+                    <svg class="icon" viewBox="0 0 24 24">
+                        <line x1="18" y1="6" x2="6" y2="18"/>
+                        <line x1="6" y1="6" x2="18" y2="18"/>
+                    </svg>
+                </button>
             </div>
             <div class="modal-body">
                 <div class="job-details-grid">
                     <div class="details-section">
-                        <h4>Job Information</h4>
+                        <h4>
+                            <svg class="icon" viewBox="0 0 24 24">
+                                <circle cx="12" cy="12" r="3"/>
+                                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+                            </svg>
+                            Job Information
+                        </h4>
                         <div class="detail-item">
                             <label>Job ID:</label>
                             <span id="detail-job-id"></span>
@@ -252,7 +410,15 @@
                         </div>
                     </div>
                     <div class="details-section">
-                        <h4>Payment</h4>
+                        <h4>
+                            <svg class="icon" viewBox="0 0 24 24">
+                                <rect x="1" y="3" width="15" height="13"/>
+                                <polygon points="16,8 20,8 23,11 23,16 16,16"/>
+                                <circle cx="5.5" cy="18.5" r="2.5"/>
+                                <circle cx="18.5" cy="18.5" r="2.5"/>
+                            </svg>
+                            Payment
+                        </h4>
                         <div id="payment-section">
                             <!-- Payment content will be inserted here -->
                         </div>
@@ -262,16 +428,36 @@
         </div>
     </div>
 
-    <!-- Modal for Payment -->
+    <!-- Payment Modal -->
     <div id="payment-modal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
-                <h3>Make Payment</h3>
-                <span class="close" id="payment-modal-close">&times;</span>
+                <h3 class="modal-title">
+                    <svg class="icon" viewBox="0 0 24 24">
+                        <rect x="1" y="4" width="22" height="16" rx="2" ry="2"/>
+                        <line x1="1" y1="10" x2="23" y2="10"/>
+                    </svg>
+                    Make Payment
+                </h3>
+                <button class="modal-close" id="payment-modal-close">
+                    <svg class="icon" viewBox="0 0 24 24">
+                        <line x1="18" y1="6" x2="6" y2="18"/>
+                        <line x1="6" y1="6" x2="18" y2="18"/>
+                    </svg>
+                </button>
             </div>
             <div class="modal-body">
                 <div class="payment-summary">
-                    <h4>Payment Summary</h4>
+                    <h4>
+                        <svg class="icon" viewBox="0 0 24 24">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                            <polyline points="14,2 14,8 20,8"/>
+                            <line x1="16" y1="13" x2="8" y2="13"/>
+                            <line x1="16" y1="17" x2="8" y2="17"/>
+                            <polyline points="10,9 9,9 8,9"/>
+                        </svg>
+                        Payment Summary
+                    </h4>
                     <div class="detail-item">
                         <label>Job ID:</label>
                         <span id="payment-job-id"></span>
@@ -286,7 +472,13 @@
                     </div>
                 </div>
                 <div class="payment-methods">
-                    <h4>Select Payment Method</h4>
+                    <h4>
+                        <svg class="icon" viewBox="0 0 24 24">
+                            <rect x="1" y="4" width="22" height="16" rx="2" ry="2"/>
+                            <line x1="1" y1="10" x2="23" y2="10"/>
+                        </svg>
+                        Select Payment Method
+                    </h4>
                     <div class="payment-options">
                         <label class="payment-option">
                             <input type="radio" name="payment-method" value="credit-card" checked>
@@ -304,15 +496,26 @@
                 </div>
                 <div class="form-actions">
                     <button type="button" id="payment-cancel-btn" class="btn btn-secondary">Cancel</button>
-                    <button type="button" id="process-payment-btn" class="btn btn-success">Process Payment</button>
+                    <button type="button" id="process-payment-btn" class="btn btn-success">
+                        <svg class="icon icon-sm" viewBox="0 0 24 24">
+                            <path d="M9 12l2 2 4-4"/>
+                            <circle cx="12" cy="12" r="9"/>
+                        </svg>
+                        Process Payment
+                    </button>
                 </div>
             </div>
         </div>
     </div>
 
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
     <script src="js/map-integration.js"></script>
     <script src="js/notifications.js"></script>
     <script src="js/enhanced-chatbot.js"></script>
     <script src="js/enhanced-customer-dashboard.js"></script>
+    <script>
+        // Initialize Lucide icons
+        lucide.createIcons();
+    </script>
 </body>
 </html>

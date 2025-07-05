@@ -4,66 +4,108 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>RepairHub Pro - Professional Auto Body Shop Management</title>
-    <link rel="stylesheet" href="css/modern-style.css">
+    <link rel="stylesheet" href="css/design-system.css">
+    <link rel="stylesheet" href="css/auth.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 </head>
-<body class="login-page">
-    <div class="login-hero">
+<body class="auth-page">
+    <div class="auth-hero">
         <div class="hero-background"></div>
         <div class="hero-content">
             <div class="brand-section">
                 <div class="brand-logo">
-                    <div class="logo-icon">🔧</div>
+                    <div class="logo-icon">
+                        <svg class="icon icon-xl" viewBox="0 0 24 24">
+                            <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
+                        </svg>
+                    </div>
                     <h1>RepairHub Pro</h1>
                 </div>
                 <p class="brand-tagline">Professional Auto Body Shop Management System</p>
                 <div class="feature-highlights">
                     <div class="feature-item">
-                        <span class="feature-icon">📅</span>
+                        <div class="feature-icon">
+                            <svg class="icon" viewBox="0 0 24 24">
+                                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                                <line x1="16" y1="2" x2="16" y2="6"/>
+                                <line x1="8" y1="2" x2="8" y2="6"/>
+                                <line x1="3" y1="10" x2="21" y2="10"/>
+                            </svg>
+                        </div>
                         <span>Smart Scheduling</span>
                     </div>
                     <div class="feature-item">
-                        <span class="feature-icon">📊</span>
+                        <div class="feature-icon">
+                            <svg class="icon" viewBox="0 0 24 24">
+                                <line x1="18" y1="20" x2="18" y2="10"/>
+                                <line x1="12" y1="20" x2="12" y2="4"/>
+                                <line x1="6" y1="20" x2="6" y2="14"/>
+                            </svg>
+                        </div>
                         <span>Real-time Analytics</span>
                     </div>
                     <div class="feature-item">
-                        <span class="feature-icon">💳</span>
+                        <div class="feature-icon">
+                            <svg class="icon" viewBox="0 0 24 24">
+                                <rect x="1" y="3" width="15" height="13"/>
+                                <polygon points="16,8 20,8 23,11 23,16 16,16"/>
+                                <circle cx="5.5" cy="18.5" r="2.5"/>
+                                <circle cx="18.5" cy="18.5" r="2.5"/>
+                            </svg>
+                        </div>
                         <span>Secure Payments</span>
                     </div>
                 </div>
             </div>
             
-            <div class="login-container">
-                <div class="login-header">
+            <div class="auth-container">
+                <div class="auth-header">
                     <h2>Welcome Back</h2>
                     <p>Sign in to your account</p>
                 </div>
                 
-                <form id="login-form" class="login-form">
+                <form id="login-form" class="auth-form">
                     <div class="form-group">
-                        <label for="username">Username</label>
-                        <div class="input-wrapper">
-                            <span class="input-icon">👤</span>
-                            <input type="text" id="username" name="username" required placeholder="Enter your username">
+                        <label for="username" class="form-label">Username</label>
+                        <div class="input-group">
+                            <div class="input-icon">
+                                <svg class="icon" viewBox="0 0 24 24">
+                                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                                    <circle cx="12" cy="7" r="4"/>
+                                </svg>
+                            </div>
+                            <input type="text" id="username" name="username" class="form-input" required placeholder="Enter your username">
                         </div>
                     </div>
                     
                     <div class="form-group">
-                        <label for="password">Password</label>
-                        <div class="input-wrapper">
-                            <span class="input-icon">🔒</span>
-                            <input type="password" id="password" name="password" required placeholder="Enter your password">
+                        <label for="password" class="form-label">Password</label>
+                        <div class="input-group">
+                            <div class="input-icon">
+                                <svg class="icon" viewBox="0 0 24 24">
+                                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                                    <circle cx="12" cy="16" r="1"/>
+                                    <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                                </svg>
+                            </div>
+                            <input type="password" id="password" name="password" class="form-input" required placeholder="Enter your password">
                         </div>
                     </div>
                     
                     <button type="submit" class="btn btn-primary btn-full">
                         <span>Sign In</span>
-                        <span class="btn-arrow">→</span>
+                        <svg class="icon icon-sm" viewBox="0 0 24 24">
+                            <line x1="5" y1="12" x2="19" y2="12"/>
+                            <polyline points="12,5 19,12 12,19"/>
+                        </svg>
                     </button>
                     
                     <div id="error-message" class="error-message"></div>
                 </form>
                 
-                <div class="login-footer">
+                <div class="auth-footer">
                     <p>Don't have an account? <a href="register.html" class="link-primary">Create one here</a></p>
                 </div>
                 
@@ -88,6 +130,11 @@
         </div>
     </div>
     
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
     <script src="js/auth.js"></script>
+    <script>
+        // Initialize Lucide icons
+        lucide.createIcons();
+    </script>
 </body>
 </html>

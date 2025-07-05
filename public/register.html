@@ -4,74 +4,141 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Create Account - RepairHub Pro</title>
-    <link rel="stylesheet" href="css/modern-style.css">
+    <link rel="stylesheet" href="css/design-system.css">
+    <link rel="stylesheet" href="css/auth.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 </head>
-<body class="register-page">
-    <div class="register-hero">
+<body class="auth-page">
+    <div class="auth-hero">
         <div class="hero-background"></div>
         <div class="hero-content">
             <div class="brand-section">
                 <div class="brand-logo">
-                    <div class="logo-icon">🔧</div>
+                    <div class="logo-icon">
+                        <svg class="icon icon-xl" viewBox="0 0 24 24">
+                            <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
+                        </svg>
+                    </div>
                     <h1>RepairHub Pro</h1>
                 </div>
                 <p class="brand-tagline">Join thousands of satisfied customers</p>
+                <div class="feature-highlights">
+                    <div class="feature-item">
+                        <div class="feature-icon">
+                            <svg class="icon" viewBox="0 0 24 24">
+                                <path d="M9 12l2 2 4-4"/>
+                                <circle cx="12" cy="12" r="9"/>
+                            </svg>
+                        </div>
+                        <span>Easy Booking</span>
+                    </div>
+                    <div class="feature-item">
+                        <div class="feature-icon">
+                            <svg class="icon" viewBox="0 0 24 24">
+                                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                            </svg>
+                        </div>
+                        <span>Quality Service</span>
+                    </div>
+                    <div class="feature-item">
+                        <div class="feature-icon">
+                            <svg class="icon" viewBox="0 0 24 24">
+                                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                                <polyline points="22,4 12,14.01 9,11.01"/>
+                            </svg>
+                        </div>
+                        <span>Trusted by Many</span>
+                    </div>
+                </div>
             </div>
             
-            <div class="register-container">
-                <div class="register-header">
+            <div class="auth-container">
+                <div class="auth-header">
                     <h2>Create Your Account</h2>
                     <p>Get started with RepairHub Pro today</p>
                 </div>
                 
-                <form id="register-form" class="register-form">
+                <form id="register-form" class="auth-form">
                     <div class="form-group">
-                        <label for="fullname">Full Name</label>
-                        <div class="input-wrapper">
-                            <span class="input-icon">👤</span>
-                            <input type="text" id="fullname" name="fullname" required placeholder="Enter your full name">
+                        <label for="fullname" class="form-label">Full Name</label>
+                        <div class="input-group">
+                            <div class="input-icon">
+                                <svg class="icon" viewBox="0 0 24 24">
+                                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                                    <circle cx="12" cy="7" r="4"/>
+                                </svg>
+                            </div>
+                            <input type="text" id="fullname" name="fullname" class="form-input" required placeholder="Enter your full name">
                         </div>
                     </div>
                     
                     <div class="form-group">
-                        <label for="username">Username</label>
-                        <div class="input-wrapper">
-                            <span class="input-icon">@</span>
-                            <input type="text" id="username" name="username" required placeholder="Choose a username">
+                        <label for="username" class="form-label">Username</label>
+                        <div class="input-group">
+                            <div class="input-icon">
+                                <svg class="icon" viewBox="0 0 24 24">
+                                    <circle cx="12" cy="12" r="3"/>
+                                    <path d="M12 1v6m0 6v6"/>
+                                    <path d="m21 12-6-3-6 3-6-3"/>
+                                </svg>
+                            </div>
+                            <input type="text" id="username" name="username" class="form-input" required placeholder="Choose a username">
                         </div>
                     </div>
                     
                     <div class="form-group">
-                        <label for="password">Password</label>
-                        <div class="input-wrapper">
-                            <span class="input-icon">🔒</span>
-                            <input type="password" id="password" name="password" required placeholder="Create a password">
+                        <label for="password" class="form-label">Password</label>
+                        <div class="input-group">
+                            <div class="input-icon">
+                                <svg class="icon" viewBox="0 0 24 24">
+                                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                                    <circle cx="12" cy="16" r="1"/>
+                                    <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                                </svg>
+                            </div>
+                            <input type="password" id="password" name="password" class="form-input" required placeholder="Create a password">
                         </div>
                     </div>
                     
                     <div class="form-group">
-                        <label for="confirm-password">Confirm Password</label>
-                        <div class="input-wrapper">
-                            <span class="input-icon">🔒</span>
-                            <input type="password" id="confirm-password" name="confirm-password" required placeholder="Confirm your password">
+                        <label for="confirm-password" class="form-label">Confirm Password</label>
+                        <div class="input-group">
+                            <div class="input-icon">
+                                <svg class="icon" viewBox="0 0 24 24">
+                                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                                    <circle cx="12" cy="16" r="1"/>
+                                    <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                                </svg>
+                            </div>
+                            <input type="password" id="confirm-password" name="confirm-password" class="form-input" required placeholder="Confirm your password">
                         </div>
                     </div>
                     
                     <button type="submit" class="btn btn-primary btn-full">
                         <span>Create Account</span>
-                        <span class="btn-arrow">→</span>
+                        <svg class="icon icon-sm" viewBox="0 0 24 24">
+                            <line x1="5" y1="12" x2="19" y2="12"/>
+                            <polyline points="12,5 19,12 12,19"/>
+                        </svg>
                     </button>
                     
                     <div id="error-message" class="error-message"></div>
                 </form>
                 
-                <div class="register-footer">
+                <div class="auth-footer">
                     <p>Already have an account? <a href="index.html" class="link-primary">Sign in here</a></p>
                 </div>
             </div>
         </div>
     </div>
     
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
     <script src="js/register.js"></script>
+    <script>
+        // Initialize Lucide icons
+        lucide.createIcons();
+    </script>
 </body>
 </html>
