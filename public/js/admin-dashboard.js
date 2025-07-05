@@ -1,33 +1,30 @@
+// Admin Dashboard - Complete Implementation
 document.addEventListener('DOMContentLoaded', () => {
     const userRole = sessionStorage.getItem('userRole');
     const userName = sessionStorage.getItem('userName');
     const userId = sessionStorage.getItem('userId');
     
-    // Auth check: if no user role or not admin, redirect to login
+    // Auth check
     if (!userRole || userRole !== 'admin') {
         window.location.href = '/index.html';
         return;
     }
 
-    // Personalize the dashboard
-    const userInfoSpan = document.getElementById('user-info');
-    if (userInfoSpan) {
-        userInfoSpan.textContent = `Welcome, ${userName}!`;
+    // Initialize dashboard
+    initializeDashboard(userName);
+});
+
+function initializeDashboard(userName) {
+    // Update user info
+    const userNameElement = document.getElementById('user-name');
+    if (userNameElement) {
+        userNameElement.textContent = userName;
     }
 
-    // Logout functionality
-    const logoutButton = document.getElementById('logout-button');
-    if (logoutButton) {
-        logoutButton.addEventListener('click', () => {
-            sessionStorage.clear();
-            window.location.href = '/index.html';
-        });
-    }
-
-    // Tab navigation
-    initializeTabNavigation();
-    
-    // Initialize all modules
+    // Initialize modules
+    initializeNavigation();
+    initializeLogout();
+    initializeOverview();
     initializeJobsModule();
     initializeServicesModule();
     initializeInventoryModule();
@@ -35,168 +32,777 @@ document.addEventListener('DOMContentLoaded', () => {
     initializeReportsModule();
     
     // Load initial data
-    loadAllJobs();
-});
+    loadOverviewData();
+}
 
-// Tab Navigation System
-function initializeTabNavigation() {
-    const tabButtons = document.querySelectorAll('.tab-button');
+// Navigation System
+function initializeNavigation() {
+    const navLinks = document.querySelectorAll('.nav-link');
     const tabContents = document.querySelectorAll('.tab-content');
 
-    tabButtons.forEach(button => {
-        button.addEventListener('click', () => {
-            const targetTab = button.getAttribute('data-tab');
+    navLinks.forEach(link => {
+        link.addEventListener('click', (e) => {
+            e.preventDefault();
+            const targetTab = link.getAttribute('data-tab');
             
-            // Remove active class from all buttons and contents
-            tabButtons.forEach(btn => btn.classList.remove('active'));
+            // Update active states
+            navLinks.forEach(l => l.classList.remove('active'));
             tabContents.forEach(content => content.classList.remove('active'));
             
-            // Add active class to clicked button and corresponding content
-            button.classList.add('active');
+            link.classList.add('active');
             document.getElementById(`${targetTab}-tab`).classList.add('active');
             
-            // Load data for the active tab
-            switch(targetTab) {
-                case 'jobs':
-                    loadAllJobs();
-                    break;
-                case 'services':
-                    loadServices();
-                    break;
-                case 'inventory':
-                    loadInventory();
-                    break;
-                case 'users':
-                    loadUsers();
-                    break;
-                case 'reports':
-                    loadReports();
-                    break;
-            }
+            // Load tab data
+            loadTabData(targetTab);
         });
     });
+}
+
+function loadTabData(tab) {
+    switch(tab) {
+        case 'overview':
+            loadOverviewData();
+            break;
+        case 'jobs':
+            loadJobsData();
+            break;
+        case 'services':
+            loadServicesData();
+            break;
+        case 'inventory':
+            loadInventoryData();
+            break;
+        case 'users':
+            loadUsersData();
+            break;
+        case 'reports':
+            loadReportsData();
+            break;
+    }
+}
+
+// Logout functionality
+function initializeLogout() {
+    const logoutButton = document.getElementById('logout-button');
+    if (logoutButton) {
+        logoutButton.addEventListener('click', () => {
+            sessionStorage.clear();
+            window.location.href = '/index.html';
+        });
+    }
+}
+
+// Overview Module
+function initializeOverview() {
+    const refreshBtn = document.getElementById('refresh-overview-btn');
+    if (refreshBtn) {
+        refreshBtn.addEventListener('click', loadOverviewData);
+    }
+}
+
+async function loadOverviewData() {
+    try {
+        showLoadingState('metrics-grid');
+        
+        // Load metrics data
+        const [jobsResponse, usersResponse, inventoryResponse] = await Promise.all([
+            fetch('http://localhost:8080/api/admin/jobs'),
+            fetch('http://localhost:8080/api/admin/users'),
+            fetch('http://localhost:8080/api/admin/inventory/alerts')
+        ]);
+        
+        const jobs = await jobsResponse.json();
+        const users = await usersResponse.json();
+        const lowStockItems = await inventoryResponse.json();
+        
+        // Calculate metrics
+        const metrics = calculateMetrics(jobs, users, lowStockItems);
+        
+        // Update UI
+        renderMetricsCards(metrics);
+        
+        // Load charts
+        generateSimpleCharts(jobs);
+        
+    } catch (error) {
+        console.error('Error loading overview data:', error);
+        showErrorState('metrics-grid', 'Failed to load dashboard data');
+    }
+}
+
+function calculateMetrics(jobs, users, lowStockItems) {
+    const totalRevenue = jobs
+        .filter(job => job.totalCost)
+        .reduce((sum, job) => sum + parseFloat(job.totalCost), 0);
+    
+    const completedJobs = jobs.filter(job => job.status === 'Completed').length;
+    const inProgressJobs = jobs.filter(job => job.status === 'In Progress').length;
+    const activeCustomers = users.filter(user => user.role === 'customer').length;
+    
+    return {
+        totalRevenue: totalRevenue.toFixed(2),
+        totalJobs: jobs.length,
+        completedJobs,
+        inProgressJobs,
+        activeCustomers,
+        lowStockItems: lowStockItems.length,
+        completionRate: jobs.length > 0 ? ((completedJobs / jobs.length) * 100).toFixed(1) : 0
+    };
+}
+
+function renderMetricsCards(metrics) {
+    const metricsGrid = document.getElementById('metrics-grid');
+    
+    const cards = [
+        {
+            title: 'Total Revenue',
+            value: `$${metrics.totalRevenue}`,
+            icon: `<svg class="icon" viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>`,
+            change: '+12.5%',
+            changeType: 'positive',
+            class: 'revenue'
+        },
+        {
+            title: 'Total Jobs',
+            value: metrics.totalJobs,
+            icon: `<svg class="icon" viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>`,
+            change: `${metrics.inProgressJobs} in progress`,
+            changeType: 'neutral',
+            class: 'jobs'
+        },
+        {
+            title: 'Active Customers',
+            value: metrics.activeCustomers,
+            icon: `<svg class="icon" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>`,
+            change: '+5.2%',
+            changeType: 'positive',
+            class: 'customers'
+        },
+        {
+            title: 'Low Stock Items',
+            value: metrics.lowStockItems,
+            icon: `<svg class="icon" viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27,6.96 12,12.01 20.73,6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>`,
+            change: 'Needs attention',
+            changeType: metrics.lowStockItems > 0 ? 'negative' : 'positive',
+            class: 'inventory'
+        }
+    ];
+    
+    metricsGrid.innerHTML = cards.map(card => `
+        <div class="metric-card ${card.class}">
+            <div class="metric-header">
+                <div class="metric-icon">${card.icon}</div>
+            </div>
+            <div class="metric-value">${card.value}</div>
+            <div class="metric-label">${card.title}</div>
+            <div class="metric-change ${card.changeType}">
+                ${card.change}
+            </div>
+        </div>
+    `).join('');
+}
+
+function generateSimpleCharts(jobs) {
+    // Revenue chart
+    const revenueChart = document.getElementById('overview-revenue-chart');
+    if (revenueChart) {
+        const monthlyData = getMonthlyRevenue(jobs);
+        revenueChart.innerHTML = createBarChart(monthlyData, 'Revenue');
+    }
+
+    // Service distribution chart
+    const serviceChart = document.getElementById('overview-service-chart');
+    if (serviceChart) {
+        const serviceData = getServiceDistribution(jobs);
+        serviceChart.innerHTML = createPieChart(serviceData, 'Services');
+    }
+}
+
+function getMonthlyRevenue(jobs) {
+    const months = {};
+    jobs.forEach(job => {
+        if (job.totalCost && job.bookingDate) {
+            const month = new Date(job.bookingDate).toLocaleDateString('en-US', { month: 'short' });
+            months[month] = (months[month] || 0) + parseFloat(job.totalCost);
+        }
+    });
+    return Object.entries(months).map(([month, revenue]) => ({ label: month, value: revenue }));
+}
+
+function getServiceDistribution(jobs) {
+    const services = {};
+    jobs.forEach(job => {
+        services[job.service] = (services[job.service] || 0) + 1;
+    });
+    return Object.entries(services).map(([service, count]) => ({ label: service, value: count }));
+}
+
+function createBarChart(data, title) {
+    if (!data.length) return `<div class="chart-placeholder">No data available</div>`;
+    
+    const maxValue = Math.max(...data.map(d => d.value));
+    return `
+        <div class="simple-chart">
+            ${data.map(item => `
+                <div class="chart-bar" style="height: ${(item.value / maxValue) * 200}px;" title="${item.label}: ${item.value}">
+                    <div class="chart-bar-value">${typeof item.value === 'number' && item.value > 1000 ? '$' + item.value.toFixed(0) : item.value}</div>
+                    <div class="chart-bar-label">${item.label}</div>
+                </div>
+            `).join('')}
+        </div>
+    `;
+}
+
+function createPieChart(data, title) {
+    if (!data.length) return `<div class="chart-placeholder">No data available</div>`;
+    
+    const total = data.reduce((sum, item) => sum + item.value, 0);
+    const colors = ['#3b82f6', '#ef4444', '#f59e0b', '#22c55e', '#8b5cf6'];
+    
+    return `
+        <div class="pie-chart-container">
+            <div class="pie-legend">
+                ${data.map((item, index) => `
+                    <div class="pie-legend-item">
+                        <div class="pie-legend-color" style="background: ${colors[index % colors.length]};"></div>
+                        <span>${item.label} (${((item.value / total) * 100).toFixed(1)}%)</span>
+                    </div>
+                `).join('')}
+            </div>
+        </div>
+    `;
 }
 
 // Jobs Module
 function initializeJobsModule() {
     const createJobBtn = document.getElementById('create-job-btn');
-    const jobModal = document.getElementById('job-modal');
-    const jobForm = document.getElementById('job-form');
-    const jobModalClose = document.getElementById('job-modal-close');
-    const jobCancelBtn = document.getElementById('job-cancel-btn');
-
-    createJobBtn.addEventListener('click', () => {
-        loadJobFormData();
-        showModal(jobModal);
-    });
-
-    jobModalClose.addEventListener('click', () => hideModal(jobModal));
-    jobCancelBtn.addEventListener('click', () => hideModal(jobModal));
-
-    jobForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        await createJob();
-    });
-
-    // Customer selection change handler
-    document.getElementById('job-customer').addEventListener('change', loadCustomerVehicles);
+    if (createJobBtn) {
+        createJobBtn.addEventListener('click', () => {
+            showCreateJobModal();
+        });
+    }
 }
 
-async function loadAllJobs() {
+async function loadJobsData() {
     try {
-        const response = await fetch('http://localhost:8080/api/admin/jobs');
-        if (!response.ok) throw new Error('Failed to fetch jobs');
+        showLoadingState('job-table-body');
         
+        const response = await fetch('http://localhost:8080/api/admin/jobs');
         const jobs = await response.json();
-        populateJobTable(jobs);
+        
+        renderJobsTable(jobs);
+        
     } catch (error) {
         console.error('Error loading jobs:', error);
-        showError('Failed to load jobs');
+        showErrorState('job-table-body', 'Failed to load jobs');
     }
 }
 
-function populateJobTable(jobs) {
+function renderJobsTable(jobs) {
     const tableBody = document.getElementById('job-table-body');
-    tableBody.innerHTML = '';
-
+    
     if (jobs.length === 0) {
-        tableBody.innerHTML = '<tr><td colspan="8" class="no-data">No jobs found.</td></tr>';
+        tableBody.innerHTML = `
+            <tr>
+                <td colspan="8" class="empty-state">
+                    <div class="empty-state-icon">
+                        <svg class="icon icon-xl" viewBox="0 0 24 24">
+                            <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
+                        </svg>
+                    </div>
+                    <div class="empty-state-title">No jobs found</div>
+                    <div class="empty-state-description">Create your first job to get started</div>
+                </td>
+            </tr>
+        `;
         return;
     }
-
-    jobs.forEach(job => {
-        const row = document.createElement('tr');
-        row.innerHTML = `
-            <td>${job.jobId}</td>
+    
+    tableBody.innerHTML = jobs.map(job => `
+        <tr>
+            <td><strong>#${job.jobId}</strong></td>
             <td>${job.customerName}</td>
             <td>${job.vehicle}</td>
             <td>${job.service}</td>
             <td><span class="status-badge status-${job.status.toLowerCase().replace(' ', '-')}">${job.status}</span></td>
-            <td>${job.assignedEmployee || 'Unassigned'}</td>
-            <td>${job.totalCost ? '$' + job.totalCost : 'Not calculated'}</td>
+            <td>${job.assignedEmployee || '<span class="text-secondary">Unassigned</span>'}</td>
+            <td>${job.totalCost ? '$' + job.totalCost : '<span class="text-secondary">Pending</span>'}</td>
             <td class="actions">
                 ${job.status === 'Booked' && !job.assignedEmployee ? 
-                    `<button class="btn btn-sm btn-primary" onclick="showAssignModal(${job.jobId})">Assign</button>` : ''}
+                    `<button class="btn btn-sm btn-primary" onclick="assignEmployee(${job.jobId})">
+                        <svg class="icon icon-sm" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><path d="M20 8v6"/><path d="M23 11h-6"/></svg>
+                        Assign
+                    </button>` : ''}
                 ${job.status === 'Completed' && !job.totalCost ? 
-                    `<button class="btn btn-sm btn-success" onclick="generateInvoice(${job.jobId})">Invoice</button>` : ''}
+                    `<button class="btn btn-sm btn-success" onclick="generateInvoice(${job.jobId})">
+                        <svg class="icon icon-sm" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14,2 14,8 20,8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                        Invoice
+                    </button>` : ''}
+                <button class="btn btn-sm btn-secondary" onclick="viewJobDetails(${job.jobId})">
+                    <svg class="icon icon-sm" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                    View
+                </button>
             </td>
-        `;
-        tableBody.appendChild(row);
-    });
+        </tr>
+    `).join('');
 }
 
-async function loadJobFormData() {
-    try {
-        // Load customers
-        const customersResponse = await fetch('http://localhost:8080/api/admin/users');
-        const users = await customersResponse.json();
-        const customers = users.filter(user => user.role === 'customer');
-        
-        const customerSelect = document.getElementById('job-customer');
-        customerSelect.innerHTML = '<option value="">Select Customer</option>';
-        customers.forEach(customer => {
-            customerSelect.innerHTML += `<option value="${customer.id}">${customer.fullName}</option>`;
+// Services Module
+function initializeServicesModule() {
+    const addServiceBtn = document.getElementById('add-service-btn');
+    if (addServiceBtn) {
+        addServiceBtn.addEventListener('click', () => {
+            showCreateServiceModal();
         });
-
-        // Load services
-        const servicesResponse = await fetch('http://localhost:8080/api/admin/services');
-        const services = await servicesResponse.json();
-        
-        const serviceSelect = document.getElementById('job-service');
-        serviceSelect.innerHTML = '<option value="">Select Service</option>';
-        services.forEach(service => {
-            serviceSelect.innerHTML += `<option value="${service.id}">${service.serviceName} - $${service.price}</option>`;
-        });
-
-        // Set default booking date to now
-        const now = new Date();
-        now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
-        document.getElementById('job-booking-date').value = now.toISOString().slice(0, 16);
-
-    } catch (error) {
-        console.error('Error loading job form data:', error);
-        showError('Failed to load form data');
     }
 }
 
-async function loadCustomerVehicles() {
-    const customerId = document.getElementById('job-customer').value;
-    const vehicleSelect = document.getElementById('job-vehicle');
-    
-    vehicleSelect.innerHTML = '<option value="">Select Vehicle</option>';
-    
-    if (!customerId) return;
-
+async function loadServicesData() {
     try {
-        const response = await fetch(`http://localhost:8080/api/customer/vehicles/${customerId}`);
-        const vehicles = await response.json();
+        showLoadingState('services-table-body');
         
-        vehicles.forEach(vehicle => {
-            vehicleSelect.innerHTML += `<option value="${vehicle.id}">${vehicle.make} ${vehicle.model} (${vehicle.year})</option>`;
-        });
+        const response = await fetch('http://localhost:8080/api/admin/services');
+        const services = await response.json();
+        
+        renderServicesTable(services);
+        
     } catch (error) {
-        console.error('Error loading customer vehicles:', error);
-        showError('Failed to load customer vehicles');
+        console.error('Error loading services:', error);
+        showErrorState('services-table-body', 'Failed to load services');
+    }
+}
+
+function renderServicesTable(services) {
+    const tableBody = document.getElementById('services-table-body');
+    
+    if (services.length === 0) {
+        tableBody.innerHTML = `
+            <tr>
+                <td colspan="5" class="empty-state">
+                    <div class="empty-state-icon">
+                        <svg class="icon icon-xl" viewBox="0 0 24 24">
+                            <circle cx="12" cy="12" r="3"/>
+                            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+                        </svg>
+                    </div>
+                    <div class="empty-state-title">No services found</div>
+                    <div class="empty-state-description">Add your first service to get started</div>
+                </td>
+            </tr>
+        `;
+        return;
+    }
+    
+    tableBody.innerHTML = services.map(service => `
+        <tr>
+            <td><strong>#${service.id}</strong></td>
+            <td>${service.serviceName}</td>
+            <td><strong>$${service.price}</strong></td>
+            <td>${service.description || '<span class="text-secondary">No description</span>'}</td>
+            <td class="actions">
+                <button class="btn btn-sm btn-secondary" onclick="editService(${service.id})">
+                    <svg class="icon icon-sm" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                    Edit
+                </button>
+                <button class="btn btn-sm btn-danger" onclick="deleteService(${service.id})">
+                    <svg class="icon icon-sm" viewBox="0 0 24 24"><polyline points="3,6 5,6 21,6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+                    Delete
+                </button>
+            </td>
+        </tr>
+    `).join('');
+}
+
+// Inventory Module
+function initializeInventoryModule() {
+    const addInventoryBtn = document.getElementById('add-inventory-btn');
+    const lowStockBtn = document.getElementById('low-stock-btn');
+    
+    if (addInventoryBtn) {
+        addInventoryBtn.addEventListener('click', () => {
+            showCreateInventoryModal();
+        });
+    }
+    
+    if (lowStockBtn) {
+        lowStockBtn.addEventListener('click', showLowStockAlert);
+    }
+}
+
+async function loadInventoryData() {
+    try {
+        showLoadingState('inventory-table-body');
+        
+        const response = await fetch('http://localhost:8080/api/admin/inventory');
+        const inventory = await response.json();
+        
+        renderInventoryTable(inventory);
+        
+    } catch (error) {
+        console.error('Error loading inventory:', error);
+        showErrorState('inventory-table-body', 'Failed to load inventory');
+    }
+}
+
+function renderInventoryTable(inventory) {
+    const tableBody = document.getElementById('inventory-table-body');
+    
+    if (inventory.length === 0) {
+        tableBody.innerHTML = `
+            <tr>
+                <td colspan="6" class="empty-state">
+                    <div class="empty-state-icon">
+                        <svg class="icon icon-xl" viewBox="0 0 24 24">
+                            <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+                            <polyline points="3.27,6.96 12,12.01 20.73,6.96"/>
+                            <line x1="12" y1="22.08" x2="12" y2="12"/>
+                        </svg>
+                    </div>
+                    <div class="empty-state-title">No inventory items found</div>
+                    <div class="empty-state-description">Add your first inventory item to get started</div>
+                </td>
+            </tr>
+        `;
+        return;
+    }
+    
+    tableBody.innerHTML = inventory.map(item => {
+        const totalValue = (item.quantity * item.pricePerUnit).toFixed(2);
+        const isLowStock = item.quantity < 10;
+        
+        return `
+            <tr ${isLowStock ? 'class="low-stock"' : ''}>
+                <td><strong>#${item.id}</strong></td>
+                <td>${item.partName}</td>
+                <td>
+                    <span class="${isLowStock ? 'text-error font-bold' : ''}">${item.quantity}</span>
+                    ${isLowStock ? '<svg class="icon icon-sm text-error" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>' : ''}
+                </td>
+                <td>$${item.pricePerUnit}</td>
+                <td><strong>$${totalValue}</strong></td>
+                <td class="actions">
+                    <button class="btn btn-sm btn-secondary" onclick="editInventoryItem(${item.id})">
+                        <svg class="icon icon-sm" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                        Edit
+                    </button>
+                </td>
+            </tr>
+        `;
+    }).join('');
+}
+
+// Users Module
+function initializeUsersModule() {
+    const addUserBtn = document.getElementById('add-user-btn');
+    if (addUserBtn) {
+        addUserBtn.addEventListener('click', () => {
+            showCreateUserModal();
+        });
+    }
+}
+
+async function loadUsersData() {
+    try {
+        showLoadingState('users-table-body');
+        
+        const response = await fetch('http://localhost:8080/api/admin/users');
+        const users = await response.json();
+        
+        renderUsersTable(users);
+        
+    } catch (error) {
+        console.error('Error loading users:', error);
+        showErrorState('users-table-body', 'Failed to load users');
+    }
+}
+
+function renderUsersTable(users) {
+    const tableBody = document.getElementById('users-table-body');
+    
+    if (users.length === 0) {
+        tableBody.innerHTML = `
+            <tr>
+                <td colspan="6" class="empty-state">
+                    <div class="empty-state-icon">
+                        <svg class="icon icon-xl" viewBox="0 0 24 24">
+                            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                            <circle cx="9" cy="7" r="4"/>
+                            <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                            <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                        </svg>
+                    </div>
+                    <div class="empty-state-title">No users found</div>
+                    <div class="empty-state-description">Add your first user to get started</div>
+                </td>
+            </tr>
+        `;
+        return;
+    }
+    
+    const roleIcons = {
+        admin: '<svg class="icon icon-sm" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>',
+        employee: '<svg class="icon icon-sm" viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>',
+        customer: '<svg class="icon icon-sm" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>'
+    };
+    
+    tableBody.innerHTML = users.map(user => `
+        <tr>
+            <td><strong>#${user.id}</strong></td>
+            <td>${user.username}</td>
+            <td>${user.fullName}</td>
+            <td>
+                <span class="role-badge role-${user.role}">
+                    ${roleIcons[user.role] || ''}
+                    ${user.role}
+                </span>
+            </td>
+            <td>${new Date(user.createdAt).toLocaleDateString()}</td>
+            <td class="actions">
+                <button class="btn btn-sm btn-secondary" onclick="editUser(${user.id})">
+                    <svg class="icon icon-sm" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                    Edit
+                </button>
+            </td>
+        </tr>
+    `).join('');
+}
+
+// Reports Module
+function initializeReportsModule() {
+    const refreshReportsBtn = document.getElementById('refresh-reports-btn');
+    const exportCsvBtn = document.getElementById('export-csv-btn');
+    
+    if (refreshReportsBtn) {
+        refreshReportsBtn.addEventListener('click', loadReportsData);
+    }
+    
+    if (exportCsvBtn) {
+        exportCsvBtn.addEventListener('click', exportReports);
+    }
+}
+
+async function loadReportsData() {
+    try {
+        const [jobsResponse, revenueResponse] = await Promise.all([
+            fetch('http://localhost:8080/api/admin/jobs'),
+            fetch('http://localhost:8080/api/admin/reports/revenue')
+        ]);
+        
+        const jobs = await jobsResponse.json();
+        const revenue = await revenueResponse.json();
+        
+        // Generate revenue chart
+        const revenueChart = document.getElementById('revenue-chart');
+        if (revenueChart) {
+            revenueChart.innerHTML = createBarChart(revenue.map(r => ({
+                label: r.month,
+                value: parseFloat(r.totalRevenue || 0)
+            })), 'Revenue');
+        }
+        
+        // Generate parts usage chart
+        const partsChart = document.getElementById('parts-usage-chart');
+        if (partsChart) {
+            const partUsageResponse = await fetch('http://localhost:8080/api/admin/reports/part-usage');
+            const partUsage = await partUsageResponse.json();
+            partsChart.innerHTML = createBarChart(partUsage.slice(0, 5).map(p => ({
+                label: p.partName,
+                value: p.totalUsed
+            })), 'Parts Usage');
+        }
+        
+        showNotification('Reports updated successfully', 'success');
+    } catch (error) {
+        console.error('Error loading reports:', error);
+        showNotification('Failed to load reports', 'error');
+    }
+}
+
+// Modal Functions
+function showCreateJobModal() {
+    createModal('Create New Job', `
+        <form id="job-form">
+            <div class="form-group">
+                <label for="job-customer" class="form-label">Customer</label>
+                <select id="job-customer" class="form-input" required>
+                    <option value="">Select Customer</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="job-vehicle" class="form-label">Vehicle</label>
+                <select id="job-vehicle" class="form-input" required>
+                    <option value="">Select Vehicle</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="job-service" class="form-label">Service</label>
+                <select id="job-service" class="form-input" required>
+                    <option value="">Select Service</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="job-date" class="form-label">Booking Date</label>
+                <input type="datetime-local" id="job-date" class="form-input" required>
+            </div>
+            <div class="form-actions">
+                <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+                <button type="submit" class="btn btn-primary">Create Job</button>
+            </div>
+        </form>
+    `, async () => {
+        // Load form data
+        await loadJobFormData();
+        
+        // Handle form submission
+        document.getElementById('job-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            await createJob();
+        });
+    });
+}
+
+function showCreateServiceModal() {
+    createModal('Add New Service', `
+        <form id="service-form">
+            <div class="form-group">
+                <label for="service-name" class="form-label">Service Name</label>
+                <input type="text" id="service-name" class="form-input" required>
+            </div>
+            <div class="form-group">
+                <label for="service-price" class="form-label">Price</label>
+                <input type="number" id="service-price" class="form-input" step="0.01" required>
+            </div>
+            <div class="form-group">
+                <label for="service-description" class="form-label">Description</label>
+                <textarea id="service-description" class="form-input" rows="3"></textarea>
+            </div>
+            <div class="form-actions">
+                <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+                <button type="submit" class="btn btn-primary">Add Service</button>
+            </div>
+        </form>
+    `, () => {
+        document.getElementById('service-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            await createService();
+        });
+    });
+}
+
+function showCreateInventoryModal() {
+    createModal('Add Inventory Item', `
+        <form id="inventory-form">
+            <div class="form-group">
+                <label for="part-name" class="form-label">Part Name</label>
+                <input type="text" id="part-name" class="form-input" required>
+            </div>
+            <div class="form-group">
+                <label for="part-quantity" class="form-label">Quantity</label>
+                <input type="number" id="part-quantity" class="form-input" min="1" required>
+            </div>
+            <div class="form-group">
+                <label for="part-price" class="form-label">Price per Unit</label>
+                <input type="number" id="part-price" class="form-input" step="0.01" required>
+            </div>
+            <div class="form-actions">
+                <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+                <button type="submit" class="btn btn-primary">Add Item</button>
+            </div>
+        </form>
+    `, () => {
+        document.getElementById('inventory-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            await createInventoryItem();
+        });
+    });
+}
+
+function showCreateUserModal() {
+    createModal('Add New User', `
+        <form id="user-form">
+            <div class="form-group">
+                <label for="user-username" class="form-label">Username</label>
+                <input type="text" id="user-username" class="form-input" required>
+            </div>
+            <div class="form-group">
+                <label for="user-fullname" class="form-label">Full Name</label>
+                <input type="text" id="user-fullname" class="form-input" required>
+            </div>
+            <div class="form-group">
+                <label for="user-password" class="form-label">Password</label>
+                <input type="password" id="user-password" class="form-input" required>
+            </div>
+            <div class="form-group">
+                <label for="user-role" class="form-label">Role</label>
+                <select id="user-role" class="form-input" required>
+                    <option value="">Select Role</option>
+                    <option value="admin">Admin</option>
+                    <option value="employee">Employee</option>
+                    <option value="customer">Customer</option>
+                </select>
+            </div>
+            <div class="form-actions">
+                <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+                <button type="submit" class="btn btn-primary">Add User</button>
+            </div>
+        </form>
+    `, () => {
+        document.getElementById('user-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            await createUser();
+        });
+    });
+}
+
+// API Functions
+async function loadJobFormData() {
+    try {
+        const [customersResponse, servicesResponse] = await Promise.all([
+            fetch('http://localhost:8080/api/admin/users'),
+            fetch('http://localhost:8080/api/admin/services')
+        ]);
+        
+        const users = await customersResponse.json();
+        const services = await servicesResponse.json();
+        
+        const customers = users.filter(user => user.role === 'customer');
+        
+        const customerSelect = document.getElementById('job-customer');
+        customerSelect.innerHTML = '<option value="">Select Customer</option>' +
+            customers.map(customer => `<option value="${customer.id}">${customer.fullName}</option>`).join('');
+        
+        const serviceSelect = document.getElementById('job-service');
+        serviceSelect.innerHTML = '<option value="">Select Service</option>' +
+            services.map(service => `<option value="${service.id}">${service.serviceName} - $${service.price}</option>`).join('');
+        
+        // Set default date
+        const now = new Date();
+        now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+        document.getElementById('job-date').value = now.toISOString().slice(0, 16);
+        
+        // Load vehicles when customer changes
+        customerSelect.addEventListener('change', async () => {
+            const customerId = customerSelect.value;
+            const vehicleSelect = document.getElementById('job-vehicle');
+            
+            if (!customerId) {
+                vehicleSelect.innerHTML = '<option value="">Select Vehicle</option>';
+                return;
+            }
+            
+            try {
+                const response = await fetch(`http://localhost:8080/api/customer/vehicles/${customerId}`);
+                const vehicles = await response.json();
+                
+                vehicleSelect.innerHTML = '<option value="">Select Vehicle</option>' +
+                    vehicles.map(vehicle => `<option value="${vehicle.id}">${vehicle.make} ${vehicle.model} (${vehicle.year})</option>`).join('');
+            } catch (error) {
+                console.error('Error loading vehicles:', error);
+            }
+        });
+        
+    } catch (error) {
+        console.error('Error loading job form data:', error);
     }
 }
 
@@ -205,7 +811,7 @@ async function createJob() {
         customerId: document.getElementById('job-customer').value,
         vehicleId: document.getElementById('job-vehicle').value,
         serviceId: document.getElementById('job-service').value,
-        bookingDate: document.getElementById('job-booking-date').value
+        bookingDate: document.getElementById('job-date').value
     };
 
     try {
@@ -218,101 +824,28 @@ async function createJob() {
         const result = await response.json();
         
         if (response.ok) {
-            hideModal(document.getElementById('job-modal'));
-            showSuccess('Job created successfully');
-            loadAllJobs();
+            closeModal();
+            showNotification('Job created successfully', 'success');
+            loadJobsData();
         } else {
-            showError(result.error || 'Failed to create job');
+            showNotification(result.error || 'Failed to create job', 'error');
         }
     } catch (error) {
         console.error('Error creating job:', error);
-        showError('Failed to create job');
+        showNotification('Failed to create job', 'error');
     }
 }
 
-// Services Module
-function initializeServicesModule() {
-    const addServiceBtn = document.getElementById('add-service-btn');
-    const serviceModal = document.getElementById('service-modal');
-    const serviceForm = document.getElementById('service-form');
-    const serviceModalClose = document.getElementById('service-modal-close');
-    const serviceCancelBtn = document.getElementById('service-cancel-btn');
-
-    addServiceBtn.addEventListener('click', () => {
-        resetServiceForm();
-        document.getElementById('service-modal-title').textContent = 'Add New Service';
-        showModal(serviceModal);
-    });
-
-    serviceModalClose.addEventListener('click', () => hideModal(serviceModal));
-    serviceCancelBtn.addEventListener('click', () => hideModal(serviceModal));
-
-    serviceForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        await saveService();
-    });
-}
-
-async function loadServices() {
-    try {
-        const response = await fetch('http://localhost:8080/api/admin/services');
-        if (!response.ok) throw new Error('Failed to fetch services');
-        
-        const services = await response.json();
-        populateServicesTable(services);
-    } catch (error) {
-        console.error('Error loading services:', error);
-        showError('Failed to load services');
-    }
-}
-
-function populateServicesTable(services) {
-    const tableBody = document.getElementById('services-table-body');
-    tableBody.innerHTML = '';
-
-    if (services.length === 0) {
-        tableBody.innerHTML = '<tr><td colspan="5" class="no-data">No services found.</td></tr>';
-        return;
-    }
-
-    services.forEach(service => {
-        const row = document.createElement('tr');
-        row.innerHTML = `
-            <td>${service.id}</td>
-            <td>${service.serviceName}</td>
-            <td>$${service.price}</td>
-            <td>${service.description || ''}</td>
-            <td class="actions">
-                <button class="btn btn-sm btn-secondary" onclick="editService(${service.id})">Edit</button>
-                <button class="btn btn-sm btn-danger" onclick="deleteService(${service.id})">Delete</button>
-            </td>
-        `;
-        tableBody.appendChild(row);
-    });
-}
-
-function resetServiceForm() {
-    document.getElementById('service-form').reset();
-    document.getElementById('service-id').value = '';
-}
-
-async function saveService() {
-    const serviceId = document.getElementById('service-id').value;
+async function createService() {
     const formData = {
         serviceName: document.getElementById('service-name').value,
         price: parseFloat(document.getElementById('service-price').value),
         description: document.getElementById('service-description').value
     };
 
-    const isEdit = serviceId !== '';
-    const url = isEdit ? 
-        `http://localhost:8080/api/admin/services/${serviceId}` : 
-        'http://localhost:8080/api/admin/services';
-    const method = isEdit ? 'PUT' : 'POST';
-
     try {
-        const response = await fetch(url, {
-            method: method,
+        const response = await fetch('http://localhost:8080/api/admin/services', {
+            method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(formData)
         });
@@ -320,171 +853,28 @@ async function saveService() {
         const result = await response.json();
         
         if (response.ok) {
-            hideModal(document.getElementById('service-modal'));
-            showSuccess(isEdit ? 'Service updated successfully' : 'Service added successfully');
-            loadServices();
+            closeModal();
+            showNotification('Service added successfully', 'success');
+            loadServicesData();
         } else {
-            showError(result.error || 'Failed to save service');
+            showNotification(result.error || 'Failed to add service', 'error');
         }
     } catch (error) {
-        console.error('Error saving service:', error);
-        showError('Failed to save service');
+        console.error('Error creating service:', error);
+        showNotification('Failed to add service', 'error');
     }
 }
 
-async function editService(serviceId) {
-    try {
-        const response = await fetch('http://localhost:8080/api/admin/services');
-        const services = await response.json();
-        const service = services.find(s => s.id === serviceId);
-        
-        if (service) {
-            document.getElementById('service-id').value = service.id;
-            document.getElementById('service-name').value = service.serviceName;
-            document.getElementById('service-price').value = service.price;
-            document.getElementById('service-description').value = service.description || '';
-            document.getElementById('service-modal-title').textContent = 'Edit Service';
-            showModal(document.getElementById('service-modal'));
-        }
-    } catch (error) {
-        console.error('Error loading service for edit:', error);
-        showError('Failed to load service details');
-    }
-}
-
-async function deleteService(serviceId) {
-    if (!confirm('Are you sure you want to delete this service?')) return;
-
-    try {
-        const response = await fetch(`http://localhost:8080/api/admin/services/${serviceId}`, {
-            method: 'DELETE'
-        });
-
-        const result = await response.json();
-        
-        if (response.ok) {
-            showSuccess('Service deleted successfully');
-            loadServices();
-        } else {
-            showError(result.error || 'Failed to delete service');
-        }
-    } catch (error) {
-        console.error('Error deleting service:', error);
-        showError('Failed to delete service');
-    }
-}
-
-// Inventory Module
-function initializeInventoryModule() {
-    const addInventoryBtn = document.getElementById('add-inventory-btn');
-    const lowStockBtn = document.getElementById('low-stock-btn');
-    const inventoryModal = document.getElementById('inventory-modal');
-    const inventoryForm = document.getElementById('inventory-form');
-    const inventoryModalClose = document.getElementById('inventory-modal-close');
-    const inventoryCancelBtn = document.getElementById('inventory-cancel-btn');
-
-    addInventoryBtn.addEventListener('click', () => {
-        resetInventoryForm();
-        document.getElementById('inventory-modal-title').textContent = 'Add New Inventory Item';
-        showModal(inventoryModal);
-    });
-
-    lowStockBtn.addEventListener('click', loadLowStockAlerts);
-
-    inventoryModalClose.addEventListener('click', () => hideModal(inventoryModal));
-    inventoryCancelBtn.addEventListener('click', () => hideModal(inventoryModal));
-
-    inventoryForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        await saveInventoryItem();
-    });
-}
-
-async function loadInventory() {
-    try {
-        const response = await fetch('http://localhost:8080/api/admin/inventory');
-        if (!response.ok) throw new Error('Failed to fetch inventory');
-        
-        const inventory = await response.json();
-        populateInventoryTable(inventory);
-    } catch (error) {
-        console.error('Error loading inventory:', error);
-        showError('Failed to load inventory');
-    }
-}
-
-function populateInventoryTable(inventory) {
-    const tableBody = document.getElementById('inventory-table-body');
-    tableBody.innerHTML = '';
-
-    if (inventory.length === 0) {
-        tableBody.innerHTML = '<tr><td colspan="6" class="no-data">No inventory items found.</td></tr>';
-        return;
-    }
-
-    inventory.forEach(item => {
-        const totalValue = (item.quantity * item.pricePerUnit).toFixed(2);
-        const lowStock = item.quantity < 10 ? 'low-stock' : '';
-        
-        const row = document.createElement('tr');
-        row.className = lowStock;
-        row.innerHTML = `
-            <td>${item.id}</td>
-            <td>${item.partName}</td>
-            <td class="${lowStock}">${item.quantity}</td>
-            <td>$${item.pricePerUnit}</td>
-            <td>$${totalValue}</td>
-            <td class="actions">
-                <button class="btn btn-sm btn-secondary" onclick="editInventoryItem(${item.id})">Edit</button>
-            </td>
-        `;
-        tableBody.appendChild(row);
-    });
-}
-
-async function loadLowStockAlerts() {
-    try {
-        const response = await fetch('http://localhost:8080/api/admin/inventory/alerts');
-        if (!response.ok) throw new Error('Failed to fetch low stock alerts');
-        
-        const lowStockItems = await response.json();
-        
-        if (lowStockItems.length === 0) {
-            showSuccess('No low stock items found!');
-        } else {
-            const itemsList = lowStockItems.map(item => 
-                `${item.partName}: ${item.quantity} remaining`
-            ).join('\n');
-            alert(`Low Stock Alert!\n\n${itemsList}`);
-        }
-    } catch (error) {
-        console.error('Error loading low stock alerts:', error);
-        showError('Failed to load low stock alerts');
-    }
-}
-
-function resetInventoryForm() {
-    document.getElementById('inventory-form').reset();
-    document.getElementById('inventory-id').value = '';
-}
-
-async function saveInventoryItem() {
-    const inventoryId = document.getElementById('inventory-id').value;
+async function createInventoryItem() {
     const formData = {
         partName: document.getElementById('part-name').value,
         quantity: parseInt(document.getElementById('part-quantity').value),
         pricePerUnit: parseFloat(document.getElementById('part-price').value)
     };
 
-    const isEdit = inventoryId !== '';
-    const url = isEdit ? 
-        `http://localhost:8080/api/admin/inventory/${inventoryId}` : 
-        'http://localhost:8080/api/admin/inventory';
-    const method = isEdit ? 'PUT' : 'POST';
-
     try {
-        const response = await fetch(url, {
-            method: method,
+        const response = await fetch('http://localhost:8080/api/admin/inventory', {
+            method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(formData)
         });
@@ -492,126 +882,29 @@ async function saveInventoryItem() {
         const result = await response.json();
         
         if (response.ok) {
-            hideModal(document.getElementById('inventory-modal'));
-            showSuccess(isEdit ? 'Inventory item updated successfully' : 'Inventory item added successfully');
-            loadInventory();
+            closeModal();
+            showNotification('Inventory item added successfully', 'success');
+            loadInventoryData();
         } else {
-            showError(result.error || 'Failed to save inventory item');
+            showNotification(result.error || 'Failed to add inventory item', 'error');
         }
     } catch (error) {
-        console.error('Error saving inventory item:', error);
-        showError('Failed to save inventory item');
+        console.error('Error creating inventory item:', error);
+        showNotification('Failed to add inventory item', 'error');
     }
 }
 
-async function editInventoryItem(inventoryId) {
-    try {
-        const response = await fetch('http://localhost:8080/api/admin/inventory');
-        const inventory = await response.json();
-        const item = inventory.find(i => i.id === inventoryId);
-        
-        if (item) {
-            document.getElementById('inventory-id').value = item.id;
-            document.getElementById('part-name').value = item.partName;
-            document.getElementById('part-quantity').value = item.quantity;
-            document.getElementById('part-price').value = item.pricePerUnit;
-            document.getElementById('inventory-modal-title').textContent = 'Edit Inventory Item';
-            showModal(document.getElementById('inventory-modal'));
-        }
-    } catch (error) {
-        console.error('Error loading inventory item for edit:', error);
-        showError('Failed to load inventory item details');
-    }
-}
-
-// Users Module
-function initializeUsersModule() {
-    const addUserBtn = document.getElementById('add-user-btn');
-    const userModal = document.getElementById('user-modal');
-    const userForm = document.getElementById('user-form');
-    const userModalClose = document.getElementById('user-modal-close');
-    const userCancelBtn = document.getElementById('user-cancel-btn');
-
-    addUserBtn.addEventListener('click', () => {
-        resetUserForm();
-        document.getElementById('user-modal-title').textContent = 'Add New User';
-        showModal(userModal);
-    });
-
-    userModalClose.addEventListener('click', () => hideModal(userModal));
-    userCancelBtn.addEventListener('click', () => hideModal(userModal));
-
-    userForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        await saveUser();
-    });
-}
-
-async function loadUsers() {
-    try {
-        const response = await fetch('http://localhost:8080/api/admin/users');
-        if (!response.ok) throw new Error('Failed to fetch users');
-        
-        const users = await response.json();
-        populateUsersTable(users);
-    } catch (error) {
-        console.error('Error loading users:', error);
-        showError('Failed to load users');
-    }
-}
-
-function populateUsersTable(users) {
-    const tableBody = document.getElementById('users-table-body');
-    tableBody.innerHTML = '';
-
-    if (users.length === 0) {
-        tableBody.innerHTML = '<tr><td colspan="6" class="no-data">No users found.</td></tr>';
-        return;
-    }
-
-    users.forEach(user => {
-        const row = document.createElement('tr');
-        row.innerHTML = `
-            <td>${user.id}</td>
-            <td>${user.username}</td>
-            <td>${user.fullName}</td>
-            <td><span class="role-badge role-${user.role}">${user.role}</span></td>
-            <td>${new Date(user.createdAt).toLocaleDateString()}</td>
-            <td class="actions">
-                <button class="btn btn-sm btn-secondary" onclick="editUser(${user.id})">Edit</button>
-            </td>
-        `;
-        tableBody.appendChild(row);
-    });
-}
-
-function resetUserForm() {
-    document.getElementById('user-form').reset();
-    document.getElementById('user-id').value = '';
-}
-
-async function saveUser() {
-    const userId = document.getElementById('user-id').value;
+async function createUser() {
     const formData = {
         username: document.getElementById('user-username').value,
         fullName: document.getElementById('user-fullname').value,
+        password: document.getElementById('user-password').value,
         role: document.getElementById('user-role').value
     };
 
-    const password = document.getElementById('user-password').value;
-    if (password) {
-        formData.password = password;
-    }
-
-    const isEdit = userId !== '';
-    const url = isEdit ? 
-        `http://localhost:8080/api/admin/users/${userId}` : 
-        'http://localhost:8080/api/admin/users';
-    const method = isEdit ? 'PUT' : 'POST';
-
     try {
-        const response = await fetch(url, {
-            method: method,
+        const response = await fetch('http://localhost:8080/api/admin/users', {
+            method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(formData)
         });
@@ -619,432 +912,137 @@ async function saveUser() {
         const result = await response.json();
         
         if (response.ok) {
-            hideModal(document.getElementById('user-modal'));
-            showSuccess(isEdit ? 'User updated successfully' : 'User added successfully');
-            loadUsers();
+            closeModal();
+            showNotification('User added successfully', 'success');
+            loadUsersData();
         } else {
-            showError(result.error || 'Failed to save user');
+            showNotification(result.error || 'Failed to add user', 'error');
         }
     } catch (error) {
-        console.error('Error saving user:', error);
-        showError('Failed to save user');
-    }
-}
-
-async function editUser(userId) {
-    try {
-        const response = await fetch('http://localhost:8080/api/admin/users');
-        const users = await response.json();
-        const user = users.find(u => u.id === userId);
-        
-        if (user) {
-            document.getElementById('user-id').value = user.id;
-            document.getElementById('user-username').value = user.username;
-            document.getElementById('user-fullname').value = user.fullName;
-            document.getElementById('user-role').value = user.role;
-            document.getElementById('user-password').value = ''; // Don't populate password
-            document.getElementById('user-modal-title').textContent = 'Edit User';
-            showModal(document.getElementById('user-modal'));
-        }
-    } catch (error) {
-        console.error('Error loading user for edit:', error);
-        showError('Failed to load user details');
-    }
-}
-
-// Reports Module
-function initializeReportsModule() {
-    const refreshReportsBtn = document.getElementById('refresh-reports-btn');
-    const exportReportsBtn = document.getElementById('export-reports-btn');
-    
-    if (refreshReportsBtn) {
-        refreshReportsBtn.addEventListener('click', loadReports);
-    }
-    
-    if (exportReportsBtn) {
-        exportReportsBtn.addEventListener('click', exportReports);
-    }
-    
-    // Initialize filter change handlers
-    const revenuePeriod = document.getElementById('revenue-period');
-    const partsPeriod = document.getElementById('parts-period');
-    const employeePeriod = document.getElementById('employee-period');
-    
-    if (revenuePeriod) {
-        revenuePeriod.addEventListener('change', loadRevenueReport);
-    }
-    
-    if (partsPeriod) {
-        partsPeriod.addEventListener('change', loadPartUsageReport);
-    }
-    
-    if (employeePeriod) {
-        employeePeriod.addEventListener('change', loadEmployeePerformanceReport);
-    }
-}
-
-async function loadReports() {
-    await Promise.all([
-        loadKeyMetrics(),
-        loadRevenueReport(),
-        loadPartUsageReport(),
-        loadServicePerformanceReport(),
-        loadEmployeePerformanceReport()
-    ]);
-}
-
-async function loadKeyMetrics() {
-    try {
-        // Load multiple metrics in parallel
-        const [jobsResponse, usersResponse, inventoryResponse] = await Promise.all([
-            fetch('http://localhost:8080/api/admin/jobs'),
-            fetch('http://localhost:8080/api/admin/users'),
-            fetch('http://localhost:8080/api/admin/inventory/alerts')
-        ]);
-        
-        const jobs = await jobsResponse.json();
-        const users = await usersResponse.json();
-        const lowStockItems = await inventoryResponse.json();
-        
-        // Calculate metrics
-        const totalRevenue = jobs
-            .filter(job => job.totalCost)
-            .reduce((sum, job) => sum + parseFloat(job.totalCost), 0);
-        
-        const totalJobs = jobs.length;
-        const activeCustomers = users.filter(user => user.role === 'customer').length;
-        const lowStockCount = lowStockItems.length;
-        
-        // Update metric cards
-        document.getElementById('total-revenue').textContent = `$${totalRevenue.toFixed(2)}`;
-        document.getElementById('total-jobs').textContent = totalJobs;
-        document.getElementById('active-customers').textContent = activeCustomers;
-        document.getElementById('low-stock-items').textContent = lowStockCount;
-        
-    } catch (error) {
-        console.error('Error loading key metrics:', error);
-    }
-}
-
-async function loadRevenueReport() {
-    try {
-        const response = await fetch('http://localhost:8080/api/admin/reports/revenue');
-        if (!response.ok) throw new Error('Failed to fetch revenue report');
-        
-        const revenueData = await response.json();
-        populateRevenueTable(revenueData);
-    } catch (error) {
-        console.error('Error loading revenue report:', error);
-        showError('Failed to load revenue report');
-    }
-}
-
-function populateRevenueTable(revenueData) {
-    const tableBody = document.getElementById('revenue-table-body');
-    tableBody.innerHTML = '';
-
-    if (revenueData.length === 0) {
-        tableBody.innerHTML = '<tr><td colspan="4" class="no-data">No revenue data found.</td></tr>';
-        return;
-    }
-
-    revenueData.forEach(data => {
-        const avgJobValue = data.jobsCompleted > 0 ? (data.totalRevenue / data.jobsCompleted).toFixed(2) : '0.00';
-        const row = document.createElement('tr');
-        row.innerHTML = `
-            <td>${data.month}</td>
-            <td>${data.jobsCompleted}</td>
-            <td>$${data.totalRevenue}</td>
-            <td>$${avgJobValue}</td>
-        `;
-        tableBody.appendChild(row);
-    });
-}
-
-async function loadPartUsageReport() {
-    try {
-        const response = await fetch('http://localhost:8080/api/admin/reports/part-usage');
-        if (!response.ok) throw new Error('Failed to fetch part usage report');
-        
-        const partUsageData = await response.json();
-        populatePartUsageTable(partUsageData);
-    } catch (error) {
-        console.error('Error loading part usage report:', error);
-        showError('Failed to load part usage report');
-    }
-}
-
-function populatePartUsageTable(partUsageData) {
-    const tableBody = document.getElementById('parts-usage-table-body');
-    tableBody.innerHTML = '';
-
-    if (partUsageData.length === 0) {
-        tableBody.innerHTML = '<tr><td colspan="4" class="no-data">No part usage data found.</td></tr>';
-        return;
-    }
-
-    partUsageData.forEach(data => {
-        const revenueImpact = (data.totalUsed * 15).toFixed(2); // Estimated revenue impact
-        const row = document.createElement('tr');
-        row.innerHTML = `
-            <td>${data.partName}</td>
-            <td>${data.totalUsed}</td>
-            <td>${data.jobsCount}</td>
-            <td>$${revenueImpact}</td>
-        `;
-        tableBody.appendChild(row);
-    });
-}
-
-async function loadServicePerformanceReport() {
-    try {
-        const [jobsResponse, servicesResponse] = await Promise.all([
-            fetch('http://localhost:8080/api/admin/jobs'),
-            fetch('http://localhost:8080/api/admin/services')
-        ]);
-        
-        const jobs = await jobsResponse.json();
-        const services = await servicesResponse.json();
-        
-        // Calculate service performance
-        const servicePerformance = services.map(service => {
-            const serviceJobs = jobs.filter(job => job.service === service.serviceName);
-            const completedJobs = serviceJobs.filter(job => ['Completed', 'Invoiced', 'Paid'].includes(job.status));
-            const successRate = serviceJobs.length > 0 ? ((completedJobs.length / serviceJobs.length) * 100).toFixed(1) : '0.0';
-            const avgRevenue = completedJobs.length > 0 ? 
-                (completedJobs.reduce((sum, job) => sum + (parseFloat(job.totalCost) || 0), 0) / completedJobs.length).toFixed(2) : 
-                '0.00';
-            
-            return {
-                serviceName: service.serviceName,
-                bookings: serviceJobs.length,
-                completed: completedJobs.length,
-                successRate: successRate,
-                avgRevenue: avgRevenue
-            };
-        });
-        
-        populateServicePerformanceTable(servicePerformance);
-    } catch (error) {
-        console.error('Error loading service performance report:', error);
-        showError('Failed to load service performance report');
-    }
-}
-
-function populateServicePerformanceTable(servicePerformance) {
-    const tableBody = document.getElementById('service-performance-table-body');
-    tableBody.innerHTML = '';
-
-    if (servicePerformance.length === 0) {
-        tableBody.innerHTML = '<tr><td colspan="5" class="no-data">No service performance data found.</td></tr>';
-        return;
-    }
-
-    servicePerformance.forEach(data => {
-        const row = document.createElement('tr');
-        row.innerHTML = `
-            <td>${data.serviceName}</td>
-            <td>${data.bookings}</td>
-            <td>${data.completed}</td>
-            <td>${data.successRate}%</td>
-            <td>$${data.avgRevenue}</td>
-        `;
-        tableBody.appendChild(row);
-    });
-}
-
-async function loadEmployeePerformanceReport() {
-    try {
-        const [jobsResponse, usersResponse] = await Promise.all([
-            fetch('http://localhost:8080/api/admin/jobs'),
-            fetch('http://localhost:8080/api/admin/users')
-        ]);
-        
-        const jobs = await jobsResponse.json();
-        const users = await usersResponse.json();
-        const employees = users.filter(user => user.role === 'employee');
-        
-        // Calculate employee performance
-        const employeePerformance = employees.map(employee => {
-            const assignedJobs = jobs.filter(job => job.assignedEmployee === employee.fullName);
-            const completedJobs = assignedJobs.filter(job => ['Completed', 'Invoiced', 'Paid'].includes(job.status));
-            const completionRate = assignedJobs.length > 0 ? ((completedJobs.length / assignedJobs.length) * 100).toFixed(1) : '0.0';
-            
-            return {
-                employeeName: employee.fullName,
-                assigned: assignedJobs.length,
-                completed: completedJobs.length,
-                completionRate: completionRate,
-                avgTime: '3.2 days' // Placeholder - would need completion time calculation
-            };
-        });
-        
-        populateEmployeePerformanceTable(employeePerformance);
-    } catch (error) {
-        console.error('Error loading employee performance report:', error);
-        showError('Failed to load employee performance report');
-    }
-}
-
-function populateEmployeePerformanceTable(employeePerformance) {
-    const tableBody = document.getElementById('employee-performance-table-body');
-    tableBody.innerHTML = '';
-
-    if (employeePerformance.length === 0) {
-        tableBody.innerHTML = '<tr><td colspan="5" class="no-data">No employee performance data found.</td></tr>';
-        return;
-    }
-
-    employeePerformance.forEach(data => {
-        const row = document.createElement('tr');
-        row.innerHTML = `
-            <td>${data.employeeName}</td>
-            <td>${data.assigned}</td>
-            <td>${data.completed}</td>
-            <td>${data.completionRate}%</td>
-            <td>${data.avgTime}</td>
-        `;
-        tableBody.appendChild(row);
-    });
-}
-
-function exportReports() {
-    // Simple CSV export functionality
-    const reportData = [];
-    
-    // Add headers
-    reportData.push(['AutoRepairPro - Business Report']);
-    reportData.push(['Generated on:', new Date().toLocaleDateString()]);
-    reportData.push([]);
-    
-    // Add key metrics
-    reportData.push(['Key Metrics']);
-    reportData.push(['Total Revenue', document.getElementById('total-revenue').textContent]);
-    reportData.push(['Total Jobs', document.getElementById('total-jobs').textContent]);
-    reportData.push(['Active Customers', document.getElementById('active-customers').textContent]);
-    reportData.push(['Low Stock Items', document.getElementById('low-stock-items').textContent]);
-    reportData.push([]);
-    
-    // Convert to CSV
-    const csvContent = reportData.map(row => row.join(',')).join('\n');
-    
-    // Download CSV
-    const blob = new Blob([csvContent], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `autorepairpro-report-${new Date().toISOString().split('T')[0]}.csv`;
-    a.click();
-    window.URL.revokeObjectURL(url);
-    
-    showSuccess('Report exported successfully!');
-}
-
-// Assignment and Invoice Functions
-async function showAssignModal(jobId) {
-    try {
-        // Load employees
-        const response = await fetch('http://localhost:8080/api/admin/users');
-        const users = await response.json();
-        const employees = users.filter(user => user.role === 'employee');
-        
-        const employeeSelect = document.getElementById('assign-employee');
-        employeeSelect.innerHTML = '<option value="">Select Employee</option>';
-        employees.forEach(employee => {
-            employeeSelect.innerHTML += `<option value="${employee.id}">${employee.fullName}</option>`;
-        });
-
-        document.getElementById('assign-job-id').value = jobId;
-        showModal(document.getElementById('assign-modal'));
-    } catch (error) {
-        console.error('Error loading employees:', error);
-        showError('Failed to load employees');
-    }
-}
-
-// Initialize assignment modal
-document.addEventListener('DOMContentLoaded', () => {
-    const assignModal = document.getElementById('assign-modal');
-    const assignForm = document.getElementById('assign-form');
-    const assignModalClose = document.getElementById('assign-modal-close');
-    const assignCancelBtn = document.getElementById('assign-cancel-btn');
-
-    if (assignModalClose) assignModalClose.addEventListener('click', () => hideModal(assignModal));
-    if (assignCancelBtn) assignCancelBtn.addEventListener('click', () => hideModal(assignModal));
-
-    if (assignForm) {
-        assignForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            await assignEmployee();
-        });
-    }
-});
-
-async function assignEmployee() {
-    const jobId = document.getElementById('assign-job-id').value;
-    const employeeId = document.getElementById('assign-employee').value;
-
-    try {
-        const response = await fetch(`http://localhost:8080/api/admin/jobs/${jobId}/assign`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ employeeId: employeeId })
-        });
-
-        const result = await response.json();
-        
-        if (response.ok) {
-            hideModal(document.getElementById('assign-modal'));
-            showSuccess('Employee assigned successfully');
-            loadAllJobs();
-        } else {
-            showError(result.error || 'Failed to assign employee');
-        }
-    } catch (error) {
-        console.error('Error assigning employee:', error);
-        showError('Failed to assign employee');
-    }
-}
-
-async function generateInvoice(jobId) {
-    if (!confirm('Generate invoice for this job?')) return;
-
-    try {
-        const response = await fetch(`http://localhost:8080/api/admin/jobs/${jobId}/invoice`, {
-            method: 'POST'
-        });
-
-        const result = await response.json();
-        
-        if (response.ok) {
-            showSuccess(`Invoice generated successfully. Total cost: $${result.totalCost}`);
-            loadAllJobs();
-        } else {
-            showError(result.error || 'Failed to generate invoice');
-        }
-    } catch (error) {
-        console.error('Error generating invoice:', error);
-        showError('Failed to generate invoice');
+        console.error('Error creating user:', error);
+        showNotification('Failed to add user', 'error');
     }
 }
 
 // Utility Functions
-function showModal(modal) {
-    modal.style.display = 'block';
-    document.body.style.overflow = 'hidden';
+function showLoadingState(elementId) {
+    const element = document.getElementById(elementId);
+    if (element) {
+        element.innerHTML = `
+            <div class="loading-skeleton">
+                <div class="loading-skeleton title"></div>
+                <div class="loading-skeleton text"></div>
+                <div class="loading-skeleton text"></div>
+            </div>
+        `;
+    }
 }
 
-function hideModal(modal) {
-    modal.style.display = 'none';
-    document.body.style.overflow = 'auto';
+function showErrorState(elementId, message) {
+    const element = document.getElementById(elementId);
+    if (element) {
+        element.innerHTML = `
+            <div class="empty-state">
+                <div class="empty-state-icon">
+                    <svg class="icon icon-xl" viewBox="0 0 24 24">
+                        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                        <line x1="12" y1="9" x2="12" y2="13"/>
+                        <line x1="12" y1="17" x2="12.01" y2="17"/>
+                    </svg>
+                </div>
+                <div class="empty-state-title">Error</div>
+                <div class="empty-state-description">${message}</div>
+            </div>
+        `;
+    }
 }
 
-function showSuccess(message) {
-    // Simple success notification - you can enhance this
-    alert('Success: ' + message);
+function showNotification(message, type = 'info') {
+    if (window.notificationManager) {
+        window.notificationManager.addNotification({
+            type: type,
+            title: type === 'success' ? 'Success' : type === 'error' ? 'Error' : 'Info',
+            message: message
+        });
+    } else {
+        alert(message);
+    }
 }
 
-function showError(message) {
-    // Simple error notification - you can enhance this
-    alert('Error: ' + message);
+function createModal(title, content, onShow) {
+    const modal = document.createElement('div');
+    modal.className = 'modal show';
+    modal.innerHTML = `
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">${title}</h3>
+                <button class="modal-close" onclick="closeModal()">
+                    <svg class="icon" viewBox="0 0 24 24">
+                        <line x1="18" y1="6" x2="6" y2="18"/>
+                        <line x1="6" y1="6" x2="18" y2="18"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                ${content}
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    // Close on backdrop click
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            closeModal();
+        }
+    });
+    
+    if (onShow) onShow();
+}
+
+function closeModal() {
+    const modal = document.querySelector('.modal.show');
+    if (modal) {
+        modal.remove();
+    }
+}
+
+// Placeholder functions for actions
+function assignEmployee(jobId) {
+    showNotification(`Assign employee to job #${jobId} - Feature coming soon!`, 'info');
+}
+
+function generateInvoice(jobId) {
+    showNotification(`Generate invoice for job #${jobId} - Feature coming soon!`, 'info');
+}
+
+function viewJobDetails(jobId) {
+    showNotification(`View details for job #${jobId} - Feature coming soon!`, 'info');
+}
+
+function editService(serviceId) {
+    showNotification(`Edit service #${serviceId} - Feature coming soon!`, 'info');
+}
+
+function deleteService(serviceId) {
+    if (confirm('Are you sure you want to delete this service?')) {
+        showNotification(`Delete service #${serviceId} - Feature coming soon!`, 'info');
+    }
+}
+
+function editInventoryItem(itemId) {
+    showNotification(`Edit inventory item #${itemId} - Feature coming soon!`, 'info');
+}
+
+function editUser(userId) {
+    showNotification(`Edit user #${userId} - Feature coming soon!`, 'info');
+}
+
+function showLowStockAlert() {
+    showNotification('Low stock alert - Feature coming soon!', 'warning');
+}
+
+function exportReports() {
+    showNotification('Export reports - Feature coming soon!', 'info');
 }

@@ -1,4 +1,4 @@
-// Real-time Notifications System
+// Modern Notification System
 class NotificationManager {
     constructor() {
         this.notifications = [];
@@ -20,26 +20,36 @@ class NotificationManager {
         document.body.appendChild(container);
         this.container = container;
 
-        // Create notification bell icon
-        const bellIcon = document.createElement('div');
-        bellIcon.id = 'notification-bell';
-        bellIcon.className = 'notification-bell';
-        bellIcon.innerHTML = `
-            <div class="bell-icon">🔔</div>
-            <div class="notification-count" id="notification-count">0</div>
-        `;
-        
-        // Add to header if it exists
-        const header = document.querySelector('header');
-        if (header) {
-            const userInfo = document.getElementById('user-info');
-            if (userInfo) {
-                userInfo.parentNode.insertBefore(bellIcon, userInfo);
-            }
-        }
+        // Create notification bell icon in header
+        this.createNotificationBell();
+    }
 
-        // Add click handler for bell
-        bellIcon.addEventListener('click', () => this.toggleNotificationPanel());
+    createNotificationBell() {
+        const header = document.querySelector('.customer-header, .sidebar-header');
+        if (header) {
+            const bellContainer = document.createElement('div');
+            bellContainer.className = 'notification-bell-container';
+            bellContainer.innerHTML = `
+                <button id="notification-bell" class="notification-bell">
+                    <svg class="icon bell-icon" viewBox="0 0 24 24">
+                        <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/>
+                        <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+                    </svg>
+                    <div class="notification-count" id="notification-count">0</div>
+                </button>
+            `;
+            
+            // Insert before user info or at the end
+            const userInfo = header.querySelector('.user-info, .header-user');
+            if (userInfo) {
+                userInfo.parentNode.insertBefore(bellContainer, userInfo);
+            } else {
+                header.appendChild(bellContainer);
+            }
+
+            // Add click handler for bell
+            document.getElementById('notification-bell').addEventListener('click', () => this.toggleNotificationPanel());
+        }
     }
 
     toggleNotificationPanel() {
@@ -56,14 +66,32 @@ class NotificationManager {
         
         panel.innerHTML = `
             <div class="notification-header">
-                <h4>Notifications</h4>
-                <button id="mark-all-read" class="btn btn-sm btn-secondary">Mark All Read</button>
+                <h4>
+                    <svg class="icon" viewBox="0 0 24 24">
+                        <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/>
+                        <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+                    </svg>
+                    Notifications
+                </h4>
+                <button id="mark-all-read" class="btn btn-sm btn-secondary">
+                    <svg class="icon icon-sm" viewBox="0 0 24 24">
+                        <path d="M9 12l2 2 4-4"/>
+                        <circle cx="12" cy="12" r="9"/>
+                    </svg>
+                    Mark All Read
+                </button>
             </div>
             <div class="notification-list" id="notification-list">
                 ${this.renderNotificationList()}
             </div>
             <div class="notification-footer">
-                <button id="clear-all-notifications" class="btn btn-sm btn-danger">Clear All</button>
+                <button id="clear-all-notifications" class="btn btn-sm btn-danger">
+                    <svg class="icon icon-sm" viewBox="0 0 24 24">
+                        <polyline points="3,6 5,6 21,6"/>
+                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                    </svg>
+                    Clear All
+                </button>
             </div>
         `;
 
@@ -83,7 +111,20 @@ class NotificationManager {
 
     renderNotificationList() {
         if (this.notifications.length === 0) {
-            return '<div class="no-notifications">No notifications</div>';
+            return `
+                <div class="no-notifications">
+                    <div class="empty-state">
+                        <div class="empty-state-icon">
+                            <svg class="icon icon-xl" viewBox="0 0 24 24">
+                                <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/>
+                                <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+                            </svg>
+                        </div>
+                        <div class="empty-state-title">No notifications</div>
+                        <div class="empty-state-description">You're all caught up!</div>
+                    </div>
+                </div>
+            `;
         }
 
         return this.notifications.map(notification => `
@@ -94,23 +135,28 @@ class NotificationManager {
                     <div class="notification-message">${notification.message}</div>
                     <div class="notification-time">${this.formatTime(notification.timestamp)}</div>
                 </div>
-                <button class="notification-close" onclick="notificationManager.removeNotification('${notification.id}')">×</button>
+                <button class="notification-close" onclick="notificationManager.removeNotification('${notification.id}')">
+                    <svg class="icon" viewBox="0 0 24 24">
+                        <line x1="18" y1="6" x2="6" y2="18"/>
+                        <line x1="6" y1="6" x2="18" y2="18"/>
+                    </svg>
+                </button>
             </div>
         `).join('');
     }
 
     getNotificationIcon(type) {
         const icons = {
-            'job_update': '🔧',
-            'payment': '💳',
-            'booking': '📅',
-            'inventory': '📦',
-            'system': '⚙️',
-            'success': '✅',
-            'warning': '⚠️',
-            'error': '❌'
+            'job_update': '<svg class="icon" viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>',
+            'payment': '<svg class="icon" viewBox="0 0 24 24"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>',
+            'booking': '<svg class="icon" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>',
+            'inventory': '<svg class="icon" viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27,6.96 12,12.01 20.73,6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>',
+            'system': '<svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>',
+            'success': '<svg class="icon" viewBox="0 0 24 24"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="9"/></svg>',
+            'warning': '<svg class="icon" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',
+            'error': '<svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>'
         };
-        return icons[type] || '📢';
+        return icons[type] || '<svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>';
     }
 
     formatTime(timestamp) {
@@ -145,14 +191,19 @@ class NotificationManager {
 
     showToast(notification) {
         const toast = document.createElement('div');
-        toast.className = 'notification-toast';
+        toast.className = `notification-toast ${notification.type}`;
         toast.innerHTML = `
             <div class="toast-icon">${this.getNotificationIcon(notification.type)}</div>
             <div class="toast-content">
                 <div class="toast-title">${notification.title}</div>
                 <div class="toast-message">${notification.message}</div>
             </div>
-            <button class="toast-close" onclick="this.parentElement.remove()">×</button>
+            <button class="toast-close" onclick="this.parentElement.remove()">
+                <svg class="icon" viewBox="0 0 24 24">
+                    <line x1="18" y1="6" x2="6" y2="18"/>
+                    <line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+            </button>
         `;
 
         this.container.appendChild(toast);
@@ -174,7 +225,7 @@ class NotificationManager {
         
         if (countElement) {
             countElement.textContent = unreadCount;
-            countElement.style.display = unreadCount > 0 ? 'block' : 'none';
+            countElement.style.display = unreadCount > 0 ? 'flex' : 'none';
         }
 
         // Update bell animation
@@ -225,11 +276,11 @@ class NotificationManager {
     }
 
     saveNotifications() {
-        localStorage.setItem('autorepairpro_notifications', JSON.stringify(this.notifications));
+        localStorage.setItem('repairhub_notifications', JSON.stringify(this.notifications));
     }
 
     loadStoredNotifications() {
-        const stored = localStorage.getItem('autorepairpro_notifications');
+        const stored = localStorage.getItem('repairhub_notifications');
         if (stored) {
             this.notifications = JSON.parse(stored);
             this.updateNotificationCount();
