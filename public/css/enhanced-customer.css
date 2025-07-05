@@ -1,88 +1,41 @@
-/* Enhanced Customer Dashboard - Modern UI/UX with Animations */
+/* Enhanced Customer Dashboard - Modern UI/UX */
 
 /* Customer-specific overrides for sidebar layout */
 .customer-dashboard .dashboard-layout {
     background: linear-gradient(135deg, var(--secondary-50) 0%, var(--primary-50) 100%);
 }
 
-/* Enhanced Metrics Cards for Customer with Animations */
-.metric-card {
-    position: relative;
-    overflow: hidden;
-    transition: all var(--transition-normal);
-    cursor: pointer;
-}
-
-.metric-card::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 4px;
-    transition: all var(--transition-normal);
-}
-
-.metric-card:hover {
-    transform: translateY(-4px) scale(1.02);
-    box-shadow: var(--shadow-xl);
-}
-
-.metric-card.jobs::before {
+/* Enhanced Metrics Cards for Customer */
+.customer-dashboard .metric-card.jobs::before {
     background: linear-gradient(90deg, var(--primary-500), var(--primary-600));
 }
 
-.metric-card.active::before {
-    background: linear-gradient(90deg, var(--warning-500), var(--warning-600));
-}
-
-.metric-card.completed::before {
+.customer-dashboard .metric-card.completed::before {
     background: linear-gradient(90deg, var(--success-500), var(--success-600));
 }
 
-.metric-card.spent::before {
+.customer-dashboard .metric-card.vehicles::before {
+    background: linear-gradient(90deg, var(--warning-500), var(--warning-600));
+}
+
+.customer-dashboard .metric-card.spent::before {
     background: linear-gradient(90deg, var(--error-500), var(--error-600));
 }
 
-.metric-icon {
-    transition: transform var(--transition-normal);
-}
-
-.metric-card:hover .metric-icon {
-    transform: scale(1.1) rotate(5deg);
-}
-
-/* Job Summary Items with Enhanced Animations */
+/* Job Summary Items */
 .job-summary-item {
     padding: var(--space-4);
     border: 1px solid var(--secondary-200);
     border-radius: var(--radius-lg);
     margin-bottom: var(--space-3);
-    transition: all var(--transition-normal);
+    transition: all var(--transition-fast);
     background: white;
-    position: relative;
-    overflow: hidden;
-}
-
-.job-summary-item::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: -100%;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
-    transition: left 0.5s ease;
-}
-
-.job-summary-item:hover::before {
-    left: 100%;
 }
 
 .job-summary-item:hover {
     border-color: var(--primary-300);
-    box-shadow: var(--shadow-lg);
-    transform: translateY(-2px) scale(1.01);
+    box-shadow: var(--shadow-md);
+    transform: translateY(-2px);
 }
 
 .job-summary-header {
@@ -96,11 +49,6 @@
     font-weight: 600;
     color: var(--primary-600);
     font-size: var(--text-sm);
-    transition: color var(--transition-fast);
-}
-
-.job-summary-item:hover .job-id {
-    color: var(--primary-700);
 }
 
 .job-summary-details {
@@ -125,7 +73,7 @@
     font-size: var(--text-xs);
 }
 
-/* Vehicle Summary Items with Hover Effects */
+/* Vehicle Summary Items */
 .vehicle-summary-item {
     display: flex;
     align-items: center;
@@ -134,16 +82,14 @@
     border: 1px solid var(--secondary-200);
     border-radius: var(--radius-lg);
     margin-bottom: var(--space-3);
-    transition: all var(--transition-normal);
+    transition: all var(--transition-fast);
     background: white;
-    cursor: pointer;
 }
 
 .vehicle-summary-item:hover {
     border-color: var(--primary-300);
     box-shadow: var(--shadow-md);
     transform: translateY(-2px);
-    background: var(--primary-50);
 }
 
 .vehicle-summary-icon {
@@ -155,12 +101,6 @@
     align-items: center;
     justify-content: center;
     color: var(--primary-600);
-    transition: all var(--transition-normal);
-}
-
-.vehicle-summary-item:hover .vehicle-summary-icon {
-    background: var(--primary-200);
-    transform: scale(1.1);
 }
 
 .vehicle-summary-details {
@@ -171,11 +111,6 @@
     font-weight: 600;
     color: var(--secondary-900);
     font-size: var(--text-sm);
-    transition: color var(--transition-fast);
-}
-
-.vehicle-summary-item:hover .vehicle-name {
-    color: var(--primary-700);
 }
 
 .vehicle-year {
@@ -183,7 +118,7 @@
     font-size: var(--text-xs);
 }
 
-/* Enhanced Map Container - Fixed Layout with Animations */
+/* Enhanced Map Container - Fixed Layout */
 .map-container {
     background: white;
     border-radius: var(--radius-2xl);
@@ -191,18 +126,6 @@
     box-shadow: var(--shadow-lg);
     border: 1px solid var(--secondary-200);
     margin-bottom: var(--space-8);
-    animation: slideUp 0.6s ease;
-}
-
-@keyframes slideUp {
-    from {
-        opacity: 0;
-        transform: translateY(20px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
 }
 
 .map-header {
@@ -240,64 +163,38 @@
     padding-right: var(--space-2);
 }
 
-/* Enhanced Branch Cards - Fixed Readability with Smooth Animations */
+/* Enhanced Branch Cards - Fixed Readability */
 .branch-card {
     background: white;
     border: 2px solid var(--secondary-200);
     border-radius: var(--radius-xl);
     padding: var(--space-6);
     cursor: pointer;
-    transition: all var(--transition-normal);
+    transition: all var(--transition-fast);
     position: relative;
     box-shadow: var(--shadow-sm);
-    overflow: hidden;
-}
-
-.branch-card::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: -100%;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(90deg, transparent, rgba(59, 130, 246, 0.1), transparent);
-    transition: left 0.6s ease;
-}
-
-.branch-card:hover::before {
-    left: 100%;
 }
 
 .branch-card:hover {
     border-color: var(--primary-300);
-    box-shadow: var(--shadow-xl);
-    transform: translateY(-4px) scale(1.02);
+    box-shadow: var(--shadow-lg);
+    transform: translateY(-2px);
 }
 
 .branch-card.selected {
     border-color: var(--primary-500);
     background: var(--primary-50);
     box-shadow: var(--shadow-xl);
-    transform: scale(1.03);
-    animation: selectedPulse 2s infinite;
+    transform: scale(1.02);
 }
 
-@keyframes selectedPulse {
-    0%, 100% {
-        box-shadow: var(--shadow-xl);
-    }
-    50% {
-        box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.2), var(--shadow-xl);
-    }
-}
-
-.branch-card.selected::after {
+.branch-card.selected::before {
     content: '✓';
     position: absolute;
     top: var(--space-3);
     right: var(--space-3);
-    width: 28px;
-    height: 28px;
+    width: 24px;
+    height: 24px;
     background: var(--primary-600);
     color: white;
     border-radius: var(--radius-full);
@@ -306,19 +203,6 @@
     justify-content: center;
     font-weight: bold;
     font-size: var(--text-sm);
-    animation: checkmarkBounce 0.5s ease;
-}
-
-@keyframes checkmarkBounce {
-    0% {
-        transform: scale(0);
-    }
-    50% {
-        transform: scale(1.2);
-    }
-    100% {
-        transform: scale(1);
-    }
 }
 
 .branch-header {
@@ -335,11 +219,6 @@
     margin: 0;
     flex: 1;
     margin-right: var(--space-2);
-    transition: color var(--transition-fast);
-}
-
-.branch-card:hover .branch-header h4 {
-    color: var(--primary-700);
 }
 
 .branch-rating {
@@ -353,12 +232,6 @@
     padding: var(--space-1) var(--space-2);
     border-radius: var(--radius-full);
     white-space: nowrap;
-    transition: all var(--transition-fast);
-}
-
-.branch-card:hover .branch-rating {
-    background: var(--warning-200);
-    transform: scale(1.05);
 }
 
 .branch-details {
@@ -375,13 +248,6 @@
     display: flex;
     align-items: flex-start;
     gap: var(--space-2);
-    transition: color var(--transition-fast);
-}
-
-.branch-card:hover .branch-address,
-.branch-card:hover .branch-phone,
-.branch-card:hover .branch-hours {
-    color: var(--secondary-800);
 }
 
 .branch-services {
@@ -408,23 +274,11 @@
     border-radius: var(--radius-sm);
     font-size: var(--text-xs);
     font-weight: 500;
-    transition: all var(--transition-fast);
-}
-
-.branch-card:hover .service-tag {
-    background: var(--primary-200);
-    transform: translateY(-1px);
 }
 
 .select-branch-btn {
     width: 100%;
     margin-top: var(--space-4);
-    transition: all var(--transition-normal);
-}
-
-.select-branch-btn:hover {
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-lg);
 }
 
 /* Enhanced Selected Branch Info - Fixed Layout */
@@ -437,7 +291,6 @@
     top: var(--space-4);
     height: fit-content;
     min-height: 300px;
-    transition: all var(--transition-normal);
 }
 
 .selected-branch-details h4 {
@@ -461,15 +314,6 @@
     display: flex;
     flex-direction: column;
     gap: var(--space-1);
-    padding: var(--space-3);
-    background: white;
-    border-radius: var(--radius-md);
-    transition: all var(--transition-fast);
-}
-
-.info-item:hover {
-    background: var(--primary-50);
-    transform: translateX(4px);
 }
 
 .info-item strong {
@@ -495,65 +339,20 @@
     gap: var(--space-3);
 }
 
-.branch-actions .btn {
-    transition: all var(--transition-normal);
-}
-
-.branch-actions .btn:hover {
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-md);
-}
-
-/* Location Detection Button States with Animations */
+/* Location Detection Button States */
 .location-btn-detecting {
     background: var(--warning-500) !important;
     color: white !important;
-    animation: detectingPulse 1.5s infinite;
-}
-
-@keyframes detectingPulse {
-    0%, 100% {
-        opacity: 1;
-    }
-    50% {
-        opacity: 0.7;
-    }
 }
 
 .location-btn-success {
     background: var(--success-500) !important;
     color: white !important;
-    animation: successBounce 0.6s ease;
-}
-
-@keyframes successBounce {
-    0% {
-        transform: scale(1);
-    }
-    50% {
-        transform: scale(1.1);
-    }
-    100% {
-        transform: scale(1);
-    }
 }
 
 .location-btn-error {
     background: var(--error-500) !important;
     color: white !important;
-    animation: errorShake 0.5s ease;
-}
-
-@keyframes errorShake {
-    0%, 100% {
-        transform: translateX(0);
-    }
-    25% {
-        transform: translateX(-4px);
-    }
-    75% {
-        transform: translateX(4px);
-    }
 }
 
 /* Enhanced Booking Container */
@@ -564,7 +363,6 @@
     box-shadow: var(--shadow-lg);
     border: 1px solid var(--secondary-200);
     margin-bottom: var(--space-8);
-    animation: slideUp 0.8s ease;
 }
 
 .booking-form {
@@ -579,22 +377,12 @@
     gap: var(--space-6);
 }
 
-.form-group {
-    position: relative;
-}
-
-.form-input:focus {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
-}
-
 .service-details {
     background: linear-gradient(135deg, var(--primary-50), var(--primary-100));
     border: 2px solid var(--primary-200);
     border-radius: var(--radius-2xl);
     padding: var(--space-6);
     margin-top: var(--space-6);
-    animation: slideUp 0.5s ease;
 }
 
 .service-details h4 {
@@ -613,14 +401,6 @@
     align-items: center;
     padding: var(--space-3) 0;
     border-bottom: 1px solid var(--primary-200);
-    transition: all var(--transition-fast);
-}
-
-.detail-item:hover {
-    background: rgba(255, 255, 255, 0.5);
-    padding-left: var(--space-2);
-    padding-right: var(--space-2);
-    border-radius: var(--radius-md);
 }
 
 .detail-item:last-child {
@@ -639,7 +419,7 @@
     text-align: right;
 }
 
-/* Enhanced Vehicle Cards with Smooth Animations */
+/* Enhanced Vehicle Cards */
 .vehicles-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
@@ -651,10 +431,9 @@
     border: 2px solid var(--secondary-200);
     border-radius: var(--radius-2xl);
     padding: var(--space-6);
-    transition: all var(--transition-normal);
+    transition: all var(--transition-fast);
     position: relative;
     overflow: hidden;
-    animation: slideUp 0.6s ease;
 }
 
 .vehicle-card::before {
@@ -667,25 +446,10 @@
     background: linear-gradient(90deg, var(--primary-500), var(--primary-600));
 }
 
-.vehicle-card::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: -100%;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
-    transition: left 0.6s ease;
-}
-
-.vehicle-card:hover::after {
-    left: 100%;
-}
-
 .vehicle-card:hover {
     border-color: var(--primary-300);
     box-shadow: var(--shadow-xl);
-    transform: translateY(-6px) scale(1.02);
+    transform: translateY(-4px);
 }
 
 .vehicle-header {
@@ -704,12 +468,6 @@
     align-items: center;
     justify-content: center;
     color: var(--primary-600);
-    transition: all var(--transition-normal);
-}
-
-.vehicle-card:hover .vehicle-icon {
-    background: linear-gradient(135deg, var(--primary-200), var(--primary-300));
-    transform: scale(1.1) rotate(5deg);
 }
 
 .vehicle-status .status-badge {
@@ -719,12 +477,6 @@
     border-radius: var(--radius-full);
     font-size: var(--text-xs);
     font-weight: 600;
-    transition: all var(--transition-fast);
-}
-
-.vehicle-card:hover .vehicle-status .status-badge {
-    background: var(--success-200);
-    transform: scale(1.05);
 }
 
 .vehicle-info h3 {
@@ -732,11 +484,6 @@
     font-weight: 600;
     color: var(--secondary-900);
     margin-bottom: var(--space-4);
-    transition: color var(--transition-fast);
-}
-
-.vehicle-card:hover .vehicle-info h3 {
-    color: var(--primary-700);
 }
 
 .vehicle-details {
@@ -750,14 +497,6 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: var(--space-2);
-    border-radius: var(--radius-md);
-    transition: all var(--transition-fast);
-}
-
-.detail-item:hover {
-    background: var(--secondary-50);
-    transform: translateX(4px);
 }
 
 .detail-label {
@@ -777,48 +516,24 @@
     gap: var(--space-3);
 }
 
-.vehicle-actions .btn {
-    flex: 1;
-    transition: all var(--transition-normal);
-}
-
-.vehicle-actions .btn:hover {
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-md);
-}
-
-/* Enhanced Job Rows with Status-based Styling */
+/* Enhanced Job Rows */
 .job-row {
     position: relative;
-    transition: all var(--transition-fast);
-}
-
-.job-row:hover {
-    background: var(--secondary-50);
-    transform: scale(1.01);
 }
 
 .job-row[data-status="completed"] {
     background: var(--success-50);
-    border-left: 4px solid var(--success-500);
 }
 
 .job-row[data-status="in-progress"] {
     background: var(--warning-50);
-    border-left: 4px solid var(--warning-500);
 }
 
 .job-row[data-status="invoiced"] {
     background: var(--primary-50);
-    border-left: 4px solid var(--primary-500);
 }
 
-.job-row[data-status="booked"] {
-    background: var(--secondary-50);
-    border-left: 4px solid var(--secondary-400);
-}
-
-/* Enhanced Payment Styles with Animations */
+/* Enhanced Payment Styles */
 .payment-info {
     text-align: center;
 }
@@ -829,13 +544,6 @@
     border-radius: var(--radius-xl);
     padding: var(--space-4);
     margin-bottom: var(--space-4);
-    transition: all var(--transition-normal);
-    animation: slideUp 0.5s ease;
-}
-
-.payment-amount-display:hover {
-    background: var(--success-100);
-    transform: scale(1.02);
 }
 
 .amount-label {
@@ -850,18 +558,6 @@
     font-size: var(--text-2xl);
     font-weight: 700;
     color: var(--success-600);
-    animation: countUp 1s ease;
-}
-
-@keyframes countUp {
-    from {
-        opacity: 0;
-        transform: translateY(20px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
 }
 
 .payment-status-paid {
@@ -877,16 +573,6 @@
     border-radius: var(--radius-xl);
     border: 2px solid var(--success-200);
     margin-bottom: var(--space-4);
-    animation: successPulse 2s infinite;
-}
-
-@keyframes successPulse {
-    0%, 100% {
-        box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.4);
-    }
-    50% {
-        box-shadow: 0 0 0 8px rgba(34, 197, 94, 0);
-    }
 }
 
 .payment-details {
@@ -908,16 +594,6 @@
     padding: var(--space-4);
     border-radius: var(--radius-xl);
     border: 2px solid var(--secondary-200);
-    animation: pendingPulse 3s infinite;
-}
-
-@keyframes pendingPulse {
-    0%, 100% {
-        opacity: 1;
-    }
-    50% {
-        opacity: 0.7;
-    }
 }
 
 /* Enhanced Processing Overlay */
@@ -934,7 +610,6 @@
     z-index: var(--z-toast);
     backdrop-filter: blur(4px);
     transition: opacity var(--transition-fast);
-    animation: fadeIn 0.3s ease;
 }
 
 .processing-message {
@@ -944,7 +619,6 @@
     text-align: center;
     box-shadow: var(--shadow-2xl);
     max-width: 300px;
-    animation: slideUp 0.5s ease;
 }
 
 .spinner {
@@ -957,78 +631,10 @@
     margin: 0 auto var(--space-4);
 }
 
-@keyframes spin {
-    to {
-        transform: rotate(360deg);
-    }
-}
-
 .processing-message p {
     font-size: var(--text-lg);
     font-weight: 600;
     color: var(--secondary-900);
-}
-
-/* Button Hover Enhancements */
-.btn {
-    position: relative;
-    overflow: hidden;
-    transition: all var(--transition-normal);
-}
-
-.btn::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: -100%;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-    transition: left 0.5s ease;
-}
-
-.btn:hover::before {
-    left: 100%;
-}
-
-.btn:hover {
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-lg);
-}
-
-.btn:active {
-    transform: translateY(0);
-    box-shadow: var(--shadow-md);
-}
-
-/* Tab Navigation Enhancements */
-.nav-link {
-    position: relative;
-    transition: all var(--transition-normal);
-}
-
-.nav-link::after {
-    content: '';
-    position: absolute;
-    bottom: 0;
-    left: 50%;
-    width: 0;
-    height: 3px;
-    background: var(--primary-600);
-    transition: all var(--transition-normal);
-    transform: translateX(-50%);
-}
-
-.nav-link:hover::after {
-    width: 80%;
-}
-
-.nav-link.active::after {
-    width: 100%;
-}
-
-.nav-link:hover {
-    transform: translateY(-2px);
 }
 
 /* Enhanced Responsive Design */
@@ -1087,48 +693,4 @@
     .branches-list {
         max-height: 400px;
     }
-    
-    /* Reduce animations on mobile for better performance */
-    .metric-card:hover,
-    .vehicle-card:hover,
-    .branch-card:hover {
-        transform: translateY(-2px) scale(1.01);
-    }
-}
-
-/* Accessibility Enhancements */
-@media (prefers-reduced-motion: reduce) {
-    *,
-    *::before,
-    *::after {
-        animation-duration: 0.01ms !important;
-        animation-iteration-count: 1 !important;
-        transition-duration: 0.01ms !important;
-    }
-}
-
-/* Focus States for Better Accessibility */
-.btn:focus,
-.form-input:focus,
-.nav-link:focus {
-    outline: 2px solid var(--primary-500);
-    outline-offset: 2px;
-}
-
-/* Loading States */
-.loading-skeleton {
-    background: linear-gradient(
-        90deg,
-        var(--secondary-200) 25%,
-        var(--secondary-100) 50%,
-        var(--secondary-200) 75%
-    );
-    background-size: 200% 100%;
-    animation: loading 1.5s infinite;
-    border-radius: var(--radius-md);
-}
-
-@keyframes loading {
-    0% { background-position: 200% 0; }
-    100% { background-position: -200% 0; }
 }

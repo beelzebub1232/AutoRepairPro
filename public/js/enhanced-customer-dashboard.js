@@ -1,4 +1,4 @@
-// Enhanced Customer Dashboard - Complete Implementation with Fixed Issues
+// Enhanced Customer Dashboard - Complete Implementation with Modern UI/UX
 document.addEventListener('DOMContentLoaded', () => {
     const userRole = sessionStorage.getItem('userRole');
     const userName = sessionStorage.getItem('userName');
@@ -24,36 +24,18 @@ function initializeDashboard(userName, userId) {
     // Initialize modules
     initializeNavigation();
     initializeLogout();
+    initializeOverview();
     initializeBookingModule();
     initializeVehicleModule();
     initializeJobsModule();
     initializePaymentModule();
     initializeMapIntegration();
     
-    // Load initial data and set default tab
+    // Load initial data
     loadCustomerData();
-    
-    // Fix: Ensure overview tab is active on page load/refresh
-    setTimeout(() => {
-        const overviewTab = document.querySelector('[data-tab="overview"]');
-        const overviewContent = document.getElementById('overview-tab');
-        
-        if (overviewTab && overviewContent) {
-            // Remove active from all tabs and contents
-            document.querySelectorAll('.nav-link').forEach(link => link.classList.remove('active'));
-            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
-            
-            // Set overview as active
-            overviewTab.classList.add('active');
-            overviewContent.classList.add('active');
-            
-            // Load overview data
-            loadOverviewData();
-        }
-    }, 100);
 }
 
-// Navigation System - Fixed to handle refresh properly
+// Navigation System
 function initializeNavigation() {
     const navLinks = document.querySelectorAll('.nav-link');
     const tabContents = document.querySelectorAll('.tab-content');
@@ -63,20 +45,41 @@ function initializeNavigation() {
             e.preventDefault();
             const targetTab = link.getAttribute('data-tab');
             
-            // Remove active class from all buttons and contents
+            // Update active states
             navLinks.forEach(l => l.classList.remove('active'));
             tabContents.forEach(content => content.classList.remove('active'));
             
-            // Add active class to clicked button and corresponding content
             link.classList.add('active');
-            const targetContent = document.getElementById(`${targetTab}-tab`);
-            if (targetContent) {
-                targetContent.classList.add('active');
+            const targetElement = document.getElementById(`${targetTab}-tab`);
+            if (targetElement) {
+                targetElement.classList.add('active');
             }
             
-            // Load data for the active tab
+            // Load tab data
             loadTabData(targetTab);
         });
+    });
+
+    // Quick book button
+    const quickBookBtn = document.getElementById('quick-book-btn');
+    if (quickBookBtn) {
+        quickBookBtn.addEventListener('click', () => {
+            document.querySelector('[data-tab="book-appointment"]').click();
+        });
+    }
+
+    // Fix "View All" and "Manage" buttons
+    document.addEventListener('click', (e) => {
+        if (e.target.matches('[data-tab]') || e.target.closest('[data-tab]')) {
+            const tabElement = e.target.matches('[data-tab]') ? e.target : e.target.closest('[data-tab]');
+            const targetTab = tabElement.getAttribute('data-tab');
+            
+            // Find and click the corresponding nav link
+            const navLink = document.querySelector(`.nav-link[data-tab="${targetTab}"]`);
+            if (navLink) {
+                navLink.click();
+            }
+        }
     });
 }
 
@@ -100,35 +103,48 @@ function loadTabData(tab) {
     }
 }
 
-// New function to load overview data
+// Logout functionality
+function initializeLogout() {
+    const logoutButton = document.getElementById('logout-button');
+    if (logoutButton) {
+        logoutButton.addEventListener('click', () => {
+            sessionStorage.clear();
+            window.location.href = '/index.html';
+        });
+    }
+}
+
+// Overview Module
+function initializeOverview() {
+    // Initialize overview functionality
+}
+
 async function loadOverviewData() {
     const userId = sessionStorage.getItem('userId');
     
     try {
-        const response = await fetch(`http://localhost:8080/api/customer/jobs/${userId}`);
-        if (!response.ok) throw new Error('Failed to fetch customer data');
+        const [jobsResponse, vehiclesResponse] = await Promise.all([
+            fetch(`http://localhost:8080/api/customer/jobs/${userId}`),
+            fetch(`http://localhost:8080/api/customer/vehicles/${userId}`)
+        ]);
         
-        const jobs = await response.json();
-        updateCustomerMetrics(jobs);
-        populateRecentJobs(jobs);
-        
-        // Load vehicles for summary
-        const vehiclesResponse = await fetch(`http://localhost:8080/api/customer/vehicles/${userId}`);
-        if (vehiclesResponse.ok) {
+        if (jobsResponse.ok && vehiclesResponse.ok) {
+            const jobs = await jobsResponse.json();
             const vehicles = await vehiclesResponse.json();
-            populateVehiclesSummary(vehicles);
+            
+            renderCustomerMetrics(jobs, vehicles);
+            renderRecentJobs(jobs.slice(0, 3));
+            renderVehiclesSummary(vehicles);
         }
     } catch (error) {
         console.error('Error loading overview data:', error);
     }
 }
 
-function updateCustomerMetrics(jobs) {
+function renderCustomerMetrics(jobs, vehicles) {
     const metricsGrid = document.getElementById('customer-metrics-grid');
-    if (!metricsGrid) return;
     
-    const totalJobs = jobs.length;
-    const activeJobs = jobs.filter(job => ['Booked', 'In Progress'].includes(job.status)).length;
+    const pendingJobs = jobs.filter(job => ['Booked', 'In Progress'].includes(job.status)).length;
     const completedJobs = jobs.filter(job => ['Completed', 'Invoiced', 'Paid'].includes(job.status)).length;
     const totalSpent = jobs
         .filter(job => job.totalCost && job.status === 'Paid')
@@ -136,31 +152,39 @@ function updateCustomerMetrics(jobs) {
 
     const metrics = [
         {
-            title: 'Total Jobs',
-            value: totalJobs,
-            icon: '<svg class="icon" viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>',
+            title: 'Active Jobs',
+            value: pendingJobs,
+            icon: `<svg class="icon" viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>`,
+            change: 'In progress',
+            changeType: 'neutral',
             class: 'jobs'
         },
         {
-            title: 'Active Jobs',
-            value: activeJobs,
-            icon: '<svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12,6 12,12 16,14"/></svg>',
-            class: 'active'
+            title: 'Completed Services',
+            value: completedJobs,
+            icon: `<svg class="icon" viewBox="0 0 24 24"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="9"/></svg>`,
+            change: 'All time',
+            changeType: 'positive',
+            class: 'completed'
         },
         {
-            title: 'Completed',
-            value: completedJobs,
-            icon: '<svg class="icon" viewBox="0 0 24 24"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="9"/></svg>',
-            class: 'completed'
+            title: 'My Vehicles',
+            value: vehicles.length,
+            icon: `<svg class="icon" viewBox="0 0 24 24"><path d="M7 17m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0"/><path d="M17 17m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0"/><path d="M5 17h-2v-6l2-5h9l4 5h1a2 2 0 0 1 2 2v4h-2"/><path d="M9 17v-6h8"/><path d="M2 6h15"/></svg>`,
+            change: 'Registered',
+            changeType: 'neutral',
+            class: 'vehicles'
         },
         {
             title: 'Total Spent',
             value: `$${totalSpent.toFixed(2)}`,
-            icon: '<svg class="icon" viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>',
+            icon: `<svg class="icon" viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>`,
+            change: 'Lifetime',
+            changeType: 'neutral',
             class: 'spent'
         }
     ];
-
+    
     metricsGrid.innerHTML = metrics.map(metric => `
         <div class="metric-card ${metric.class}">
             <div class="metric-header">
@@ -168,26 +192,29 @@ function updateCustomerMetrics(jobs) {
             </div>
             <div class="metric-value">${metric.value}</div>
             <div class="metric-label">${metric.title}</div>
+            <div class="metric-change ${metric.changeType}">
+                ${metric.change}
+            </div>
         </div>
     `).join('');
 }
 
-function populateRecentJobs(jobs) {
+function renderRecentJobs(jobs) {
     const recentJobsList = document.getElementById('recent-jobs-list');
-    if (!recentJobsList) return;
     
-    const recentJobs = jobs.slice(0, 3);
-    
-    if (recentJobs.length === 0) {
+    if (jobs.length === 0) {
         recentJobsList.innerHTML = `
             <div class="empty-state">
                 <div class="empty-state-description">No recent jobs found</div>
+                <button class="btn btn-primary btn-sm" data-tab="book-appointment">
+                    Book Your First Service
+                </button>
             </div>
         `;
         return;
     }
-    
-    recentJobsList.innerHTML = recentJobs.map(job => `
+
+    recentJobsList.innerHTML = jobs.map(job => `
         <div class="job-summary-item">
             <div class="job-summary-header">
                 <span class="job-id">#${job.jobId}</span>
@@ -202,19 +229,21 @@ function populateRecentJobs(jobs) {
     `).join('');
 }
 
-function populateVehiclesSummary(vehicles) {
+function renderVehiclesSummary(vehicles) {
     const vehiclesSummary = document.getElementById('vehicles-summary');
-    if (!vehiclesSummary) return;
     
     if (vehicles.length === 0) {
         vehiclesSummary.innerHTML = `
             <div class="empty-state">
                 <div class="empty-state-description">No vehicles registered</div>
+                <button class="btn btn-primary btn-sm" onclick="showVehicleModal()">
+                    Add Your First Vehicle
+                </button>
             </div>
         `;
         return;
     }
-    
+
     vehiclesSummary.innerHTML = vehicles.slice(0, 3).map(vehicle => `
         <div class="vehicle-summary-item">
             <div class="vehicle-summary-icon">
@@ -230,19 +259,11 @@ function populateVehiclesSummary(vehicles) {
                 <div class="vehicle-name">${vehicle.make} ${vehicle.model}</div>
                 <div class="vehicle-year">${vehicle.year}</div>
             </div>
+            <button class="btn btn-sm btn-primary" onclick="bookForVehicle(${vehicle.id})">
+                Book Service
+            </button>
         </div>
     `).join('');
-}
-
-// Logout functionality
-function initializeLogout() {
-    const logoutButton = document.getElementById('logout-button');
-    if (logoutButton) {
-        logoutButton.addEventListener('click', () => {
-            sessionStorage.clear();
-            window.location.href = '/index.html';
-        });
-    }
 }
 
 // Map Integration
@@ -379,6 +400,16 @@ function attachMapEventListeners() {
         });
     });
 
+    // Branch card click
+    document.querySelectorAll('.branch-card').forEach(card => {
+        card.addEventListener('click', (e) => {
+            if (!e.target.classList.contains('select-branch-btn')) {
+                const branchId = parseInt(card.getAttribute('data-branch-id'));
+                selectBranch(branchId);
+            }
+        });
+    });
+
     // Location detection
     const detectBtn = document.getElementById('detect-location');
     if (detectBtn) {
@@ -440,18 +471,11 @@ function updateSelectedBranchInfo(branchId) {
                     </div>
                 </div>
                 <div class="branch-actions">
-                    <button class="btn btn-sm btn-secondary">
+                    <button class="btn btn-sm btn-secondary" onclick="getDirections()">
                         <svg class="icon icon-sm" viewBox="0 0 24 24">
-                            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
-                            <circle cx="12" cy="10" r="3"/>
+                            <polygon points="3,11 22,2 13,21 11,13 3,11"/>
                         </svg>
                         Get Directions
-                    </button>
-                    <button class="btn btn-sm btn-primary">
-                        <svg class="icon icon-sm" viewBox="0 0 24 24">
-                            <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
-                        </svg>
-                        Call Branch
                     </button>
                 </div>
             </div>
@@ -503,12 +527,16 @@ function detectUserLocation() {
     );
 }
 
+function getDirections() {
+    showNotification('Opening directions in your default map app...', 'info');
+}
+
 // Booking Module
 function initializeBookingModule() {
     const bookingForm = document.getElementById('booking-form');
     const serviceSelect = document.getElementById('booking-service');
+    const vehicleSelect = document.getElementById('booking-vehicle');
     const addVehicleBtn = document.getElementById('add-vehicle-btn');
-    const quickBookBtn = document.getElementById('quick-book-btn');
 
     if (bookingForm) {
         bookingForm.addEventListener('submit', async (e) => {
@@ -519,20 +547,16 @@ function initializeBookingModule() {
 
     if (serviceSelect) {
         serviceSelect.addEventListener('change', showServiceDetails);
+        // Apply custom styling
+        serviceSelect.classList.add('form-select');
+    }
+
+    if (vehicleSelect) {
+        vehicleSelect.classList.add('form-select');
     }
 
     if (addVehicleBtn) {
         addVehicleBtn.addEventListener('click', () => showVehicleModal());
-    }
-
-    if (quickBookBtn) {
-        quickBookBtn.addEventListener('click', () => {
-            // Switch to booking tab
-            const bookingTab = document.querySelector('[data-tab="book-appointment"]');
-            if (bookingTab) {
-                bookingTab.click();
-            }
-        });
     }
 
     // Set minimum date to today
@@ -658,6 +682,11 @@ async function bookAppointment() {
             document.getElementById('service-details').style.display = 'none';
             document.getElementById('selected-branch-name').textContent = 'Please select a branch above';
             loadCustomerData(); // Refresh stats
+            
+            // Notify chatbot
+            if (window.enhancedChatbot) {
+                window.enhancedChatbot.notifyBooking(document.getElementById('booking-service').selectedOptions[0].textContent);
+            }
         } else {
             showNotification(result.error || 'Failed to book appointment', 'error');
         }
@@ -727,6 +756,7 @@ async function addVehicle() {
             showNotification('Vehicle added successfully!', 'success');
             loadMyVehicles();
             loadCustomerVehicles(); // Refresh booking dropdown
+            loadOverviewData(); // Refresh overview
         } else {
             showNotification(result.error || 'Failed to add vehicle', 'error');
         }
@@ -769,6 +799,13 @@ function populateVehiclesGrid(vehicles) {
                 </div>
                 <div class="empty-state-title">No vehicles found</div>
                 <div class="empty-state-description">Add your first vehicle to get started!</div>
+                <button class="btn btn-primary" onclick="showVehicleModal()">
+                    <svg class="icon icon-sm" viewBox="0 0 24 24">
+                        <line x1="12" y1="5" x2="12" y2="19"/>
+                        <line x1="5" y1="12" x2="19" y2="12"/>
+                    </svg>
+                    Add Vehicle
+                </button>
             </div>
         `;
         return;
@@ -806,7 +843,7 @@ function populateVehiclesGrid(vehicles) {
                 </div>
             </div>
             <div class="vehicle-actions">
-                <button class="btn btn-sm btn-primary" onclick="bookForVehicle(${vehicle.id})">
+                <button class="btn btn-primary" onclick="bookForVehicle(${vehicle.id})">
                     <svg class="icon icon-sm" viewBox="0 0 24 24">
                         <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
                         <line x1="16" y1="2" x2="16" y2="6"/>
@@ -815,13 +852,12 @@ function populateVehiclesGrid(vehicles) {
                     </svg>
                     Book Service
                 </button>
-                <button class="btn btn-sm btn-secondary">
+                <button class="btn btn-secondary" onclick="editVehicle(${vehicle.id})">
                     <svg class="icon icon-sm" viewBox="0 0 24 24">
-                        <path d="M3 3v5h5"/>
-                        <path d="M3.05 13A9 9 0 1 0 6 5.3L3 8"/>
-                        <path d="M12 7v5l4 2"/>
+                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
                     </svg>
-                    History
+                    Edit
                 </button>
             </div>
         </div>
@@ -837,6 +873,10 @@ function bookForVehicle(vehicleId) {
             vehicleSelect.value = vehicleId;
         }
     }, 100);
+}
+
+function editVehicle(vehicleId) {
+    showNotification(`Edit vehicle #${vehicleId} - Feature coming soon!`, 'info');
 }
 
 // Jobs Module
@@ -880,6 +920,9 @@ function populateJobsTable(jobs) {
                     </div>
                     <div class="empty-state-title">No current jobs found</div>
                     <div class="empty-state-description">Book your first appointment to get started</div>
+                    <button class="btn btn-primary" data-tab="book-appointment">
+                        Book Appointment
+                    </button>
                 </td>
             </tr>
         `;
@@ -984,46 +1027,40 @@ function populateJobDetailsModal(job) {
     const paymentSection = document.getElementById('payment-section');
     if (job.status === 'Invoiced') {
         paymentSection.innerHTML = `
-            <div class="payment-info">
-                <div class="payment-amount-display">
-                    <span class="amount-label">Amount Due</span>
-                    <span class="amount-value">$${job.totalCost}</span>
-                </div>
-                <button class="btn btn-success" onclick="showPaymentModal(${job.jobId})">
-                    <svg class="icon icon-sm" viewBox="0 0 24 24">
-                        <rect x="1" y="4" width="22" height="16" rx="2" ry="2"/>
-                        <line x1="1" y1="10" x2="23" y2="10"/>
-                    </svg>
-                    Pay Now
-                </button>
+            <div class="payment-amount-display">
+                <span class="amount-label">Amount Due</span>
+                <span class="amount-value">$${job.totalCost}</span>
             </div>
+            <button class="btn btn-success btn-full" onclick="showPaymentModal(${job.jobId})">
+                <svg class="icon icon-sm" viewBox="0 0 24 24">
+                    <rect x="1" y="4" width="22" height="16" rx="2" ry="2"/>
+                    <line x1="1" y1="10" x2="23" y2="10"/>
+                </svg>
+                Pay Now
+            </button>
         `;
     } else if (job.status === 'Paid') {
         paymentSection.innerHTML = `
-            <div class="payment-info">
-                <div class="payment-status-paid">
-                    <svg class="icon icon-sm" viewBox="0 0 24 24">
-                        <path d="M9 12l2 2 4-4"/>
-                        <circle cx="12" cy="12" r="9"/>
-                    </svg>
-                    Payment Completed
-                </div>
-                <div class="payment-details">
-                    <div>Amount Paid: $${job.totalCost}</div>
-                    <div>Payment Date: ${job.completionDate ? new Date(job.completionDate).toLocaleDateString() : 'N/A'}</div>
-                </div>
+            <div class="payment-status-paid">
+                <svg class="icon icon-sm" viewBox="0 0 24 24">
+                    <path d="M9 12l2 2 4-4"/>
+                    <circle cx="12" cy="12" r="9"/>
+                </svg>
+                Payment Completed
+            </div>
+            <div class="payment-details">
+                <div>Amount Paid: $${job.totalCost}</div>
+                <div>Payment Date: ${job.completionDate ? new Date(job.completionDate).toLocaleDateString() : 'N/A'}</div>
             </div>
         `;
     } else {
         paymentSection.innerHTML = `
-            <div class="payment-info">
-                <div class="payment-pending">
-                    <svg class="icon icon-sm" viewBox="0 0 24 24">
-                        <circle cx="12" cy="12" r="10"/>
-                        <polyline points="12,6 12,12 16,14"/>
-                    </svg>
-                    Payment will be available once the job is completed and invoiced.
-                </div>
+            <div class="payment-pending">
+                <svg class="icon icon-sm" viewBox="0 0 24 24">
+                    <circle cx="12" cy="12" r="10"/>
+                    <polyline points="12,6 12,12 16,14"/>
+                </svg>
+                Payment will be available once the job is completed and invoiced.
             </div>
         `;
     }
@@ -1083,7 +1120,13 @@ async function processPayment() {
             showNotification('Payment processed successfully!', 'success');
             loadMyJobs(); // Refresh jobs table
             loadServiceHistory(); // Refresh history
-            loadCustomerData(); // Refresh stats
+            loadOverviewData(); // Refresh overview
+            
+            // Notify chatbot
+            if (window.enhancedChatbot) {
+                const amount = document.getElementById('payment-amount').textContent;
+                window.enhancedChatbot.notifyPayment(amount);
+            }
         } else {
             showNotification(result.error || 'Payment failed', 'error');
         }
@@ -1105,9 +1148,10 @@ async function loadServiceHistory() {
         const jobs = await response.json();
         populateServiceHistoryTable(jobs);
         
-        // Initialize filter
+        // Initialize filter with custom styling
         const historyFilter = document.getElementById('history-filter');
         if (historyFilter) {
+            historyFilter.classList.add('form-select');
             historyFilter.addEventListener('change', () => filterServiceHistory(jobs));
         }
     } catch (error) {
@@ -1194,7 +1238,7 @@ function updateCustomerStats(jobs) {
 // Utility Functions
 function showModal(modal) {
     if (modal) {
-        modal.style.display = 'block';
+        modal.style.display = 'flex';
         modal.classList.add('show');
         document.body.style.overflow = 'hidden';
     }
@@ -1216,7 +1260,21 @@ function showNotification(message, type = 'info') {
             message: message
         });
     } else {
-        alert(message);
+        // Fallback notification
+        const notification = document.createElement('div');
+        notification.className = `notification-toast ${type}`;
+        notification.innerHTML = `
+            <div class="toast-content">
+                <div class="toast-title">${type === 'success' ? 'Success' : type === 'error' ? 'Error' : 'Info'}</div>
+                <div class="toast-message">${message}</div>
+            </div>
+        `;
+        
+        document.body.appendChild(notification);
+        
+        setTimeout(() => {
+            notification.remove();
+        }, 5000);
     }
 }
 
