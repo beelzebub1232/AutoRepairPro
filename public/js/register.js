@@ -4,6 +4,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     registerForm.addEventListener('submit', async (e) => {
         e.preventDefault();
+        
+        // Clear previous errors
+        errorMessage.classList.remove('show');
         errorMessage.textContent = '';
 
         const fullName = registerForm.fullname.value.trim();
@@ -13,19 +16,25 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Client-side validation
         if (!fullName || !username || !password) {
-            errorMessage.textContent = 'All fields are required.';
+            showError('All fields are required.');
             return;
         }
 
         if (password !== confirmPassword) {
-            errorMessage.textContent = 'Passwords do not match.';
+            showError('Passwords do not match.');
             return;
         }
 
         if (password.length < 6) {
-            errorMessage.textContent = 'Password must be at least 6 characters long.';
+            showError('Password must be at least 6 characters long.');
             return;
         }
+
+        // Add loading state
+        const submitBtn = registerForm.querySelector('button[type="submit"]');
+        const originalText = submitBtn.innerHTML;
+        submitBtn.innerHTML = '<span>Creating account...</span><span class="btn-arrow">⏳</span>';
+        submitBtn.disabled = true;
 
         try {
             const response = await fetch('http://localhost:8080/api/auth/register', {
@@ -43,15 +52,61 @@ document.addEventListener('DOMContentLoaded', () => {
             const data = await response.json();
 
             if (response.ok) {
-                // Registration successful
-                alert('Registration successful! Please login with your credentials.');
-                window.location.href = '/index.html';
+                // Show success state
+                submitBtn.innerHTML = '<span>Account created!</span><span class="btn-arrow">✅</span>';
+                
+                // Show success message
+                showSuccess('Registration successful! Redirecting to login...');
+                
+                // Redirect to login
+                setTimeout(() => {
+                    window.location.href = '/index.html';
+                }, 2000);
             } else {
-                errorMessage.textContent = data.error || 'Registration failed. Please try again.';
+                throw new Error(data.error || 'Registration failed');
             }
         } catch (error) {
             console.error('Registration request failed:', error);
-            errorMessage.textContent = 'An error occurred. Please check the console.';
+            
+            // Show error
+            showError(error.message || 'An error occurred. Please try again.');
+            
+            // Reset button
+            submitBtn.innerHTML = originalText;
+            submitBtn.disabled = false;
+            
+            // Add shake animation to form
+            registerForm.style.animation = 'shake 0.5s ease-in-out';
+            setTimeout(() => {
+                registerForm.style.animation = '';
+            }, 500);
         }
     });
+
+    function showError(message) {
+        errorMessage.textContent = message;
+        errorMessage.classList.add('show');
+        errorMessage.style.background = 'var(--error-50)';
+        errorMessage.style.color = 'var(--error-600)';
+        errorMessage.style.borderColor = 'var(--error-200)';
+    }
+
+    function showSuccess(message) {
+        errorMessage.textContent = message;
+        errorMessage.classList.add('show');
+        errorMessage.style.background = 'var(--success-50)';
+        errorMessage.style.color = 'var(--success-600)';
+        errorMessage.style.borderColor = 'var(--success-200)';
+    }
 });
+
+// Add shake animation
+const style = document.createElement('style');
+style.textContent = `
+    @keyframes shake {
+        0%, 100% { transform: translateX(0); }
+        25% { transform: translateX(-5px); }
+        75% { transform: translateX(5px); }
+    }
+`;
+document.head.appendChild(style);

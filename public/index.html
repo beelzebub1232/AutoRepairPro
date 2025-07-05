@@ -3,29 +3,91 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AutoRepairPro - Login</title>
-    <link rel="stylesheet" href="css/style.css">
+    <title>RepairHub Pro - Professional Auto Body Shop Management</title>
+    <link rel="stylesheet" href="css/modern-style.css">
 </head>
-<body>
-    <div class="login-container">
-        <h1>AutoRepairPro</h1>
-        <h2>Bodyshop Management System</h2>
-        <form id="login-form">
-            <div class="form-group">
-                <label for="username">Username</label>
-                <input type="text" id="username" name="username" required>
+<body class="login-page">
+    <div class="login-hero">
+        <div class="hero-background"></div>
+        <div class="hero-content">
+            <div class="brand-section">
+                <div class="brand-logo">
+                    <div class="logo-icon">🔧</div>
+                    <h1>RepairHub Pro</h1>
+                </div>
+                <p class="brand-tagline">Professional Auto Body Shop Management System</p>
+                <div class="feature-highlights">
+                    <div class="feature-item">
+                        <span class="feature-icon">📅</span>
+                        <span>Smart Scheduling</span>
+                    </div>
+                    <div class="feature-item">
+                        <span class="feature-icon">📊</span>
+                        <span>Real-time Analytics</span>
+                    </div>
+                    <div class="feature-item">
+                        <span class="feature-icon">💳</span>
+                        <span>Secure Payments</span>
+                    </div>
+                </div>
             </div>
-            <div class="form-group">
-                <label for="password">Password</label>
-                <input type="password" id="password" name="password" required>
+            
+            <div class="login-container">
+                <div class="login-header">
+                    <h2>Welcome Back</h2>
+                    <p>Sign in to your account</p>
+                </div>
+                
+                <form id="login-form" class="login-form">
+                    <div class="form-group">
+                        <label for="username">Username</label>
+                        <div class="input-wrapper">
+                            <span class="input-icon">👤</span>
+                            <input type="text" id="username" name="username" required placeholder="Enter your username">
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="password">Password</label>
+                        <div class="input-wrapper">
+                            <span class="input-icon">🔒</span>
+                            <input type="password" id="password" name="password" required placeholder="Enter your password">
+                        </div>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary btn-full">
+                        <span>Sign In</span>
+                        <span class="btn-arrow">→</span>
+                    </button>
+                    
+                    <div id="error-message" class="error-message"></div>
+                </form>
+                
+                <div class="login-footer">
+                    <p>Don't have an account? <a href="register.html" class="link-primary">Create one here</a></p>
+                </div>
+                
+                <div class="demo-accounts">
+                    <h4>Demo Accounts</h4>
+                    <div class="demo-grid">
+                        <div class="demo-account" data-username="admin" data-password="admin123">
+                            <span class="demo-role">Admin</span>
+                            <span class="demo-credentials">admin / admin123</span>
+                        </div>
+                        <div class="demo-account" data-username="tech1" data-password="tech123">
+                            <span class="demo-role">Employee</span>
+                            <span class="demo-credentials">tech1 / tech123</span>
+                        </div>
+                        <div class="demo-account" data-username="johndoe" data-password="customer123">
+                            <span class="demo-role">Customer</span>
+                            <span class="demo-credentials">johndoe / customer123</span>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <button type="submit">Login</button>
-            <p id="error-message" class="error-text"></p>
-        </form>
-        <p style="text-align: center; margin-top: 20px;">
-            Don't have an account? <a href="register.html" style="color: #3498db;">Register here</a>
-        </p>
+        </div>
     </div>
+    
     <script src="js/auth.js"></script>
 </body>
 </html>
