@@ -3,13 +3,12 @@ class NotificationManager {
     constructor() {
         this.notifications = [];
         this.container = null;
-        this.floatingIcon = null;
         this.init();
     }
 
     init() {
         this.createNotificationContainer();
-        this.createFloatingNotificationIcon();
+        this.createNotificationIcon();
         this.loadStoredNotifications();
         this.startPolling();
     }
@@ -19,85 +18,50 @@ class NotificationManager {
         const container = document.createElement('div');
         container.id = 'notification-container';
         container.className = 'notification-container';
-        container.style.cssText = `
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            z-index: 10000;
-            pointer-events: none;
-            max-width: 400px;
-        `;
         document.body.appendChild(container);
         this.container = container;
     }
 
-    createFloatingNotificationIcon() {
-        // Create floating notification icon above chatbot
-        const floatingIcon = document.createElement('div');
-        floatingIcon.className = 'notification-floating-icon';
-        floatingIcon.innerHTML = `
-            <svg class="icon" viewBox="0 0 24 24">
-                <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/>
-                <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
-            </svg>
-            <div class="notification-count" id="floating-notification-count">0</div>
+    createNotificationIcon() {
+        // Create notification icon positioned above chatbot
+        const notificationIcon = document.createElement('div');
+        notificationIcon.id = 'notification-icon-container';
+        notificationIcon.className = 'notification-icon-container';
+        notificationIcon.innerHTML = `
+            <button id="notification-bell" class="notification-bell">
+                <svg class="icon bell-icon" viewBox="0 0 24 24">
+                    <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/>
+                    <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+                </svg>
+                <div class="notification-count" id="notification-count">0</div>
+                <div class="notification-pulse"></div>
+            </button>
         `;
         
-        document.body.appendChild(floatingIcon);
-        this.floatingIcon = floatingIcon;
+        document.body.appendChild(notificationIcon);
 
-        // Add click handler for floating icon
-        floatingIcon.addEventListener('click', (e) => {
+        // Add click handler for bell
+        document.getElementById('notification-bell').addEventListener('click', (e) => {
             e.stopPropagation();
             this.toggleNotificationPanel();
         });
-
-        // Also create notification bell in header if user info exists
-        this.createNotificationBell();
-    }
-
-    createNotificationBell() {
-        // Look for the user info section in the header
-        const userInfo = document.querySelector('.user-info, .header-user, .user-profile');
-        if (userInfo && userInfo.parentElement) {
-            const bellContainer = document.createElement('div');
-            bellContainer.className = 'notification-bell-container';
-            bellContainer.innerHTML = `
-                <button id="notification-bell" class="notification-bell">
-                    <svg class="icon bell-icon" viewBox="0 0 24 24">
-                        <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/>
-                        <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
-                    </svg>
-                    <div class="notification-count" id="notification-count">0</div>
-                </button>
-            `;
-            
-            // Insert before user info
-            userInfo.parentElement.insertBefore(bellContainer, userInfo);
-
-            // Add click handler for bell
-            document.getElementById('notification-bell').addEventListener('click', (e) => {
-                e.stopPropagation();
-                this.toggleNotificationPanel();
-            });
-        }
     }
 
     toggleNotificationPanel() {
         const existingPanel = document.getElementById('notification-panel');
         
         if (existingPanel) {
-            this.hideNotificationPanel(existingPanel);
+            existingPanel.remove();
             return;
         }
 
-        this.showNotificationPanel();
-    }
-
-    showNotificationPanel() {
         const panel = document.createElement('div');
         panel.id = 'notification-panel';
         panel.className = 'notification-panel';
+        
+        // Position panel correctly above the notification icon
+        const bell = document.getElementById('notification-bell');
+        const bellRect = bell.getBoundingClientRect();
         
         panel.innerHTML = `
             <div class="notification-header">
@@ -130,6 +94,12 @@ class NotificationManager {
             </div>
         `;
 
+        // Position the panel correctly - above the notification icon
+        panel.style.position = 'fixed';
+        panel.style.bottom = (window.innerHeight - bellRect.top + 10) + 'px';
+        panel.style.right = '20px';
+        panel.style.zIndex = '10001';
+
         document.body.appendChild(panel);
 
         // Add event listeners
@@ -138,29 +108,10 @@ class NotificationManager {
 
         // Close panel when clicking outside
         document.addEventListener('click', (e) => {
-            if (!panel.contains(e.target) && 
-                !this.floatingIcon.contains(e.target) && 
-                !document.getElementById('notification-bell')?.contains(e.target)) {
-                this.hideNotificationPanel(panel);
-            }
-        });
-
-        // Animate panel appearance
-        setTimeout(() => {
-            panel.style.opacity = '1';
-            panel.style.transform = 'translateY(0) scale(1)';
-        }, 10);
-    }
-
-    hideNotificationPanel(panel) {
-        panel.style.opacity = '0';
-        panel.style.transform = 'translateY(-20px) scale(0.95)';
-        
-        setTimeout(() => {
-            if (panel.parentNode) {
+            if (!panel.contains(e.target) && !document.getElementById('notification-bell').contains(e.target)) {
                 panel.remove();
             }
-        }, 200);
+        });
     }
 
     renderNotificationList() {
@@ -208,10 +159,9 @@ class NotificationManager {
             'system': '<svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>',
             'success': '<svg class="icon" viewBox="0 0 24 24"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="9"/></svg>',
             'warning': '<svg class="icon" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',
-            'error': '<svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>',
-            'info': '<svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>'
+            'error': '<svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>'
         };
-        return icons[type] || icons['info'];
+        return icons[type] || '<svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>';
     }
 
     formatTime(timestamp) {
@@ -247,59 +197,13 @@ class NotificationManager {
     showToast(notification) {
         const toast = document.createElement('div');
         toast.className = `notification-toast ${notification.type}`;
-        toast.style.cssText = `
-            background: white;
-            border-radius: var(--radius-xl);
-            box-shadow: var(--shadow-lg);
-            margin-bottom: var(--space-4);
-            padding: var(--space-4);
-            display: flex;
-            align-items: flex-start;
-            max-width: 380px;
-            cursor: pointer;
-            transition: all var(--transition-fast);
-            pointer-events: all;
-            animation: toastSlideIn 0.3s ease;
-            border: 1px solid var(--secondary-200);
-            gap: var(--space-3);
-            border-left: 4px solid var(--${this.getToastColor(notification.type)});
-        `;
-        
         toast.innerHTML = `
-            <div class="toast-icon" style="
-                flex-shrink: 0;
-                width: 36px;
-                height: 36px;
-                background: var(--${this.getToastColor(notification.type)}-100);
-                border-radius: var(--radius-lg);
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                color: var(--${this.getToastColor(notification.type)}-600);
-            ">${this.getNotificationIcon(notification.type)}</div>
-            <div class="toast-content" style="flex: 1; min-width: 0;">
-                <div class="toast-title" style="
-                    font-weight: 600;
-                    color: var(--secondary-900);
-                    margin-bottom: var(--space-1);
-                    font-size: var(--text-sm);
-                ">${notification.title}</div>
-                <div class="toast-message" style="
-                    color: var(--secondary-600);
-                    font-size: var(--text-sm);
-                    line-height: 1.4;
-                ">${notification.message}</div>
+            <div class="toast-icon">${this.getNotificationIcon(notification.type)}</div>
+            <div class="toast-content">
+                <div class="toast-title">${notification.title}</div>
+                <div class="toast-message">${notification.message}</div>
             </div>
-            <button class="toast-close" style="
-                background: none;
-                border: none;
-                color: var(--secondary-400);
-                cursor: pointer;
-                padding: var(--space-1);
-                border-radius: var(--radius-sm);
-                transition: all var(--transition-fast);
-                flex-shrink: 0;
-            " onclick="this.parentElement.remove()">
+            <button class="toast-close" onclick="this.parentElement.remove()">
                 <svg class="icon" viewBox="0 0 24 24">
                     <line x1="18" y1="6" x2="6" y2="18"/>
                     <line x1="6" y1="6" x2="18" y2="18"/>
@@ -307,83 +211,34 @@ class NotificationManager {
             </button>
         `;
 
-        // Add hover effect
-        toast.addEventListener('mouseenter', () => {
-            toast.style.transform = 'translateY(-2px)';
-            toast.style.boxShadow = 'var(--shadow-xl)';
-        });
-
-        toast.addEventListener('mouseleave', () => {
-            toast.style.transform = 'translateY(0)';
-            toast.style.boxShadow = 'var(--shadow-lg)';
-        });
-
         this.container.appendChild(toast);
 
         // Auto remove after 5 seconds
         setTimeout(() => {
             if (toast.parentElement) {
-                toast.style.opacity = '0';
-                toast.style.transform = 'translateX(100%)';
-                setTimeout(() => {
-                    if (toast.parentElement) {
-                        toast.remove();
-                    }
-                }, 300);
+                toast.remove();
             }
         }, 5000);
 
         // Add click to remove
-        toast.addEventListener('click', () => {
-            toast.style.opacity = '0';
-            toast.style.transform = 'translateX(100%)';
-            setTimeout(() => {
-                if (toast.parentElement) {
-                    toast.remove();
-                }
-            }, 300);
-        });
-    }
-
-    getToastColor(type) {
-        const colors = {
-            'success': 'success-500',
-            'warning': 'warning-500',
-            'error': 'error-500',
-            'info': 'primary-500',
-            'job_update': 'primary-500',
-            'payment': 'success-500',
-            'booking': 'primary-500',
-            'inventory': 'warning-500',
-            'system': 'secondary-500'
-        };
-        return colors[type] || 'primary-500';
+        toast.addEventListener('click', () => toast.remove());
     }
 
     updateNotificationCount() {
         const unreadCount = this.notifications.filter(n => !n.read).length;
+        const countElement = document.getElementById('notification-count');
         
-        // Update floating icon count
-        const floatingCount = document.getElementById('floating-notification-count');
-        if (floatingCount) {
-            floatingCount.textContent = unreadCount;
-            floatingCount.style.display = unreadCount > 0 ? 'flex' : 'none';
-        }
-        
-        // Update header bell count
-        const headerCount = document.getElementById('notification-count');
-        if (headerCount) {
-            headerCount.textContent = unreadCount;
-            headerCount.style.display = unreadCount > 0 ? 'flex' : 'none';
-        }
-
-        // Add bounce animation when new notification arrives
-        if (unreadCount > 0) {
-            if (this.floatingIcon) {
-                this.floatingIcon.style.animation = 'notificationBounce 0.5s ease';
-                setTimeout(() => {
-                    this.floatingIcon.style.animation = '';
-                }, 500);
+        if (countElement) {
+            countElement.textContent = unreadCount;
+            countElement.style.display = unreadCount > 0 ? 'flex' : 'none';
+            
+            // Add pulse animation for new notifications
+            if (unreadCount > 0) {
+                const bell = document.getElementById('notification-bell');
+                bell.classList.add('has-notifications');
+            } else {
+                const bell = document.getElementById('notification-bell');
+                bell.classList.remove('has-notifications');
             }
         }
     }
@@ -409,7 +264,7 @@ class NotificationManager {
         // Update panel if open
         const panel = document.getElementById('notification-panel');
         if (panel) {
-            this.hideNotificationPanel(panel);
+            panel.remove();
         }
     }
 
@@ -449,42 +304,6 @@ class NotificationManager {
         setInterval(() => {
             this.checkForNewNotifications(userRole, userId);
         }, 30000);
-
-        // Add some initial demo notifications after 5 seconds
-        setTimeout(() => {
-            this.addDemoNotifications(userRole);
-        }, 5000);
-    }
-
-    addDemoNotifications(userRole) {
-        const demoNotifications = {
-            customer: [
-                {
-                    type: 'booking',
-                    title: 'Welcome to RepairHub Pro!',
-                    message: 'Your account has been set up successfully. You can now book appointments and track your vehicle repairs.'
-                }
-            ],
-            employee: [
-                {
-                    type: 'job_update',
-                    title: 'Welcome to RepairHub Pro!',
-                    message: 'You have access to job management and inventory tools. Check your assigned jobs to get started.'
-                }
-            ],
-            admin: [
-                {
-                    type: 'system',
-                    title: 'Welcome to RepairHub Pro!',
-                    message: 'You have full administrative access. Monitor operations, manage users, and view comprehensive reports.'
-                }
-            ]
-        };
-
-        const roleNotifications = demoNotifications[userRole] || [];
-        roleNotifications.forEach(notification => {
-            this.addNotification(notification);
-        });
     }
 
     async checkForNewNotifications(userRole, userId) {
@@ -589,195 +408,6 @@ class NotificationManager {
         });
     }
 }
-
-// Add required CSS for toast animations
-const style = document.createElement('style');
-style.textContent = `
-    @keyframes toastSlideIn {
-        from {
-            opacity: 0;
-            transform: translateX(100%);
-        }
-        to {
-            opacity: 1;
-            transform: translateX(0);
-        }
-    }
-
-    @keyframes notificationBounce {
-        0%, 100% { transform: scale(1); }
-        50% { transform: scale(1.1); }
-    }
-
-    .notification-panel {
-        opacity: 0;
-        transform: translateY(-20px) scale(0.95);
-        transition: all 0.3s ease;
-    }
-
-    .notification-floating-icon {
-        animation: float 3s ease-in-out infinite;
-    }
-
-    @keyframes float {
-        0%, 100% { transform: translateY(0px); }
-        50% { transform: translateY(-5px); }
-    }
-
-    .notification-item {
-        transition: all 0.3s ease;
-    }
-
-    .notification-item:hover {
-        background: var(--primary-50);
-        transform: translateX(4px);
-    }
-
-    .notification-item.unread {
-        background: var(--primary-50);
-        border-left: 4px solid var(--primary-500);
-    }
-
-    .notification-header {
-        background: var(--secondary-50);
-        padding: var(--space-4) var(--space-6);
-        border-bottom: 1px solid var(--secondary-200);
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }
-
-    .notification-header h4 {
-        margin: 0;
-        color: var(--secondary-900);
-        font-size: var(--text-lg);
-        font-weight: 600;
-        display: flex;
-        align-items: center;
-        gap: var(--space-2);
-    }
-
-    .notification-list {
-        max-height: 350px;
-        overflow-y: auto;
-    }
-
-    .notification-item {
-        display: flex;
-        align-items: flex-start;
-        padding: var(--space-4) var(--space-6);
-        border-bottom: 1px solid var(--secondary-100);
-        transition: background-color var(--transition-fast);
-        cursor: pointer;
-        gap: var(--space-3);
-    }
-
-    .notification-item:last-child {
-        border-bottom: none;
-    }
-
-    .notification-icon {
-        flex-shrink: 0;
-        width: 40px;
-        height: 40px;
-        background: var(--primary-100);
-        border-radius: var(--radius-lg);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: var(--primary-600);
-    }
-
-    .notification-content {
-        flex: 1;
-        min-width: 0;
-    }
-
-    .notification-title {
-        font-weight: 600;
-        color: var(--secondary-900);
-        margin-bottom: var(--space-1);
-        font-size: var(--text-sm);
-    }
-
-    .notification-message {
-        color: var(--secondary-600);
-        font-size: var(--text-sm);
-        line-height: 1.4;
-        margin-bottom: var(--space-1);
-    }
-
-    .notification-time {
-        color: var(--secondary-400);
-        font-size: var(--text-xs);
-    }
-
-    .notification-close {
-        background: none;
-        border: none;
-        color: var(--secondary-400);
-        cursor: pointer;
-        padding: var(--space-1);
-        border-radius: var(--radius-sm);
-        transition: all var(--transition-fast);
-        flex-shrink: 0;
-    }
-
-    .notification-close:hover {
-        background: var(--error-100);
-        color: var(--error-600);
-    }
-
-    .notification-footer {
-        background: var(--secondary-50);
-        padding: var(--space-4) var(--space-6);
-        border-top: 1px solid var(--secondary-200);
-        text-align: center;
-    }
-
-    .no-notifications {
-        padding: var(--space-8) var(--space-6);
-    }
-
-    .empty-state {
-        text-align: center;
-        color: var(--secondary-500);
-    }
-
-    .empty-state-icon {
-        margin-bottom: var(--space-4);
-        opacity: 0.5;
-    }
-
-    .empty-state-title {
-        font-weight: 600;
-        margin-bottom: var(--space-2);
-        color: var(--secondary-700);
-    }
-
-    .empty-state-description {
-        font-size: var(--text-sm);
-    }
-
-    /* Scrollbar Styling */
-    .notification-list::-webkit-scrollbar {
-        width: 4px;
-    }
-
-    .notification-list::-webkit-scrollbar-track {
-        background: transparent;
-    }
-
-    .notification-list::-webkit-scrollbar-thumb {
-        background: var(--secondary-300);
-        border-radius: 2px;
-    }
-
-    .notification-list::-webkit-scrollbar-thumb:hover {
-        background: var(--secondary-400);
-    }
-`;
-document.head.appendChild(style);
 
 // Initialize notification manager
 document.addEventListener('DOMContentLoaded', () => {
