@@ -1,4 +1,4 @@
-// Enhanced Customer Dashboard - Modern UI/UX Implementation
+// Enhanced Customer Dashboard - Complete Implementation with Modern UI/UX
 document.addEventListener('DOMContentLoaded', () => {
     const userRole = sessionStorage.getItem('userRole');
     const userName = sessionStorage.getItem('userName');
@@ -24,6 +24,7 @@ function initializeDashboard(userName, userId) {
     // Initialize modules
     initializeNavigation();
     initializeLogout();
+    initializeOverview();
     initializeBookingModule();
     initializeVehicleModule();
     initializeJobsModule();
@@ -32,65 +33,47 @@ function initializeDashboard(userName, userId) {
     
     // Load initial data
     loadCustomerData();
-    
-    // Add smooth animations
-    addPageAnimations();
 }
 
-// Add smooth page animations
-function addPageAnimations() {
-    // Animate cards on load
-    const cards = document.querySelectorAll('.card, .stat-card, .metric-card');
-    cards.forEach((card, index) => {
-        card.style.opacity = '0';
-        card.style.transform = 'translateY(20px)';
-        setTimeout(() => {
-            card.style.transition = 'all 0.6s ease';
-            card.style.opacity = '1';
-            card.style.transform = 'translateY(0)';
-        }, index * 100);
-    });
-}
-
-// Navigation System with smooth transitions
+// Navigation System
 function initializeNavigation() {
-    const tabButtons = document.querySelectorAll('.tab-button');
+    const navLinks = document.querySelectorAll('.nav-link');
     const tabContents = document.querySelectorAll('.tab-content');
 
-    tabButtons.forEach(button => {
-        button.addEventListener('click', () => {
-            const targetTab = button.getAttribute('data-tab');
+    navLinks.forEach(link => {
+        link.addEventListener('click', (e) => {
+            e.preventDefault();
+            const targetTab = link.getAttribute('data-tab');
             
-            // Remove active class from all buttons and contents
-            tabButtons.forEach(btn => btn.classList.remove('active'));
-            tabContents.forEach(content => {
-                content.classList.remove('active');
-                content.style.opacity = '0';
-                content.style.transform = 'translateX(20px)';
-            });
+            // Update active states
+            navLinks.forEach(l => l.classList.remove('active'));
+            tabContents.forEach(content => content.classList.remove('active'));
             
-            // Add active class to clicked button
-            button.classList.add('active');
+            link.classList.add('active');
+            const targetElement = document.getElementById(`${targetTab}-tab`);
+            if (targetElement) {
+                targetElement.classList.add('active');
+            }
             
-            // Show target content with animation
-            setTimeout(() => {
-                const targetContent = document.getElementById(`${targetTab}-tab`);
-                if (targetContent) {
-                    targetContent.classList.add('active');
-                    targetContent.style.transition = 'all 0.4s ease';
-                    targetContent.style.opacity = '1';
-                    targetContent.style.transform = 'translateX(0)';
-                }
-                
-                // Load data for the active tab
-                loadTabData(targetTab);
-            }, 100);
+            // Load tab data
+            loadTabData(targetTab);
         });
     });
+
+    // Quick book button
+    const quickBookBtn = document.getElementById('quick-book-btn');
+    if (quickBookBtn) {
+        quickBookBtn.addEventListener('click', () => {
+            document.querySelector('[data-tab="book-appointment"]').click();
+        });
+    }
 }
 
 function loadTabData(tab) {
     switch(tab) {
+        case 'overview':
+            loadOverviewData();
+            break;
         case 'book-appointment':
             loadBookingData();
             break;
@@ -117,27 +100,165 @@ function initializeLogout() {
     }
 }
 
-// Enhanced Map Integration with animations
+// Overview Module
+function initializeOverview() {
+    // Initialize overview functionality
+}
+
+async function loadOverviewData() {
+    const userId = sessionStorage.getItem('userId');
+    
+    try {
+        const [jobsResponse, vehiclesResponse] = await Promise.all([
+            fetch(`http://localhost:8080/api/customer/jobs/${userId}`),
+            fetch(`http://localhost:8080/api/customer/vehicles/${userId}`)
+        ]);
+        
+        if (jobsResponse.ok && vehiclesResponse.ok) {
+            const jobs = await jobsResponse.json();
+            const vehicles = await vehiclesResponse.json();
+            
+            renderCustomerMetrics(jobs, vehicles);
+            renderRecentJobs(jobs.slice(0, 3));
+            renderVehiclesSummary(vehicles);
+        }
+    } catch (error) {
+        console.error('Error loading overview data:', error);
+    }
+}
+
+function renderCustomerMetrics(jobs, vehicles) {
+    const metricsGrid = document.getElementById('customer-metrics-grid');
+    
+    const pendingJobs = jobs.filter(job => ['Booked', 'In Progress'].includes(job.status)).length;
+    const completedJobs = jobs.filter(job => ['Completed', 'Invoiced', 'Paid'].includes(job.status)).length;
+    const totalSpent = jobs
+        .filter(job => job.totalCost && job.status === 'Paid')
+        .reduce((sum, job) => sum + parseFloat(job.totalCost), 0);
+
+    const metrics = [
+        {
+            title: 'Active Jobs',
+            value: pendingJobs,
+            icon: `<svg class="icon" viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>`,
+            change: 'In progress',
+            changeType: 'neutral',
+            class: 'jobs'
+        },
+        {
+            title: 'Completed Services',
+            value: completedJobs,
+            icon: `<svg class="icon" viewBox="0 0 24 24"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="9"/></svg>`,
+            change: 'All time',
+            changeType: 'positive',
+            class: 'completed'
+        },
+        {
+            title: 'My Vehicles',
+            value: vehicles.length,
+            icon: `<svg class="icon" viewBox="0 0 24 24"><path d="M7 17m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0"/><path d="M17 17m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0"/><path d="M5 17h-2v-6l2-5h9l4 5h1a2 2 0 0 1 2 2v4h-2"/><path d="M9 17v-6h8"/><path d="M2 6h15"/></svg>`,
+            change: 'Registered',
+            changeType: 'neutral',
+            class: 'vehicles'
+        },
+        {
+            title: 'Total Spent',
+            value: `$${totalSpent.toFixed(2)}`,
+            icon: `<svg class="icon" viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>`,
+            change: 'Lifetime',
+            changeType: 'neutral',
+            class: 'spent'
+        }
+    ];
+    
+    metricsGrid.innerHTML = metrics.map(metric => `
+        <div class="metric-card ${metric.class}">
+            <div class="metric-header">
+                <div class="metric-icon">${metric.icon}</div>
+            </div>
+            <div class="metric-value">${metric.value}</div>
+            <div class="metric-label">${metric.title}</div>
+            <div class="metric-change ${metric.changeType}">
+                ${metric.change}
+            </div>
+        </div>
+    `).join('');
+}
+
+function renderRecentJobs(jobs) {
+    const recentJobsList = document.getElementById('recent-jobs-list');
+    
+    if (jobs.length === 0) {
+        recentJobsList.innerHTML = `
+            <div class="empty-state">
+                <div class="empty-state-description">No recent jobs found</div>
+                <button class="btn btn-primary btn-sm" onclick="document.querySelector('[data-tab=\\"book-appointment\\"]').click()">
+                    Book Your First Service
+                </button>
+            </div>
+        `;
+        return;
+    }
+
+    recentJobsList.innerHTML = jobs.map(job => `
+        <div class="job-summary-item">
+            <div class="job-summary-header">
+                <span class="job-id">#${job.jobId}</span>
+                <span class="status-badge status-${job.status.toLowerCase().replace(' ', '-')}">${job.status}</span>
+            </div>
+            <div class="job-summary-details">
+                <div class="job-vehicle">${job.vehicle}</div>
+                <div class="job-service">${job.service}</div>
+                <div class="job-date">${new Date(job.bookingDate).toLocaleDateString()}</div>
+            </div>
+        </div>
+    `).join('');
+}
+
+function renderVehiclesSummary(vehicles) {
+    const vehiclesSummary = document.getElementById('vehicles-summary');
+    
+    if (vehicles.length === 0) {
+        vehiclesSummary.innerHTML = `
+            <div class="empty-state">
+                <div class="empty-state-description">No vehicles registered</div>
+                <button class="btn btn-primary btn-sm" onclick="showVehicleModal()">
+                    Add Your First Vehicle
+                </button>
+            </div>
+        `;
+        return;
+    }
+
+    vehiclesSummary.innerHTML = vehicles.slice(0, 3).map(vehicle => `
+        <div class="vehicle-summary-item">
+            <div class="vehicle-summary-icon">
+                <svg class="icon" viewBox="0 0 24 24">
+                    <path d="M7 17m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0"/>
+                    <path d="M17 17m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0"/>
+                    <path d="M5 17h-2v-6l2-5h9l4 5h1a2 2 0 0 1 2 2v4h-2"/>
+                    <path d="M9 17v-6h8"/>
+                    <path d="M2 6h15"/>
+                </svg>
+            </div>
+            <div class="vehicle-summary-details">
+                <div class="vehicle-name">${vehicle.make} ${vehicle.model}</div>
+                <div class="vehicle-year">${vehicle.year}</div>
+            </div>
+            <button class="btn btn-sm btn-primary" onclick="bookForVehicle(${vehicle.id})">
+                Book Service
+            </button>
+        </div>
+    `).join('');
+}
+
+// Map Integration
 function initializeMapIntegration() {
     const mapContainer = document.getElementById('branch-map-container');
     if (mapContainer) {
         mapContainer.innerHTML = createMapInterface();
         attachMapEventListeners();
-        animateMapElements();
     }
-}
-
-function animateMapElements() {
-    const branchCards = document.querySelectorAll('.branch-card');
-    branchCards.forEach((card, index) => {
-        card.style.opacity = '0';
-        card.style.transform = 'translateY(30px)';
-        setTimeout(() => {
-            card.style.transition = 'all 0.5s ease';
-            card.style.opacity = '1';
-            card.style.transform = 'translateY(0)';
-        }, index * 150);
-    });
 }
 
 function createMapInterface() {
@@ -149,8 +270,7 @@ function createMapInterface() {
             phone: "(555) 123-4567",
             services: ["Paint Jobs", "Dent Repair", "Collision Repair"],
             rating: 4.8,
-            hours: "Mon-Fri: 8AM-6PM, Sat: 9AM-4PM",
-            distance: "2.3 km"
+            hours: "Mon-Fri: 8AM-6PM, Sat: 9AM-4PM"
         },
         {
             id: 2,
@@ -159,8 +279,7 @@ function createMapInterface() {
             phone: "(555) 234-5678",
             services: ["Paint Jobs", "Dent Repair", "Oil Change"],
             rating: 4.6,
-            hours: "Mon-Fri: 7AM-7PM, Sat: 8AM-5PM",
-            distance: "4.1 km"
+            hours: "Mon-Fri: 7AM-7PM, Sat: 8AM-5PM"
         },
         {
             id: 3,
@@ -169,8 +288,7 @@ function createMapInterface() {
             phone: "(555) 345-6789",
             services: ["Collision Repair", "Paint Jobs", "Maintenance"],
             rating: 4.9,
-            hours: "Mon-Sat: 8AM-6PM",
-            distance: "6.7 km"
+            hours: "Mon-Sat: 8AM-6PM"
         }
     ];
 
@@ -182,7 +300,7 @@ function createMapInterface() {
                         <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
                         <circle cx="12" cy="10" r="3"/>
                     </svg>
-                    Select Your Preferred Branch
+                    Select a Branch Location
                 </h3>
                 <button id="detect-location" class="btn btn-sm btn-primary">
                     <svg class="icon icon-sm" viewBox="0 0 24 24">
@@ -226,17 +344,10 @@ function createMapInterface() {
                                     ${branch.hours}
                                 </p>
                                 <div class="branch-services">
-                                    <strong>Available Services:</strong>
+                                    <strong>Services:</strong>
                                     <div class="services-tags">
                                         ${branch.services.map(service => `<span class="service-tag">${service}</span>`).join('')}
                                     </div>
-                                </div>
-                                <div class="branch-distance">
-                                    <svg class="icon icon-sm" viewBox="0 0 24 24">
-                                        <path d="M9 11a3 3 0 1 0 6 0a3 3 0 0 0 -6 0"/>
-                                        <path d="M17.657 16.657l-4.243 4.243a2 2 0 0 1 -2.827 0l-4.244 -4.243a8 8 0 1 1 11.314 0z"/>
-                                    </svg>
-                                    ${branch.distance} away
                                 </div>
                             </div>
                             <button class="btn btn-primary select-branch-btn" data-branch-id="${branch.id}">
@@ -258,7 +369,7 @@ function createMapInterface() {
                             </svg>
                         </div>
                         <div class="empty-state-title">Select a branch</div>
-                        <div class="empty-state-description">Choose a location to see details and book your appointment</div>
+                        <div class="empty-state-description">Choose a location to see details</div>
                     </div>
                 </div>
             </div>
@@ -267,7 +378,7 @@ function createMapInterface() {
 }
 
 function attachMapEventListeners() {
-    // Branch selection with smooth animations
+    // Branch selection
     document.querySelectorAll('.select-branch-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
             const branchId = parseInt(e.target.getAttribute('data-branch-id'));
@@ -283,20 +394,17 @@ function attachMapEventListeners() {
 }
 
 function selectBranch(branchId) {
-    // Update UI to show selection with animations
+    // Update UI to show selection
     document.querySelectorAll('.branch-card').forEach(card => {
         card.classList.remove('selected');
-        card.style.transform = 'scale(1)';
     });
     
     const selectedCard = document.querySelector(`[data-branch-id="${branchId}"]`);
     if (selectedCard) {
         selectedCard.classList.add('selected');
-        selectedCard.style.transform = 'scale(1.02)';
-        selectedCard.style.transition = 'all 0.3s ease';
     }
 
-    // Update selected branch info with animation
+    // Update selected branch info
     updateSelectedBranchInfo(branchId);
     
     // Update booking form
@@ -305,76 +413,49 @@ function selectBranch(branchId) {
         const branchName = selectedCard.querySelector('h4').textContent;
         branchNameElement.textContent = branchName;
         branchNameElement.style.color = 'var(--success-600)';
-        branchNameElement.style.fontWeight = '600';
     }
 }
 
 function updateSelectedBranchInfo(branchId) {
     const branches = [
-        { id: 1, name: "RepairHub Pro Downtown", address: "123 Main Street, Downtown", phone: "(555) 123-4567" },
-        { id: 2, name: "RepairHub Pro Uptown", address: "456 Oak Avenue, Uptown", phone: "(555) 234-5678" },
-        { id: 3, name: "RepairHub Pro Westside", address: "789 Pine Road, Westside", phone: "(555) 345-6789" }
+        { id: 1, name: "RepairHub Pro Downtown", address: "123 Main Street, Downtown" },
+        { id: 2, name: "RepairHub Pro Uptown", address: "456 Oak Avenue, Uptown" },
+        { id: 3, name: "RepairHub Pro Westside", address: "789 Pine Road, Westside" }
     ];
     
     const branch = branches.find(b => b.id === branchId);
     const infoContainer = document.getElementById('selected-branch-info');
     
     if (infoContainer && branch) {
-        infoContainer.style.opacity = '0';
-        setTimeout(() => {
-            infoContainer.innerHTML = `
-                <div class="selected-branch-details">
-                    <h4>
-                        <svg class="icon" viewBox="0 0 24 24">
-                            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
-                            <circle cx="12" cy="10" r="3"/>
-                        </svg>
-                        ${branch.name}
-                    </h4>
-                    <div class="branch-info-grid">
-                        <div class="info-item">
-                            <strong>Address:</strong>
-                            <span>${branch.address}</span>
-                        </div>
-                        <div class="info-item">
-                            <strong>Phone:</strong>
-                            <span>${branch.phone}</span>
-                        </div>
-                        <div class="info-item">
-                            <strong>Status:</strong>
-                            <span class="status-success">✓ Selected</span>
-                        </div>
+        infoContainer.innerHTML = `
+            <div class="selected-branch-details">
+                <h4>
+                    <svg class="icon" viewBox="0 0 24 24">
+                        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+                        <circle cx="12" cy="10" r="3"/>
+                    </svg>
+                    ${branch.name}
+                </h4>
+                <div class="branch-info-grid">
+                    <div class="info-item">
+                        <strong>Address:</strong>
+                        <span>${branch.address}</span>
                     </div>
-                    <div class="branch-actions">
-                        <button class="btn btn-sm btn-secondary" onclick="viewBranchDetails(${branch.id})">
-                            <svg class="icon icon-sm" viewBox="0 0 24 24">
-                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-                                <circle cx="12" cy="12" r="3"/>
-                            </svg>
-                            View Details
-                        </button>
-                        <button class="btn btn-sm btn-primary" onclick="scrollToBooking()">
-                            <svg class="icon icon-sm" viewBox="0 0 24 24">
-                                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
-                                <line x1="16" y1="2" x2="16" y2="6"/>
-                                <line x1="8" y1="2" x2="8" y2="6"/>
-                                <line x1="3" y1="10" x2="21" y2="10"/>
-                            </svg>
-                            Book Now
-                        </button>
+                    <div class="info-item">
+                        <strong>Status:</strong>
+                        <span class="status-success">Selected</span>
                     </div>
                 </div>
-            `;
-            infoContainer.style.transition = 'opacity 0.3s ease';
-            infoContainer.style.opacity = '1';
-        }, 200);
-    }
-}
-
-function scrollToBooking() {
-    const bookingForm = document.querySelector('.booking-container');
-    if (bookingForm) {
-        bookingForm.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                <div class="branch-actions">
+                    <button class="btn btn-sm btn-secondary" onclick="getDirections()">
+                        <svg class="icon icon-sm" viewBox="0 0 24 24">
+                            <polygon points="3,11 22,2 13,21 11,13 3,11"/>
+                        </svg>
+                        Get Directions
+                    </button>
+                </div>
+            </div>
+        `;
     }
 }
 
@@ -392,7 +473,6 @@ function detectUserLocation() {
         </svg>
         Detecting...
     `;
-    detectBtn.disabled = true;
 
     navigator.geolocation.getCurrentPosition(
         (position) => {
@@ -405,12 +485,7 @@ function detectUserLocation() {
             `;
             detectBtn.classList.remove('btn-primary');
             detectBtn.classList.add('btn-success');
-            showNotification('Location detected successfully! Showing nearest branches.', 'success');
-            
-            // Simulate sorting branches by distance
-            setTimeout(() => {
-                animateMapElements();
-            }, 1000);
+            showNotification('Location detected successfully', 'success');
         },
         (error) => {
             detectBtn.innerHTML = `
@@ -422,12 +497,16 @@ function detectUserLocation() {
             `;
             detectBtn.classList.remove('btn-primary');
             detectBtn.classList.add('btn-danger');
-            showNotification('Failed to detect location. Please select a branch manually.', 'error');
+            showNotification('Failed to detect location', 'error');
         }
     );
 }
 
-// Enhanced Booking Module
+function getDirections() {
+    showNotification('Opening directions in your default map app...', 'info');
+}
+
+// Booking Module
 function initializeBookingModule() {
     const bookingForm = document.getElementById('booking-form');
     const serviceSelect = document.getElementById('booking-service');
@@ -532,15 +611,7 @@ function showServiceDetails() {
         document.getElementById('selected-service-name').textContent = selectedOption.textContent.split(' - $')[0];
         document.getElementById('selected-service-price').textContent = '$' + selectedOption.getAttribute('data-price');
         document.getElementById('selected-service-description').textContent = selectedOption.getAttribute('data-description') || 'No description available';
-        
         serviceDetails.style.display = 'block';
-        serviceDetails.style.opacity = '0';
-        serviceDetails.style.transform = 'translateY(20px)';
-        setTimeout(() => {
-            serviceDetails.style.transition = 'all 0.4s ease';
-            serviceDetails.style.opacity = '1';
-            serviceDetails.style.transform = 'translateY(0)';
-        }, 100);
     } else {
         serviceDetails.style.display = 'none';
     }
@@ -564,17 +635,6 @@ async function bookAppointment() {
         branchId: selectedBranch.getAttribute('data-branch-id')
     };
 
-    // Show loading state
-    const submitBtn = document.querySelector('#booking-form button[type="submit"]');
-    const originalText = submitBtn.innerHTML;
-    submitBtn.innerHTML = `
-        <svg class="icon icon-sm animate-spin" viewBox="0 0 24 24">
-            <path d="M21 12a9 9 0 11-6.219-8.56"/>
-        </svg>
-        Booking...
-    `;
-    submitBtn.disabled = true;
-
     try {
         const response = await fetch('http://localhost:8080/api/customer/bookings', {
             method: 'POST',
@@ -585,43 +645,26 @@ async function bookAppointment() {
         const result = await response.json();
         
         if (response.ok) {
-            submitBtn.innerHTML = `
-                <svg class="icon icon-sm" viewBox="0 0 24 24">
-                    <path d="M9 12l2 2 4-4"/>
-                    <circle cx="12" cy="12" r="9"/>
-                </svg>
-                Booked Successfully!
-            `;
-            submitBtn.classList.remove('btn-primary');
-            submitBtn.classList.add('btn-success');
-            
-            showNotification('Appointment booked successfully! You will receive a confirmation shortly.', 'success');
-            
-            // Reset form after delay
-            setTimeout(() => {
-                document.getElementById('booking-form').reset();
-                document.getElementById('service-details').style.display = 'none';
-                document.getElementById('selected-branch-name').textContent = 'Please select a branch above';
-                submitBtn.innerHTML = originalText;
-                submitBtn.classList.remove('btn-success');
-                submitBtn.classList.add('btn-primary');
-                submitBtn.disabled = false;
-            }, 3000);
-            
+            showNotification('Appointment booked successfully!', 'success');
+            document.getElementById('booking-form').reset();
+            document.getElementById('service-details').style.display = 'none';
+            document.getElementById('selected-branch-name').textContent = 'Please select a branch above';
             loadCustomerData(); // Refresh stats
+            
+            // Notify chatbot
+            if (window.enhancedChatbot) {
+                window.enhancedChatbot.notifyBooking(document.getElementById('booking-service').selectedOptions[0].textContent);
+            }
         } else {
-            throw new Error(result.error || 'Failed to book appointment');
+            showNotification(result.error || 'Failed to book appointment', 'error');
         }
     } catch (error) {
         console.error('Error booking appointment:', error);
-        showNotification(error.message, 'error');
-        
-        submitBtn.innerHTML = originalText;
-        submitBtn.disabled = false;
+        showNotification('Failed to book appointment', 'error');
     }
 }
 
-// Enhanced Vehicle Module
+// Vehicle Module
 function initializeVehicleModule() {
     const vehicleModal = document.getElementById('vehicle-modal');
     const vehicleForm = document.getElementById('vehicle-form');
@@ -667,16 +710,6 @@ async function addVehicle() {
         vin: document.getElementById('vehicle-vin').value
     };
 
-    const submitBtn = document.querySelector('#vehicle-form button[type="submit"]');
-    const originalText = submitBtn.innerHTML;
-    submitBtn.innerHTML = `
-        <svg class="icon icon-sm animate-spin" viewBox="0 0 24 24">
-            <path d="M21 12a9 9 0 11-6.219-8.56"/>
-        </svg>
-        Adding...
-    `;
-    submitBtn.disabled = true;
-
     try {
         const response = await fetch('http://localhost:8080/api/customer/vehicles', {
             method: 'POST',
@@ -691,15 +724,13 @@ async function addVehicle() {
             showNotification('Vehicle added successfully!', 'success');
             loadMyVehicles();
             loadCustomerVehicles(); // Refresh booking dropdown
+            loadOverviewData(); // Refresh overview
         } else {
-            throw new Error(result.error || 'Failed to add vehicle');
+            showNotification(result.error || 'Failed to add vehicle', 'error');
         }
     } catch (error) {
         console.error('Error adding vehicle:', error);
-        showNotification(error.message, 'error');
-    } finally {
-        submitBtn.innerHTML = originalText;
-        submitBtn.disabled = false;
+        showNotification('Failed to add vehicle', 'error');
     }
 }
 
@@ -707,8 +738,6 @@ async function loadMyVehicles() {
     const userId = sessionStorage.getItem('userId');
     
     try {
-        showLoadingState('vehicles-grid');
-        
         const response = await fetch(`http://localhost:8080/api/customer/vehicles/${userId}`);
         if (!response.ok) throw new Error('Failed to fetch vehicles');
         
@@ -716,7 +745,7 @@ async function loadMyVehicles() {
         populateVehiclesGrid(vehicles);
     } catch (error) {
         console.error('Error loading vehicles:', error);
-        showErrorState('vehicles-grid', 'Failed to load vehicles');
+        showNotification('Failed to load vehicles', 'error');
     }
 }
 
@@ -750,8 +779,8 @@ function populateVehiclesGrid(vehicles) {
         return;
     }
 
-    vehiclesGrid.innerHTML = vehicles.map((vehicle, index) => `
-        <div class="vehicle-card" style="animation-delay: ${index * 100}ms">
+    vehiclesGrid.innerHTML = vehicles.map(vehicle => `
+        <div class="vehicle-card">
             <div class="vehicle-header">
                 <div class="vehicle-icon">
                     <svg class="icon" viewBox="0 0 24 24">
@@ -763,7 +792,7 @@ function populateVehiclesGrid(vehicles) {
                     </svg>
                 </div>
                 <div class="vehicle-status">
-                    <span class="status-badge status-active">Active</span>
+                    <span class="status-badge">Active</span>
                 </div>
             </div>
             <div class="vehicle-info">
@@ -782,7 +811,7 @@ function populateVehiclesGrid(vehicles) {
                 </div>
             </div>
             <div class="vehicle-actions">
-                <button class="btn btn-sm btn-primary" onclick="bookForVehicle(${vehicle.id})">
+                <button class="btn btn-primary" onclick="bookForVehicle(${vehicle.id})">
                     <svg class="icon icon-sm" viewBox="0 0 24 24">
                         <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
                         <line x1="16" y1="2" x2="16" y2="6"/>
@@ -791,29 +820,16 @@ function populateVehiclesGrid(vehicles) {
                     </svg>
                     Book Service
                 </button>
-                <button class="btn btn-sm btn-secondary" onclick="viewVehicleHistory(${vehicle.id})">
+                <button class="btn btn-secondary" onclick="editVehicle(${vehicle.id})">
                     <svg class="icon icon-sm" viewBox="0 0 24 24">
-                        <path d="M3 3v5h5"/>
-                        <path d="M3.05 13A9 9 0 1 0 6 5.3L3 8"/>
-                        <path d="M12 7v5l4 2"/>
+                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
                     </svg>
-                    History
+                    Edit
                 </button>
             </div>
         </div>
     `).join('');
-
-    // Animate vehicle cards
-    const vehicleCards = vehiclesGrid.querySelectorAll('.vehicle-card');
-    vehicleCards.forEach((card, index) => {
-        card.style.opacity = '0';
-        card.style.transform = 'translateY(30px)';
-        setTimeout(() => {
-            card.style.transition = 'all 0.5s ease';
-            card.style.opacity = '1';
-            card.style.transform = 'translateY(0)';
-        }, index * 150);
-    });
 }
 
 function bookForVehicle(vehicleId) {
@@ -823,18 +839,15 @@ function bookForVehicle(vehicleId) {
         const vehicleSelect = document.getElementById('booking-vehicle');
         if (vehicleSelect) {
             vehicleSelect.value = vehicleId;
-            vehicleSelect.dispatchEvent(new Event('change'));
         }
-        // Scroll to booking form
-        scrollToBooking();
-    }, 500);
+    }, 100);
 }
 
-function viewVehicleHistory(vehicleId) {
-    showNotification('Vehicle history feature coming soon!', 'info');
+function editVehicle(vehicleId) {
+    showNotification(`Edit vehicle #${vehicleId} - Feature coming soon!`, 'info');
 }
 
-// Enhanced Jobs Module
+// Jobs Module
 function initializeJobsModule() {
     const jobsSearch = document.getElementById('jobs-search');
     
@@ -849,8 +862,6 @@ async function loadMyJobs() {
     const userId = sessionStorage.getItem('userId');
     
     try {
-        showLoadingState('my-jobs-table-body');
-        
         const response = await fetch(`http://localhost:8080/api/customer/jobs/${userId}`);
         if (!response.ok) throw new Error('Failed to fetch jobs');
         
@@ -858,7 +869,7 @@ async function loadMyJobs() {
         populateJobsTable(jobs.filter(job => job.status !== 'Paid'));
     } catch (error) {
         console.error('Error loading jobs:', error);
-        showErrorState('my-jobs-table-body', 'Failed to load jobs');
+        showNotification('Failed to load jobs', 'error');
     }
 }
 
@@ -877,13 +888,7 @@ function populateJobsTable(jobs) {
                     </div>
                     <div class="empty-state-title">No current jobs found</div>
                     <div class="empty-state-description">Book your first appointment to get started</div>
-                    <button class="btn btn-primary" onclick="document.querySelector('[data-tab=\\'book-appointment\\']').click()">
-                        <svg class="icon icon-sm" viewBox="0 0 24 24">
-                            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
-                            <line x1="16" y1="2" x2="16" y2="6"/>
-                            <line x1="8" y1="2" x2="8" y2="6"/>
-                            <line x1="3" y1="10" x2="21" y2="10"/>
-                        </svg>
+                    <button class="btn btn-primary" onclick="document.querySelector('[data-tab=\\"book-appointment\\"]').click()">
                         Book Appointment
                     </button>
                 </td>
@@ -893,7 +898,7 @@ function populateJobsTable(jobs) {
     }
 
     tableBody.innerHTML = jobs.map(job => `
-        <tr class="job-row" data-status="${job.status.toLowerCase()}">
+        <tr class="job-row" data-status="${job.status.toLowerCase().replace(' ', '-')}">
             <td><strong>#${job.jobId}</strong></td>
             <td>${job.vehicle}</td>
             <td>${job.service}</td>
@@ -926,18 +931,11 @@ function filterJobs(searchTerm) {
     const rows = document.querySelectorAll('#my-jobs-table-body tr');
     rows.forEach(row => {
         const text = row.textContent.toLowerCase();
-        const isVisible = text.includes(searchTerm.toLowerCase());
-        row.style.display = isVisible ? '' : 'none';
-        
-        if (isVisible && searchTerm) {
-            row.style.backgroundColor = 'var(--primary-50)';
-        } else {
-            row.style.backgroundColor = '';
-        }
+        row.style.display = text.includes(searchTerm.toLowerCase()) ? '' : 'none';
     });
 }
 
-// Enhanced Payment Module
+// Payment Module
 function initializePaymentModule() {
     const paymentModal = document.getElementById('payment-modal');
     const paymentModalClose = document.getElementById('payment-modal-close');
@@ -997,46 +995,40 @@ function populateJobDetailsModal(job) {
     const paymentSection = document.getElementById('payment-section');
     if (job.status === 'Invoiced') {
         paymentSection.innerHTML = `
-            <div class="payment-info">
-                <div class="payment-amount-display">
-                    <span class="amount-label">Amount Due:</span>
-                    <span class="amount-value">$${job.totalCost}</span>
-                </div>
-                <button class="btn btn-success btn-full" onclick="showPaymentModal(${job.jobId})">
-                    <svg class="icon icon-sm" viewBox="0 0 24 24">
-                        <rect x="1" y="4" width="22" height="16" rx="2" ry="2"/>
-                        <line x1="1" y1="10" x2="23" y2="10"/>
-                    </svg>
-                    Pay Now
-                </button>
+            <div class="payment-amount-display">
+                <span class="amount-label">Amount Due</span>
+                <span class="amount-value">$${job.totalCost}</span>
             </div>
+            <button class="btn btn-success btn-full" onclick="showPaymentModal(${job.jobId})">
+                <svg class="icon icon-sm" viewBox="0 0 24 24">
+                    <rect x="1" y="4" width="22" height="16" rx="2" ry="2"/>
+                    <line x1="1" y1="10" x2="23" y2="10"/>
+                </svg>
+                Pay Now
+            </button>
         `;
     } else if (job.status === 'Paid') {
         paymentSection.innerHTML = `
-            <div class="payment-info">
-                <div class="payment-status-paid">
-                    <svg class="icon icon-sm" viewBox="0 0 24 24">
-                        <path d="M9 12l2 2 4-4"/>
-                        <circle cx="12" cy="12" r="9"/>
-                    </svg>
-                    Payment Completed
-                </div>
-                <div class="payment-details">
-                    <span>Amount Paid: $${job.totalCost}</span>
-                    <span>Payment Date: ${job.completionDate ? new Date(job.completionDate).toLocaleDateString() : 'N/A'}</span>
-                </div>
+            <div class="payment-status-paid">
+                <svg class="icon icon-sm" viewBox="0 0 24 24">
+                    <path d="M9 12l2 2 4-4"/>
+                    <circle cx="12" cy="12" r="9"/>
+                </svg>
+                Payment Completed
+            </div>
+            <div class="payment-details">
+                <div>Amount Paid: $${job.totalCost}</div>
+                <div>Payment Date: ${job.completionDate ? new Date(job.completionDate).toLocaleDateString() : 'N/A'}</div>
             </div>
         `;
     } else {
         paymentSection.innerHTML = `
-            <div class="payment-info">
-                <div class="payment-pending">
-                    <svg class="icon icon-sm" viewBox="0 0 24 24">
-                        <circle cx="12" cy="12" r="10"/>
-                        <polyline points="12,6 12,12 16,14"/>
-                    </svg>
-                    Payment will be available once the job is completed and invoiced.
-                </div>
+            <div class="payment-pending">
+                <svg class="icon icon-sm" viewBox="0 0 24 24">
+                    <circle cx="12" cy="12" r="10"/>
+                    <polyline points="12,6 12,12 16,14"/>
+                </svg>
+                Payment will be available once the job is completed and invoiced.
             </div>
         `;
     }
@@ -1093,17 +1085,23 @@ async function processPayment() {
         
         if (response.ok) {
             hideModal(document.getElementById('payment-modal'));
-            showNotification('Payment processed successfully! Thank you for your business.', 'success');
+            showNotification('Payment processed successfully!', 'success');
             loadMyJobs(); // Refresh jobs table
             loadServiceHistory(); // Refresh history
-            loadCustomerData(); // Refresh stats
+            loadOverviewData(); // Refresh overview
+            
+            // Notify chatbot
+            if (window.enhancedChatbot) {
+                const amount = document.getElementById('payment-amount').textContent;
+                window.enhancedChatbot.notifyPayment(amount);
+            }
         } else {
-            throw new Error(result.error || 'Payment failed');
+            showNotification(result.error || 'Payment failed', 'error');
         }
     } catch (error) {
         hideProcessingMessage(processingOverlay);
         console.error('Error processing payment:', error);
-        showNotification('Payment processing failed. Please try again.', 'error');
+        showNotification('Payment processing failed', 'error');
     }
 }
 
@@ -1112,8 +1110,6 @@ async function loadServiceHistory() {
     const userId = sessionStorage.getItem('userId');
     
     try {
-        showLoadingState('service-history-table-body');
-        
         const response = await fetch(`http://localhost:8080/api/customer/jobs/${userId}`);
         if (!response.ok) throw new Error('Failed to fetch service history');
         
@@ -1127,7 +1123,7 @@ async function loadServiceHistory() {
         }
     } catch (error) {
         console.error('Error loading service history:', error);
-        showErrorState('service-history-table-body', 'Failed to load service history');
+        showNotification('Failed to load service history', 'error');
     }
 }
 
@@ -1202,29 +1198,8 @@ function updateCustomerStats(jobs) {
     const pendingElement = document.getElementById('pending-jobs');
     const completedElement = document.getElementById('completed-jobs');
     
-    if (pendingElement) {
-        pendingElement.textContent = pendingJobs;
-        animateNumber(pendingElement, 0, pendingJobs, 1000);
-    }
-    if (completedElement) {
-        completedElement.textContent = completedJobs;
-        animateNumber(completedElement, 0, completedJobs, 1000);
-    }
-}
-
-function animateNumber(element, start, end, duration) {
-    const range = end - start;
-    const increment = range / (duration / 16);
-    let current = start;
-    
-    const timer = setInterval(() => {
-        current += increment;
-        if (current >= end) {
-            current = end;
-            clearInterval(timer);
-        }
-        element.textContent = Math.floor(current);
-    }, 16);
+    if (pendingElement) pendingElement.textContent = pendingJobs;
+    if (completedElement) completedElement.textContent = completedJobs;
 }
 
 // Utility Functions
@@ -1233,34 +1208,14 @@ function showModal(modal) {
         modal.style.display = 'block';
         modal.classList.add('show');
         document.body.style.overflow = 'hidden';
-        
-        // Add animation
-        const content = modal.querySelector('.modal-content');
-        if (content) {
-            content.style.transform = 'scale(0.9) translateY(-20px)';
-            content.style.opacity = '0';
-            setTimeout(() => {
-                content.style.transition = 'all 0.3s ease';
-                content.style.transform = 'scale(1) translateY(0)';
-                content.style.opacity = '1';
-            }, 10);
-        }
     }
 }
 
 function hideModal(modal) {
     if (modal) {
-        const content = modal.querySelector('.modal-content');
-        if (content) {
-            content.style.transform = 'scale(0.9) translateY(-20px)';
-            content.style.opacity = '0';
-        }
-        
-        setTimeout(() => {
-            modal.style.display = 'none';
-            modal.classList.remove('show');
-            document.body.style.overflow = 'auto';
-        }, 300);
+        modal.style.display = 'none';
+        modal.classList.remove('show');
+        document.body.style.overflow = 'auto';
     }
 }
 
@@ -1305,52 +1260,6 @@ function showProcessingMessage(message) {
 
 function hideProcessingMessage(overlay) {
     if (overlay && overlay.parentNode) {
-        overlay.style.opacity = '0';
-        setTimeout(() => {
-            overlay.parentNode.removeChild(overlay);
-        }, 300);
+        overlay.parentNode.removeChild(overlay);
     }
-}
-
-function showLoadingState(elementId) {
-    const element = document.getElementById(elementId);
-    if (element) {
-        element.innerHTML = `
-            <tr>
-                <td colspan="10" class="text-center py-8">
-                    <div class="loading-skeleton">
-                        <div class="loading-skeleton title"></div>
-                        <div class="loading-skeleton text"></div>
-                        <div class="loading-skeleton text"></div>
-                    </div>
-                </td>
-            </tr>
-        `;
-    }
-}
-
-function showErrorState(elementId, message) {
-    const element = document.getElementById(elementId);
-    if (element) {
-        element.innerHTML = `
-            <tr>
-                <td colspan="10" class="empty-state">
-                    <div class="empty-state-icon">
-                        <svg class="icon icon-xl" viewBox="0 0 24 24">
-                            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
-                            <line x1="12" y1="9" x2="12" y2="13"/>
-                            <line x1="12" y1="17" x2="12.01" y2="17"/>
-                        </svg>
-                    </div>
-                    <div class="empty-state-title">Error</div>
-                    <div class="empty-state-description">${message}</div>
-                </td>
-            </tr>
-        `;
-    }
-}
-
-// Additional utility functions
-function viewBranchDetails(branchId) {
-    showNotification('Branch details feature coming soon!', 'info');
 }
