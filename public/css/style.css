@@ -253,6 +253,71 @@ header h1 {
     gap: 1rem;
 }
 
+/* Job Stats */
+.job-stats, .appointment-stats {
+    display: flex;
+    gap: 1rem;
+}
+
+.stat-card {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    text-align: center;
+    min-width: 120px;
+}
+
+.stat-number {
+    display: block;
+    font-size: 2rem;
+    font-weight: bold;
+    color: #3498db;
+}
+
+.stat-label {
+    display: block;
+    font-size: 0.875rem;
+    color: #7f8c8d;
+    margin-top: 0.5rem;
+}
+
+/* Search Container */
+.search-container {
+    display: flex;
+    align-items: center;
+}
+
+.search-input {
+    padding: 10px 15px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 14px;
+    width: 300px;
+    transition: border-color 0.3s, box-shadow 0.3s;
+}
+
+.search-input:focus {
+    outline: none;
+    border-color: #3498db;
+    box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+}
+
+/* Filter Container */
+.filter-container {
+    display: flex;
+    align-items: center;
+}
+
+.filter-select {
+    padding: 10px 15px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 14px;
+    background: white;
+    cursor: pointer;
+}
+
 /* Table Styles */
 .table-container {
     background: white;
@@ -334,6 +399,21 @@ tbody tr:hover {
     color: #00695c;
 }
 
+.status-in-stock {
+    background-color: #e8f5e8;
+    color: #388e3c;
+}
+
+.status-low-stock {
+    background-color: #fff3e0;
+    color: #f57c00;
+}
+
+.status-out-of-stock {
+    background-color: #ffebee;
+    color: #c62828;
+}
+
 .role-admin {
     background-color: #ffebee;
     color: #c62828;
@@ -357,6 +437,28 @@ tbody tr:hover {
 .low-stock td {
     color: #c62828;
     font-weight: 600;
+}
+
+/* Status Dropdown */
+.status-dropdown, .status-dropdown-inline {
+    padding: 6px 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 12px;
+    background: white;
+    cursor: pointer;
+}
+
+.status-dropdown-inline {
+    margin-left: 0.5rem;
+    font-size: 11px;
+    padding: 4px 8px;
+}
+
+.status-update-form {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
 }
 
 /* Actions Column */
@@ -393,6 +495,11 @@ tbody tr:hover {
     animation: modalSlideIn 0.3s ease;
 }
 
+.large-modal {
+    max-width: 900px;
+    width: 95%;
+}
+
 @keyframes modalSlideIn {
     from {
         opacity: 0;
@@ -415,6 +522,12 @@ tbody tr:hover {
 .modal-header h3 {
     margin: 0;
     color: #2c3e50;
+}
+
+.modal-body {
+    padding: 1.5rem;
+    max-height: 70vh;
+    overflow-y: auto;
 }
 
 .close {
@@ -447,6 +560,70 @@ tbody tr:hover {
     min-width: 100px;
 }
 
+/* Job Details Grid */
+.job-details-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 2rem;
+    margin-bottom: 2rem;
+}
+
+.details-section {
+    background: #f8f9fa;
+    padding: 1.5rem;
+    border-radius: 6px;
+}
+
+.details-section h4 {
+    margin: 0 0 1rem 0;
+    color: #2c3e50;
+    border-bottom: 2px solid #3498db;
+    padding-bottom: 0.5rem;
+}
+
+.detail-item {
+    display: flex;
+    margin-bottom: 0.75rem;
+}
+
+.detail-item label {
+    font-weight: 600;
+    color: #555;
+    min-width: 140px;
+    margin-right: 1rem;
+}
+
+.detail-item span {
+    color: #333;
+}
+
+/* Parts Section */
+.parts-section {
+    border-top: 2px solid #ecf0f1;
+    padding-top: 1.5rem;
+}
+
+.parts-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.parts-header h4 {
+    margin: 0;
+    color: #2c3e50;
+}
+
+.parts-total {
+    text-align: right;
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid #ecf0f1;
+    font-size: 1.1rem;
+    color: #2c3e50;
+}
+
 /* Reports Grid */
 .reports-grid {
     display: grid;
@@ -477,6 +654,187 @@ tbody tr:hover {
     margin: 0;
 }
 
+/* Customer-specific Styles */
+
+/* Booking Form */
+.booking-container {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    padding: 2rem;
+}
+
+.booking-form {
+    max-width: 800px;
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+    margin-bottom: 1.5rem;
+}
+
+.service-details {
+    background: #f8f9fa;
+    padding: 1.5rem;
+    border-radius: 6px;
+    margin-top: 1rem;
+    border-left: 4px solid #3498db;
+}
+
+.service-details h4 {
+    margin: 0 0 1rem 0;
+    color: #2c3e50;
+}
+
+/* Vehicle Cards */
+.vehicles-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 1.5rem;
+}
+
+.vehicle-card {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    padding: 1.5rem;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.vehicle-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.vehicle-info h3 {
+    margin: 0 0 0.5rem 0;
+    color: #2c3e50;
+    font-size: 1.25rem;
+}
+
+.vehicle-year {
+    color: #7f8c8d;
+    margin: 0.25rem 0;
+}
+
+.vehicle-vin {
+    color: #7f8c8d;
+    font-size: 0.875rem;
+    margin: 0.25rem 0;
+}
+
+.vehicle-actions {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid #ecf0f1;
+}
+
+/* Payment Styles */
+.payment-summary {
+    background: #f8f9fa;
+    padding: 1.5rem;
+    border-radius: 6px;
+    margin-bottom: 1.5rem;
+}
+
+.payment-summary h4 {
+    margin: 0 0 1rem 0;
+    color: #2c3e50;
+}
+
+.payment-amount {
+    font-size: 1.25rem;
+    font-weight: bold;
+    color: #27ae60;
+}
+
+.payment-methods h4 {
+    margin: 0 0 1rem 0;
+    color: #2c3e50;
+}
+
+.payment-options {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.payment-option {
+    display: flex;
+    align-items: center;
+    padding: 0.75rem;
+    border: 2px solid #ecf0f1;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.payment-option:hover {
+    border-color: #3498db;
+    background-color: #f8f9fa;
+}
+
+.payment-option input[type="radio"] {
+    margin-right: 0.75rem;
+    width: auto;
+}
+
+.payment-option input[type="radio"]:checked + span {
+    color: #3498db;
+    font-weight: 600;
+}
+
+.payment-info {
+    text-align: center;
+    padding: 1rem;
+}
+
+.payment-status-paid {
+    color: #27ae60;
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+}
+
+/* Processing Overlay */
+.processing-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.7);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 2000;
+}
+
+.processing-message {
+    background: white;
+    padding: 2rem;
+    border-radius: 8px;
+    text-align: center;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+}
+
+.spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid #ecf0f1;
+    border-top: 4px solid #3498db;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 0 auto 1rem auto;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
     .dashboard-container {
@@ -498,6 +856,18 @@ tbody tr:hover {
         justify-content: flex-start;
     }
     
+    .job-stats, .appointment-stats {
+        flex-direction: column;
+    }
+    
+    .stat-card {
+        min-width: auto;
+    }
+    
+    .search-input {
+        width: 100%;
+    }
+    
     .table-container {
         overflow-x: auto;
     }
@@ -511,6 +881,16 @@ tbody tr:hover {
         margin: 10% auto;
     }
     
+    .large-modal {
+        width: 98%;
+        margin: 2% auto;
+    }
+    
+    .job-details-grid {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+    
     .reports-grid {
         grid-template-columns: 1fr;
     }
@@ -521,6 +901,38 @@ tbody tr:hover {
     
     .form-actions .btn {
         width: 100%;
+    }
+    
+    .status-update-form {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .actions {
+        white-space: normal;
+    }
+    
+    .actions .btn, .actions .status-dropdown-inline {
+        display: block;
+        width: 100%;
+        margin: 0.25rem 0;
+    }
+    
+    .form-row {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+    
+    .vehicles-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .payment-options {
+        gap: 0.5rem;
+    }
+    
+    .payment-option {
+        padding: 0.5rem;
     }
 }
 

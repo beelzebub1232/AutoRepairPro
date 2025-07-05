@@ -3,22 +3,302 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Customer Dashboard</title>
+    <title>Customer Dashboard - AutoRepairPro</title>
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
     <header>
-        <h1>Welcome, Customer!</h1>
+        <h1>Customer Dashboard</h1>
         <div>
             <span id="user-info"></span>
             <button id="logout-button">Logout</button>
         </div>
     </header>
+    
     <main class="dashboard-container">
-        <h2>Your Service History</h2>
-        <p>This area will show your past and current job statuses.</p>
-        <!-- Customer features would be implemented here -->
+        <!-- Navigation Tabs -->
+        <div class="tab-navigation">
+            <button class="tab-button active" data-tab="book-appointment">Book Appointment</button>
+            <button class="tab-button" data-tab="my-jobs">My Jobs</button>
+            <button class="tab-button" data-tab="my-vehicles">My Vehicles</button>
+            <button class="tab-button" data-tab="service-history">Service History</button>
+        </div>
+
+        <!-- Book Appointment Tab -->
+        <div id="book-appointment-tab" class="tab-content active">
+            <div class="section-header">
+                <h2>Book New Appointment</h2>
+                <div class="appointment-stats">
+                    <div class="stat-card">
+                        <span class="stat-number" id="pending-jobs">0</span>
+                        <span class="stat-label">Pending Jobs</span>
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-number" id="completed-jobs">0</span>
+                        <span class="stat-label">Completed Jobs</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="booking-container">
+                <form id="booking-form" class="booking-form">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="booking-vehicle">Select Vehicle:</label>
+                            <select id="booking-vehicle" required>
+                                <option value="">Choose your vehicle...</option>
+                            </select>
+                            <button type="button" id="add-vehicle-btn" class="btn btn-sm btn-secondary">Add New Vehicle</button>
+                        </div>
+                        <div class="form-group">
+                            <label for="booking-service">Select Service:</label>
+                            <select id="booking-service" required>
+                                <option value="">Choose a service...</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="booking-date">Preferred Date & Time:</label>
+                            <input type="datetime-local" id="booking-date" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="booking-notes">Additional Notes:</label>
+                            <textarea id="booking-notes" rows="3" placeholder="Describe the issue or any special requirements..."></textarea>
+                        </div>
+                    </div>
+                    <div class="service-details" id="service-details" style="display: none;">
+                        <h4>Service Details</h4>
+                        <div class="detail-item">
+                            <label>Service:</label>
+                            <span id="selected-service-name"></span>
+                        </div>
+                        <div class="detail-item">
+                            <label>Price:</label>
+                            <span id="selected-service-price"></span>
+                        </div>
+                        <div class="detail-item">
+                            <label>Description:</label>
+                            <span id="selected-service-description"></span>
+                        </div>
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary">Book Appointment</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- My Jobs Tab -->
+        <div id="my-jobs-tab" class="tab-content">
+            <div class="section-header">
+                <h2>My Current Jobs</h2>
+                <div class="search-container">
+                    <input type="text" id="jobs-search" placeholder="Search jobs..." class="search-input">
+                </div>
+            </div>
+            
+            <div class="table-container">
+                <table id="my-jobs-table">
+                    <thead>
+                        <tr>
+                            <th>Job ID</th>
+                            <th>Vehicle</th>
+                            <th>Service</th>
+                            <th>Status</th>
+                            <th>Booking Date</th>
+                            <th>Total Cost</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="my-jobs-table-body">
+                        <!-- Job rows will be inserted here by JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- My Vehicles Tab -->
+        <div id="my-vehicles-tab" class="tab-content">
+            <div class="section-header">
+                <h2>My Vehicles</h2>
+                <button id="add-vehicle-main-btn" class="btn btn-primary">Add New Vehicle</button>
+            </div>
+            
+            <div class="vehicles-grid" id="vehicles-grid">
+                <!-- Vehicle cards will be inserted here by JS -->
+            </div>
+        </div>
+
+        <!-- Service History Tab -->
+        <div id="service-history-tab" class="tab-content">
+            <div class="section-header">
+                <h2>Service History</h2>
+                <div class="filter-container">
+                    <select id="history-filter" class="filter-select">
+                        <option value="all">All Services</option>
+                        <option value="paid">Paid</option>
+                        <option value="completed">Completed</option>
+                        <option value="invoiced">Invoiced</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="table-container">
+                <table id="service-history-table">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Vehicle</th>
+                            <th>Service</th>
+                            <th>Status</th>
+                            <th>Cost</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="service-history-table-body">
+                        <!-- History rows will be inserted here by JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
     </main>
-    <script src="js/dashboard.js"></script>
+
+    <!-- Modal for Vehicle Form -->
+    <div id="vehicle-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Add New Vehicle</h3>
+                <span class="close" id="vehicle-modal-close">&times;</span>
+            </div>
+            <form id="vehicle-form">
+                <div class="form-group">
+                    <label for="vehicle-make">Make:</label>
+                    <input type="text" id="vehicle-make" required placeholder="e.g., Toyota, Honda, Ford">
+                </div>
+                <div class="form-group">
+                    <label for="vehicle-model">Model:</label>
+                    <input type="text" id="vehicle-model" required placeholder="e.g., Camry, Civic, F-150">
+                </div>
+                <div class="form-group">
+                    <label for="vehicle-year">Year:</label>
+                    <input type="number" id="vehicle-year" required min="1900" max="2030" placeholder="e.g., 2020">
+                </div>
+                <div class="form-group">
+                    <label for="vehicle-vin">VIN (Optional):</label>
+                    <input type="text" id="vehicle-vin" placeholder="Vehicle Identification Number">
+                </div>
+                <div class="form-actions">
+                    <button type="button" id="vehicle-cancel-btn" class="btn btn-secondary">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Add Vehicle</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal for Job Details -->
+    <div id="job-details-modal" class="modal">
+        <div class="modal-content large-modal">
+            <div class="modal-header">
+                <h3>Job Details</h3>
+                <span class="close" id="job-details-close">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="job-details-grid">
+                    <div class="details-section">
+                        <h4>Job Information</h4>
+                        <div class="detail-item">
+                            <label>Job ID:</label>
+                            <span id="detail-job-id"></span>
+                        </div>
+                        <div class="detail-item">
+                            <label>Vehicle:</label>
+                            <span id="detail-vehicle"></span>
+                        </div>
+                        <div class="detail-item">
+                            <label>Service:</label>
+                            <span id="detail-service"></span>
+                        </div>
+                        <div class="detail-item">
+                            <label>Status:</label>
+                            <span id="detail-status"></span>
+                        </div>
+                        <div class="detail-item">
+                            <label>Booking Date:</label>
+                            <span id="detail-booking-date"></span>
+                        </div>
+                        <div class="detail-item">
+                            <label>Completion Date:</label>
+                            <span id="detail-completion-date"></span>
+                        </div>
+                        <div class="detail-item">
+                            <label>Total Cost:</label>
+                            <span id="detail-total-cost"></span>
+                        </div>
+                        <div class="detail-item">
+                            <label>Notes:</label>
+                            <span id="detail-notes"></span>
+                        </div>
+                    </div>
+                    <div class="details-section">
+                        <h4>Payment</h4>
+                        <div id="payment-section">
+                            <!-- Payment content will be inserted here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal for Payment -->
+    <div id="payment-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Make Payment</h3>
+                <span class="close" id="payment-modal-close">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="payment-summary">
+                    <h4>Payment Summary</h4>
+                    <div class="detail-item">
+                        <label>Job ID:</label>
+                        <span id="payment-job-id"></span>
+                    </div>
+                    <div class="detail-item">
+                        <label>Service:</label>
+                        <span id="payment-service"></span>
+                    </div>
+                    <div class="detail-item">
+                        <label>Total Amount:</label>
+                        <span id="payment-amount" class="payment-amount"></span>
+                    </div>
+                </div>
+                <div class="payment-methods">
+                    <h4>Select Payment Method</h4>
+                    <div class="payment-options">
+                        <label class="payment-option">
+                            <input type="radio" name="payment-method" value="credit-card" checked>
+                            <span>Credit/Debit Card</span>
+                        </label>
+                        <label class="payment-option">
+                            <input type="radio" name="payment-method" value="upi">
+                            <span>UPI</span>
+                        </label>
+                        <label class="payment-option">
+                            <input type="radio" name="payment-method" value="wallet">
+                            <span>Digital Wallet</span>
+                        </label>
+                    </div>
+                </div>
+                <div class="form-actions">
+                    <button type="button" id="payment-cancel-btn" class="btn btn-secondary">Cancel</button>
+                    <button type="button" id="process-payment-btn" class="btn btn-success">Process Payment</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/customer-dashboard.js"></script>
 </body>
 </html>

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Employee Dashboard</title>
+    <title>Employee Dashboard - AutoRepairPro</title>
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -14,25 +14,208 @@
             <button id="logout-button">Logout</button>
         </div>
     </header>
+    
     <main class="dashboard-container">
-        <h2>My Assigned Jobs</h2>
-        <div id="job-list-container">
-            <table id="job-table">
-                <thead>
-                    <tr>
-                        <th>Job ID</th>
-                        <th>Customer</th>
-                        <th>Vehicle</th>
-                        <th>Service</th>
-                        <th>Status</th>
-                    </tr>
-                </thead>
-                <tbody id="job-table-body">
-                    <!-- Job rows will be inserted here by JS -->
-                </tbody>
-            </table>
+        <!-- Navigation Tabs -->
+        <div class="tab-navigation">
+            <button class="tab-button active" data-tab="assigned-jobs">My Assigned Jobs</button>
+            <button class="tab-button" data-tab="inventory">Inventory</button>
+        </div>
+
+        <!-- Assigned Jobs Tab -->
+        <div id="assigned-jobs-tab" class="tab-content active">
+            <div class="section-header">
+                <h2>My Assigned Jobs</h2>
+                <div class="job-stats">
+                    <div class="stat-card">
+                        <span class="stat-number" id="total-jobs">0</span>
+                        <span class="stat-label">Total Jobs</span>
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-number" id="in-progress-jobs">0</span>
+                        <span class="stat-label">In Progress</span>
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-number" id="completed-jobs">0</span>
+                        <span class="stat-label">Completed</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="table-container">
+                <table id="assigned-jobs-table">
+                    <thead>
+                        <tr>
+                            <th>Job ID</th>
+                            <th>Customer</th>
+                            <th>Vehicle</th>
+                            <th>Service</th>
+                            <th>Status</th>
+                            <th>Booking Date</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="assigned-jobs-table-body">
+                        <!-- Job rows will be inserted here by JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Inventory Tab -->
+        <div id="inventory-tab" class="tab-content">
+            <div class="section-header">
+                <h2>Available Inventory</h2>
+                <div class="search-container">
+                    <input type="text" id="inventory-search" placeholder="Search parts..." class="search-input">
+                </div>
+            </div>
+            
+            <div class="table-container">
+                <table id="inventory-table">
+                    <thead>
+                        <tr>
+                            <th>Part Name</th>
+                            <th>Available Quantity</th>
+                            <th>Price per Unit</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="inventory-table-body">
+                        <!-- Inventory rows will be inserted here by JS -->
+                    </tbody>
+                </table>
+            </div>
         </div>
     </main>
-    <script src="js/dashboard.js"></script>
+
+    <!-- Modal for Job Details -->
+    <div id="job-details-modal" class="modal">
+        <div class="modal-content large-modal">
+            <div class="modal-header">
+                <h3 id="job-details-title">Job Details</h3>
+                <span class="close" id="job-details-close">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="job-details-grid">
+                    <!-- Job Information -->
+                    <div class="details-section">
+                        <h4>Job Information</h4>
+                        <div class="detail-item">
+                            <label>Job ID:</label>
+                            <span id="detail-job-id"></span>
+                        </div>
+                        <div class="detail-item">
+                            <label>Customer:</label>
+                            <span id="detail-customer"></span>
+                        </div>
+                        <div class="detail-item">
+                            <label>Vehicle:</label>
+                            <span id="detail-vehicle"></span>
+                        </div>
+                        <div class="detail-item">
+                            <label>VIN:</label>
+                            <span id="detail-vin"></span>
+                        </div>
+                        <div class="detail-item">
+                            <label>Service:</label>
+                            <span id="detail-service"></span>
+                        </div>
+                        <div class="detail-item">
+                            <label>Service Description:</label>
+                            <span id="detail-service-description"></span>
+                        </div>
+                        <div class="detail-item">
+                            <label>Service Price:</label>
+                            <span id="detail-service-price"></span>
+                        </div>
+                        <div class="detail-item">
+                            <label>Status:</label>
+                            <span id="detail-status"></span>
+                        </div>
+                        <div class="detail-item">
+                            <label>Booking Date:</label>
+                            <span id="detail-booking-date"></span>
+                        </div>
+                        <div class="detail-item">
+                            <label>Notes:</label>
+                            <span id="detail-notes"></span>
+                        </div>
+                    </div>
+
+                    <!-- Status Update -->
+                    <div class="details-section">
+                        <h4>Update Status</h4>
+                        <div class="status-update-form">
+                            <select id="status-select" class="status-dropdown">
+                                <option value="Booked">Booked</option>
+                                <option value="In Progress">In Progress</option>
+                                <option value="Completed">Completed</option>
+                            </select>
+                            <button id="update-status-btn" class="btn btn-primary">Update Status</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Parts Usage Section -->
+                <div class="parts-section">
+                    <div class="parts-header">
+                        <h4>Parts Used</h4>
+                        <button id="add-part-btn" class="btn btn-sm btn-primary">Use Part</button>
+                    </div>
+                    
+                    <div class="table-container">
+                        <table id="used-parts-table">
+                            <thead>
+                                <tr>
+                                    <th>Part Name</th>
+                                    <th>Quantity Used</th>
+                                    <th>Price per Unit</th>
+                                    <th>Total Cost</th>
+                                </tr>
+                            </thead>
+                            <tbody id="used-parts-table-body">
+                                <!-- Used parts will be inserted here -->
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <div class="parts-total">
+                        <strong>Total Parts Cost: $<span id="total-parts-cost">0.00</span></strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal for Using Parts -->
+    <div id="use-part-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Use Part for Job</h3>
+                <span class="close" id="use-part-close">&times;</span>
+            </div>
+            <form id="use-part-form">
+                <input type="hidden" id="use-part-job-id">
+                <div class="form-group">
+                    <label for="part-select">Select Part:</label>
+                    <select id="part-select" required>
+                        <option value="">Choose a part...</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="part-quantity">Quantity to Use:</label>
+                    <input type="number" id="part-quantity" min="1" required>
+                    <small class="form-hint">Available: <span id="available-quantity">0</span></small>
+                </div>
+                <div class="form-actions">
+                    <button type="button" id="use-part-cancel" class="btn btn-secondary">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Use Part</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="js/employee-dashboard.js"></script>
 </body>
 </html>
