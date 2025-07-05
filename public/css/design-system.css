@@ -467,6 +467,52 @@ body {
     background: var(--success-500);
 }
 
+/* Enhanced Filter Select */
+.filter-select {
+    padding: var(--space-3) var(--space-4);
+    border: 2px solid var(--secondary-200);
+    border-radius: var(--radius-lg);
+    font-size: var(--text-sm);
+    background: white;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e");
+    background-position: right 0.75rem center;
+    background-repeat: no-repeat;
+    background-size: 1.5em 1.5em;
+    padding-right: 2.5rem;
+    appearance: none;
+}
+
+.filter-select:focus {
+    outline: none;
+    border-color: var(--primary-500);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%233b82f6' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e");
+}
+
+.filter-select:hover {
+    border-color: var(--primary-300);
+    background: var(--primary-50);
+}
+
+/* Sidebar Navigation - Remove black border flash */
+.nav-link {
+    transition: all var(--transition-fast);
+    border: 2px solid transparent !important; /* Prevent border flash */
+}
+
+.nav-link:focus {
+    outline: none !important;
+    box-shadow: none !important;
+    border: 2px solid transparent !important;
+}
+
+.nav-link:active {
+    border: 2px solid transparent !important;
+    box-shadow: none !important;
+}
+
 /* Animations */
 @keyframes fadeIn {
     from { opacity: 0; }

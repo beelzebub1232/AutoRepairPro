@@ -46,7 +46,6 @@ class NotificationManager {
                     <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/>
                     <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
                 </svg>
-                <div class="notification-count" id="notification-count">0</div>
             </button>
         `;
         
@@ -269,15 +268,9 @@ class NotificationManager {
         const unreadCount = this.notifications.filter(n => !n.read).length;
         const countElement = document.getElementById('notification-count');
         
+        // Notification count is completely hidden now
         if (countElement) {
-            countElement.textContent = unreadCount;
-            if (unreadCount > 0) {
-                countElement.classList.add('show');
-                countElement.style.display = 'flex';
-            } else {
-                countElement.classList.remove('show');
-                countElement.style.display = 'none';
-            }
+            countElement.style.display = 'none';
         }
     }
 

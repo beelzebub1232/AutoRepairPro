@@ -78,6 +78,24 @@ function initializeNavigation() {
             loadTabData(targetTab);
         });
     });
+
+    // Fix: Add event listeners for "View All" and "Manage" buttons
+    const viewAllBtn = document.querySelector('#recent-jobs-list .btn[data-tab="my-jobs"]');
+    const manageBtn = document.querySelector('#vehicles-summary .btn[data-tab="my-vehicles"]');
+    
+    if (viewAllBtn) {
+        viewAllBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            document.querySelector('[data-tab="my-jobs"]').click();
+        });
+    }
+    
+    if (manageBtn) {
+        manageBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            document.querySelector('[data-tab="my-vehicles"]').click();
+        });
+    }
 }
 
 function loadTabData(tab) {
@@ -251,12 +269,13 @@ function initializeLogout() {
     }
 }
 
-// Map Integration
+// Map Integration with Leaflet
 function initializeMapIntegration() {
     const mapContainer = document.getElementById('branch-map-container');
     if (mapContainer) {
         mapContainer.innerHTML = createMapInterface();
         attachMapEventListeners();
+        initializeLeafletMap();
     }
 }
 
@@ -269,7 +288,9 @@ function createMapInterface() {
             phone: "(555) 123-4567",
             services: ["Paint Jobs", "Dent Repair", "Collision Repair"],
             rating: 4.8,
-            hours: "Mon-Fri: 8AM-6PM, Sat: 9AM-4PM"
+            hours: "Mon-Fri: 8AM-6PM, Sat: 9AM-4PM",
+            lat: 40.7128,
+            lng: -74.0060
         },
         {
             id: 2,
@@ -278,7 +299,9 @@ function createMapInterface() {
             phone: "(555) 234-5678",
             services: ["Paint Jobs", "Dent Repair", "Oil Change"],
             rating: 4.6,
-            hours: "Mon-Fri: 7AM-7PM, Sat: 8AM-5PM"
+            hours: "Mon-Fri: 7AM-7PM, Sat: 8AM-5PM",
+            lat: 40.7831,
+            lng: -73.9712
         },
         {
             id: 3,
@@ -287,7 +310,9 @@ function createMapInterface() {
             phone: "(555) 345-6789",
             services: ["Collision Repair", "Paint Jobs", "Maintenance"],
             rating: 4.9,
-            hours: "Mon-Sat: 8AM-6PM"
+            hours: "Mon-Sat: 8AM-6PM",
+            lat: 40.7589,
+            lng: -73.9851
         }
     ];
 
@@ -311,7 +336,7 @@ function createMapInterface() {
             <div class="map-view">
                 <div class="branches-list">
                     ${branches.map((branch, index) => `
-                        <div class="branch-card" data-branch-id="${branch.id}" style="animation-delay: ${index * 0.1}s">
+                        <div class="branch-card" data-branch-id="${branch.id}" data-lat="${branch.lat}" data-lng="${branch.lng}" style="animation-delay: ${index * 0.1}s">
                             <div class="branch-header">
                                 <h4>${branch.name}</h4>
                                 <div class="branch-rating">
@@ -360,20 +385,75 @@ function createMapInterface() {
                     `).join('')}
                 </div>
                 <div class="selected-branch-info" id="selected-branch-info">
-                    <div class="empty-state">
-                        <div class="empty-state-icon">
-                            <svg class="icon icon-xl" viewBox="0 0 24 24">
-                                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
-                                <circle cx="12" cy="10" r="3"/>
-                            </svg>
+                    <div id="leaflet-map" style="height: 400px; border-radius: var(--radius-xl); overflow: hidden; border: 2px solid var(--secondary-200);"></div>
+                    <div style="margin-top: var(--space-4);">
+                        <div class="empty-state">
+                            <div class="empty-state-icon">
+                                <svg class="icon icon-xl" viewBox="0 0 24 24">
+                                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+                                    <circle cx="12" cy="10" r="3"/>
+                                </svg>
+                            </div>
+                            <div class="empty-state-title">Select a branch</div>
+                            <div class="empty-state-description">Choose a location to see details</div>
                         </div>
-                        <div class="empty-state-title">Select a branch</div>
-                        <div class="empty-state-description">Choose a location to see details</div>
                     </div>
                 </div>
             </div>
         </div>
     `;
+}
+
+let leafletMap = null;
+let branchMarkers = [];
+
+function initializeLeafletMap() {
+    // Load Leaflet CSS and JS
+    if (!document.querySelector('link[href*="leaflet"]')) {
+        const leafletCSS = document.createElement('link');
+        leafletCSS.rel = 'stylesheet';
+        leafletCSS.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+        document.head.appendChild(leafletCSS);
+    }
+
+    if (!window.L) {
+        const leafletJS = document.createElement('script');
+        leafletJS.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+        leafletJS.onload = () => {
+            setTimeout(createLeafletMap, 100);
+        };
+        document.head.appendChild(leafletJS);
+    } else {
+        setTimeout(createLeafletMap, 100);
+    }
+}
+
+function createLeafletMap() {
+    const mapElement = document.getElementById('leaflet-map');
+    if (!mapElement || !window.L) return;
+
+    // Initialize map centered on NYC
+    leafletMap = L.map('leaflet-map').setView([40.7128, -74.0060], 12);
+
+    // Add tile layer
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors'
+    }).addTo(leafletMap);
+
+    // Add branch markers
+    const branches = [
+        { id: 1, name: "RepairHub Pro Downtown", lat: 40.7128, lng: -74.0060 },
+        { id: 2, name: "RepairHub Pro Uptown", lat: 40.7831, lng: -73.9712 },
+        { id: 3, name: "RepairHub Pro Westside", lat: 40.7589, lng: -73.9851 }
+    ];
+
+    branches.forEach(branch => {
+        const marker = L.marker([branch.lat, branch.lng])
+            .addTo(leafletMap)
+            .bindPopup(`<strong>${branch.name}</strong><br><button onclick="selectBranch(${branch.id})" class="btn btn-sm btn-primary" style="margin-top: 8px;">Select Branch</button>`);
+        
+        branchMarkers.push({ id: branch.id, marker });
+    });
 }
 
 function attachMapEventListeners() {
@@ -401,6 +481,20 @@ function selectBranch(branchId) {
     const selectedCard = document.querySelector(`[data-branch-id="${branchId}"]`);
     if (selectedCard) {
         selectedCard.classList.add('selected');
+        
+        // Center map on selected branch
+        if (leafletMap) {
+            const lat = parseFloat(selectedCard.getAttribute('data-lat'));
+            const lng = parseFloat(selectedCard.getAttribute('data-lng'));
+            leafletMap.setView([lat, lng], 15);
+            
+            // Highlight selected marker
+            branchMarkers.forEach(({ id, marker }) => {
+                if (id === branchId) {
+                    marker.openPopup();
+                }
+            });
+        }
     }
 
     // Update selected branch info
@@ -423,7 +517,7 @@ function updateSelectedBranchInfo(branchId) {
     ];
     
     const branch = branches.find(b => b.id === branchId);
-    const infoContainer = document.getElementById('selected-branch-info');
+    const infoContainer = document.querySelector('#selected-branch-info > div:last-child');
     
     if (infoContainer && branch) {
         infoContainer.innerHTML = `
@@ -446,14 +540,14 @@ function updateSelectedBranchInfo(branchId) {
                     </div>
                 </div>
                 <div class="branch-actions">
-                    <button class="btn btn-sm btn-secondary">
+                    <button class="btn btn-sm btn-secondary" onclick="getDirections(${branchId})">
                         <svg class="icon icon-sm" viewBox="0 0 24 24">
                             <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
                             <circle cx="12" cy="10" r="3"/>
                         </svg>
                         Get Directions
                     </button>
-                    <button class="btn btn-sm btn-primary">
+                    <button class="btn btn-sm btn-primary" onclick="callBranch(${branchId})">
                         <svg class="icon icon-sm" viewBox="0 0 24 24">
                             <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
                         </svg>
@@ -462,6 +556,33 @@ function updateSelectedBranchInfo(branchId) {
                 </div>
             </div>
         `;
+    }
+}
+
+function getDirections(branchId) {
+    const branches = [
+        { id: 1, address: "123 Main Street, Downtown, NY" },
+        { id: 2, address: "456 Oak Avenue, Uptown, NY" },
+        { id: 3, address: "789 Pine Road, Westside, NY" }
+    ];
+    
+    const branch = branches.find(b => b.id === branchId);
+    if (branch) {
+        const url = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(branch.address)}`;
+        window.open(url, '_blank');
+    }
+}
+
+function callBranch(branchId) {
+    const phones = {
+        1: "(555) 123-4567",
+        2: "(555) 234-5678",
+        3: "(555) 345-6789"
+    };
+    
+    const phone = phones[branchId];
+    if (phone) {
+        window.location.href = `tel:${phone}`;
     }
 }
 
@@ -483,6 +604,8 @@ function detectUserLocation() {
 
     navigator.geolocation.getCurrentPosition(
         (position) => {
+            const { latitude, longitude } = position.coords;
+            
             detectBtn.innerHTML = `
                 <svg class="icon icon-sm" viewBox="0 0 24 24">
                     <path d="M9 12l2 2 4-4"/>
@@ -492,6 +615,18 @@ function detectUserLocation() {
             `;
             detectBtn.classList.remove('location-btn-detecting');
             detectBtn.classList.add('location-btn-success');
+            
+            // Center map on user location
+            if (leafletMap) {
+                leafletMap.setView([latitude, longitude], 13);
+                
+                // Add user location marker
+                L.marker([latitude, longitude])
+                    .addTo(leafletMap)
+                    .bindPopup('Your Location')
+                    .openPopup();
+            }
+            
             showNotification('Location detected successfully', 'success');
         },
         (error) => {

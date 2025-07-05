@@ -72,26 +72,9 @@
     transform: rotate(15deg);
 }
 
+/* REMOVED: notification-count completely hidden */
 .notification-count {
-    position: absolute;
-    top: -2px;
-    right: -2px;
-    background: var(--error-500);
-    color: white;
-    border-radius: var(--radius-full);
-    width: 20px;
-    height: 20px;
-    font-size: var(--text-xs);
-    display: none;
-    align-items: center;
-    justify-content: center;
-    font-weight: 700;
-    border: 2px solid white;
-    animation: bounceIn 0.5s ease;
-}
-
-.notification-count.show {
-    display: flex;
+    display: none !important;
 }
 
 .notification-panel {
