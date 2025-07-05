@@ -1,4 +1,4 @@
-// Modern Notification System
+// Modern Notification System - Fixed Positioning
 class NotificationManager {
     constructor() {
         this.notifications = [];
@@ -10,45 +10,56 @@ class NotificationManager {
         this.createNotificationContainer();
         this.loadStoredNotifications();
         this.startPolling();
+        
+        // Wait for DOM to be fully loaded before creating bell
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', () => {
+                setTimeout(() => this.createNotificationBell(), 500);
+            });
+        } else {
+            setTimeout(() => this.createNotificationBell(), 500);
+        }
     }
 
     createNotificationContainer() {
-        // Create notification container
+        // Create notification container for toasts
         const container = document.createElement('div');
         container.id = 'notification-container';
         container.className = 'notification-container';
         document.body.appendChild(container);
         this.container = container;
-
-        // Create notification bell icon in header
-        this.createNotificationBell();
     }
 
     createNotificationBell() {
-        // Look for the user info section in the header
-        const userInfo = document.querySelector('.user-info, .header-user');
-        if (userInfo && userInfo.parentElement) {
-            const bellContainer = document.createElement('div');
-            bellContainer.className = 'notification-bell-container';
-            bellContainer.innerHTML = `
-                <button id="notification-bell" class="notification-bell">
-                    <svg class="icon bell-icon" viewBox="0 0 24 24">
-                        <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/>
-                        <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
-                    </svg>
-                    <div class="notification-count" id="notification-count">0</div>
-                </button>
-            `;
-            
-            // Insert before user info
-            userInfo.parentElement.insertBefore(bellContainer, userInfo);
-
-            // Add click handler for bell
-            document.getElementById('notification-bell').addEventListener('click', (e) => {
-                e.stopPropagation();
-                this.toggleNotificationPanel();
-            });
+        // Remove existing bell if present
+        const existingBell = document.querySelector('.notification-bell-container');
+        if (existingBell) {
+            existingBell.remove();
         }
+
+        // Create notification bell with fixed positioning
+        const bellContainer = document.createElement('div');
+        bellContainer.className = 'notification-bell-container';
+        bellContainer.innerHTML = `
+            <button id="notification-bell" class="notification-bell">
+                <svg class="icon bell-icon" viewBox="0 0 24 24">
+                    <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/>
+                    <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+                </svg>
+                <div class="notification-count" id="notification-count">0</div>
+            </button>
+        `;
+        
+        document.body.appendChild(bellContainer);
+
+        // Add click handler for bell
+        document.getElementById('notification-bell').addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.toggleNotificationPanel();
+        });
+
+        // Update count display
+        this.updateNotificationCount();
     }
 
     toggleNotificationPanel() {
@@ -63,9 +74,26 @@ class NotificationManager {
         panel.id = 'notification-panel';
         panel.className = 'notification-panel';
         
-        // Position panel relative to the bell
+        // Position panel relative to the bell with better positioning
         const bell = document.getElementById('notification-bell');
         const bellRect = bell.getBoundingClientRect();
+        const viewportWidth = window.innerWidth;
+        const viewportHeight = window.innerHeight;
+        
+        // Calculate optimal position
+        let left = bellRect.left - 300; // Panel width is 380px, so position it to the left
+        let top = bellRect.top - 500; // Position above the bell
+        
+        // Ensure panel doesn't go off-screen
+        if (left < 20) {
+            left = 20;
+        }
+        if (left + 380 > viewportWidth - 20) {
+            left = viewportWidth - 400;
+        }
+        if (top < 20) {
+            top = bellRect.bottom + 10; // Position below if no space above
+        }
         
         panel.innerHTML = `
             <div class="notification-header">
@@ -98,10 +126,10 @@ class NotificationManager {
             </div>
         `;
 
-        // Position the panel correctly
+        // Set position
         panel.style.position = 'fixed';
-        panel.style.top = (bellRect.bottom + 10) + 'px';
-        panel.style.left = Math.max(20, bellRect.left - 300) + 'px'; // Ensure it doesn't go off-screen
+        panel.style.top = top + 'px';
+        panel.style.left = left + 'px';
 
         document.body.appendChild(panel);
 
@@ -110,11 +138,17 @@ class NotificationManager {
         document.getElementById('clear-all-notifications').addEventListener('click', () => this.clearAllNotifications());
 
         // Close panel when clicking outside
-        document.addEventListener('click', (e) => {
+        const closeHandler = (e) => {
             if (!panel.contains(e.target) && !document.getElementById('notification-bell').contains(e.target)) {
                 panel.remove();
+                document.removeEventListener('click', closeHandler);
             }
-        });
+        };
+        
+        // Add delay to prevent immediate closing
+        setTimeout(() => {
+            document.addEventListener('click', closeHandler);
+        }, 100);
     }
 
     renderNotificationList() {
@@ -219,12 +253,16 @@ class NotificationManager {
         // Auto remove after 5 seconds
         setTimeout(() => {
             if (toast.parentElement) {
-                toast.remove();
+                toast.style.animation = 'toastSlideOut 0.3s ease forwards';
+                setTimeout(() => toast.remove(), 300);
             }
         }, 5000);
 
         // Add click to remove
-        toast.addEventListener('click', () => toast.remove());
+        toast.addEventListener('click', () => {
+            toast.style.animation = 'toastSlideOut 0.3s ease forwards';
+            setTimeout(() => toast.remove(), 300);
+        });
     }
 
     updateNotificationCount() {
@@ -233,7 +271,13 @@ class NotificationManager {
         
         if (countElement) {
             countElement.textContent = unreadCount;
-            countElement.style.display = unreadCount > 0 ? 'flex' : 'none';
+            if (unreadCount > 0) {
+                countElement.classList.add('show');
+                countElement.style.display = 'flex';
+            } else {
+                countElement.classList.remove('show');
+                countElement.style.display = 'none';
+            }
         }
     }
 
@@ -402,6 +446,22 @@ class NotificationManager {
         });
     }
 }
+
+// Add CSS for toast slide out animation
+const style = document.createElement('style');
+style.textContent = `
+    @keyframes toastSlideOut {
+        from {
+            opacity: 1;
+            transform: translateX(0);
+        }
+        to {
+            opacity: 0;
+            transform: translateX(100%);
+        }
+    }
+`;
+document.head.appendChild(style);
 
 // Initialize notification manager
 document.addEventListener('DOMContentLoaded', () => {
