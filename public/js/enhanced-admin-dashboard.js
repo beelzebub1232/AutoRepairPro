@@ -1,3 +1,4 @@
+// Enhanced Admin Dashboard with Advanced Features
 document.addEventListener('DOMContentLoaded', () => {
     const userRole = sessionStorage.getItem('userRole');
     const userName = sessionStorage.getItem('userName');
@@ -24,10 +25,9 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Tab navigation
-    initializeTabNavigation();
-    
     // Initialize all modules
+    initializeTabNavigation();
+    initializeOverviewModule();
     initializeJobsModule();
     initializeServicesModule();
     initializeInventoryModule();
@@ -35,7 +35,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initializeReportsModule();
     
     // Load initial data
-    loadAllJobs();
+    loadOverviewData();
 });
 
 // Tab Navigation System
@@ -57,6 +57,9 @@ function initializeTabNavigation() {
             
             // Load data for the active tab
             switch(targetTab) {
+                case 'overview':
+                    loadOverviewData();
+                    break;
                 case 'jobs':
                     loadAllJobs();
                     break;
@@ -77,7 +80,30 @@ function initializeTabNavigation() {
     });
 }
 
-// Jobs Module
+// Overview Module
+function initializeOverviewModule() {
+    const refreshBtn = document.getElementById('refresh-overview-btn');
+    if (refreshBtn) {
+        refreshBtn.addEventListener('click', loadOverviewData);
+    }
+}
+
+async function loadOverviewData() {
+    try {
+        // Update KPIs
+        if (window.advancedReporting) {
+            await window.advancedReporting.updateKPIDashboard();
+            
+            // Generate overview charts
+            await window.advancedReporting.generateRevenueChart('overview-revenue-chart');
+            await window.advancedReporting.generateServicePerformanceChart('overview-service-chart');
+        }
+    } catch (error) {
+        console.error('Error loading overview data:', error);
+    }
+}
+
+// Jobs Module (Enhanced from existing)
 function initializeJobsModule() {
     const createJobBtn = document.getElementById('create-job-btn');
     const jobModal = document.getElementById('job-modal');
@@ -221,6 +247,15 @@ async function createJob() {
             hideModal(document.getElementById('job-modal'));
             showSuccess('Job created successfully');
             loadAllJobs();
+            
+            // Send notification
+            if (window.notificationManager) {
+                window.notificationManager.addNotification({
+                    type: 'success',
+                    title: 'Job Created',
+                    message: `New job #${result.jobId} has been created successfully`
+                });
+            }
         } else {
             showError(result.error || 'Failed to create job');
         }
@@ -230,7 +265,7 @@ async function createJob() {
     }
 }
 
-// Services Module
+// Services Module (Enhanced from existing)
 function initializeServicesModule() {
     const addServiceBtn = document.getElementById('add-service-btn');
     const serviceModal = document.getElementById('service-modal');
@@ -323,6 +358,15 @@ async function saveService() {
             hideModal(document.getElementById('service-modal'));
             showSuccess(isEdit ? 'Service updated successfully' : 'Service added successfully');
             loadServices();
+            
+            // Send notification
+            if (window.notificationManager) {
+                window.notificationManager.addNotification({
+                    type: 'success',
+                    title: isEdit ? 'Service Updated' : 'Service Added',
+                    message: `Service "${formData.serviceName}" has been ${isEdit ? 'updated' : 'added'} successfully`
+                });
+            }
         } else {
             showError(result.error || 'Failed to save service');
         }
@@ -365,6 +409,15 @@ async function deleteService(serviceId) {
         if (response.ok) {
             showSuccess('Service deleted successfully');
             loadServices();
+            
+            // Send notification
+            if (window.notificationManager) {
+                window.notificationManager.addNotification({
+                    type: 'warning',
+                    title: 'Service Deleted',
+                    message: 'A service has been removed from the system'
+                });
+            }
         } else {
             showError(result.error || 'Failed to delete service');
         }
@@ -374,7 +427,7 @@ async function deleteService(serviceId) {
     }
 }
 
-// Inventory Module
+// Inventory Module (Enhanced from existing)
 function initializeInventoryModule() {
     const addInventoryBtn = document.getElementById('add-inventory-btn');
     const lowStockBtn = document.getElementById('low-stock-btn');
@@ -456,6 +509,15 @@ async function loadLowStockAlerts() {
                 `${item.partName}: ${item.quantity} remaining`
             ).join('\n');
             alert(`Low Stock Alert!\n\n${itemsList}`);
+            
+            // Send notification
+            if (window.notificationManager) {
+                window.notificationManager.addNotification({
+                    type: 'warning',
+                    title: 'Low Stock Alert',
+                    message: `${lowStockItems.length} items are running low in inventory`
+                });
+            }
         }
     } catch (error) {
         console.error('Error loading low stock alerts:', error);
@@ -495,6 +557,15 @@ async function saveInventoryItem() {
             hideModal(document.getElementById('inventory-modal'));
             showSuccess(isEdit ? 'Inventory item updated successfully' : 'Inventory item added successfully');
             loadInventory();
+            
+            // Send notification
+            if (window.notificationManager) {
+                window.notificationManager.addNotification({
+                    type: 'success',
+                    title: isEdit ? 'Inventory Updated' : 'Inventory Added',
+                    message: `Part "${formData.partName}" has been ${isEdit ? 'updated' : 'added'} successfully`
+                });
+            }
         } else {
             showError(result.error || 'Failed to save inventory item');
         }
@@ -524,7 +595,7 @@ async function editInventoryItem(inventoryId) {
     }
 }
 
-// Users Module
+// Users Module (Enhanced from existing)
 function initializeUsersModule() {
     const addUserBtn = document.getElementById('add-user-btn');
     const userModal = document.getElementById('user-modal');
@@ -622,6 +693,15 @@ async function saveUser() {
             hideModal(document.getElementById('user-modal'));
             showSuccess(isEdit ? 'User updated successfully' : 'User added successfully');
             loadUsers();
+            
+            // Send notification
+            if (window.notificationManager) {
+                window.notificationManager.addNotification({
+                    type: 'success',
+                    title: isEdit ? 'User Updated' : 'User Added',
+                    message: `User "${formData.fullName}" has been ${isEdit ? 'updated' : 'added'} successfully`
+                });
+            }
         } else {
             showError(result.error || 'Failed to save user');
         }
@@ -652,295 +732,59 @@ async function editUser(userId) {
     }
 }
 
-// Reports Module
+// Reports Module (Enhanced)
 function initializeReportsModule() {
     const refreshReportsBtn = document.getElementById('refresh-reports-btn');
-    const exportReportsBtn = document.getElementById('export-reports-btn');
+    const exportCsvBtn = document.getElementById('export-csv-btn');
+    const exportJsonBtn = document.getElementById('export-json-btn');
     
     if (refreshReportsBtn) {
         refreshReportsBtn.addEventListener('click', loadReports);
     }
     
-    if (exportReportsBtn) {
-        exportReportsBtn.addEventListener('click', exportReports);
+    if (exportCsvBtn) {
+        exportCsvBtn.addEventListener('click', () => {
+            if (window.advancedReporting) {
+                window.advancedReporting.exportReport('csv');
+            }
+        });
     }
     
-    // Initialize filter change handlers
-    const revenuePeriod = document.getElementById('revenue-period');
-    const partsPeriod = document.getElementById('parts-period');
-    const employeePeriod = document.getElementById('employee-period');
-    
-    if (revenuePeriod) {
-        revenuePeriod.addEventListener('change', loadRevenueReport);
-    }
-    
-    if (partsPeriod) {
-        partsPeriod.addEventListener('change', loadPartUsageReport);
-    }
-    
-    if (employeePeriod) {
-        employeePeriod.addEventListener('change', loadEmployeePerformanceReport);
+    if (exportJsonBtn) {
+        exportJsonBtn.addEventListener('click', () => {
+            if (window.advancedReporting) {
+                window.advancedReporting.exportReport('json');
+            }
+        });
     }
 }
 
 async function loadReports() {
-    await Promise.all([
-        loadKeyMetrics(),
-        loadRevenueReport(),
-        loadPartUsageReport(),
-        loadServicePerformanceReport(),
-        loadEmployeePerformanceReport()
-    ]);
-}
-
-async function loadKeyMetrics() {
-    try {
-        // Load multiple metrics in parallel
-        const [jobsResponse, usersResponse, inventoryResponse] = await Promise.all([
-            fetch('http://localhost:8080/api/admin/jobs'),
-            fetch('http://localhost:8080/api/admin/users'),
-            fetch('http://localhost:8080/api/admin/inventory/alerts')
-        ]);
-        
-        const jobs = await jobsResponse.json();
-        const users = await usersResponse.json();
-        const lowStockItems = await inventoryResponse.json();
-        
-        // Calculate metrics
-        const totalRevenue = jobs
-            .filter(job => job.totalCost)
-            .reduce((sum, job) => sum + parseFloat(job.totalCost), 0);
-        
-        const totalJobs = jobs.length;
-        const activeCustomers = users.filter(user => user.role === 'customer').length;
-        const lowStockCount = lowStockItems.length;
-        
-        // Update metric cards
-        document.getElementById('total-revenue').textContent = `$${totalRevenue.toFixed(2)}`;
-        document.getElementById('total-jobs').textContent = totalJobs;
-        document.getElementById('active-customers').textContent = activeCustomers;
-        document.getElementById('low-stock-items').textContent = lowStockCount;
-        
-    } catch (error) {
-        console.error('Error loading key metrics:', error);
-    }
-}
-
-async function loadRevenueReport() {
-    try {
-        const response = await fetch('http://localhost:8080/api/admin/reports/revenue');
-        if (!response.ok) throw new Error('Failed to fetch revenue report');
-        
-        const revenueData = await response.json();
-        populateRevenueTable(revenueData);
-    } catch (error) {
-        console.error('Error loading revenue report:', error);
-        showError('Failed to load revenue report');
-    }
-}
-
-function populateRevenueTable(revenueData) {
-    const tableBody = document.getElementById('revenue-table-body');
-    tableBody.innerHTML = '';
-
-    if (revenueData.length === 0) {
-        tableBody.innerHTML = '<tr><td colspan="4" class="no-data">No revenue data found.</td></tr>';
-        return;
-    }
-
-    revenueData.forEach(data => {
-        const avgJobValue = data.jobsCompleted > 0 ? (data.totalRevenue / data.jobsCompleted).toFixed(2) : '0.00';
-        const row = document.createElement('tr');
-        row.innerHTML = `
-            <td>${data.month}</td>
-            <td>${data.jobsCompleted}</td>
-            <td>$${data.totalRevenue}</td>
-            <td>$${avgJobValue}</td>
-        `;
-        tableBody.appendChild(row);
-    });
-}
-
-async function loadPartUsageReport() {
-    try {
-        const response = await fetch('http://localhost:8080/api/admin/reports/part-usage');
-        if (!response.ok) throw new Error('Failed to fetch part usage report');
-        
-        const partUsageData = await response.json();
-        populatePartUsageTable(partUsageData);
-    } catch (error) {
-        console.error('Error loading part usage report:', error);
-        showError('Failed to load part usage report');
-    }
-}
-
-function populatePartUsageTable(partUsageData) {
-    const tableBody = document.getElementById('parts-usage-table-body');
-    tableBody.innerHTML = '';
-
-    if (partUsageData.length === 0) {
-        tableBody.innerHTML = '<tr><td colspan="4" class="no-data">No part usage data found.</td></tr>';
-        return;
-    }
-
-    partUsageData.forEach(data => {
-        const revenueImpact = (data.totalUsed * 15).toFixed(2); // Estimated revenue impact
-        const row = document.createElement('tr');
-        row.innerHTML = `
-            <td>${data.partName}</td>
-            <td>${data.totalUsed}</td>
-            <td>${data.jobsCount}</td>
-            <td>$${revenueImpact}</td>
-        `;
-        tableBody.appendChild(row);
-    });
-}
-
-async function loadServicePerformanceReport() {
-    try {
-        const [jobsResponse, servicesResponse] = await Promise.all([
-            fetch('http://localhost:8080/api/admin/jobs'),
-            fetch('http://localhost:8080/api/admin/services')
-        ]);
-        
-        const jobs = await jobsResponse.json();
-        const services = await servicesResponse.json();
-        
-        // Calculate service performance
-        const servicePerformance = services.map(service => {
-            const serviceJobs = jobs.filter(job => job.service === service.serviceName);
-            const completedJobs = serviceJobs.filter(job => ['Completed', 'Invoiced', 'Paid'].includes(job.status));
-            const successRate = serviceJobs.length > 0 ? ((completedJobs.length / serviceJobs.length) * 100).toFixed(1) : '0.0';
-            const avgRevenue = completedJobs.length > 0 ? 
-                (completedJobs.reduce((sum, job) => sum + (parseFloat(job.totalCost) || 0), 0) / completedJobs.length).toFixed(2) : 
-                '0.00';
+    if (window.advancedReporting) {
+        try {
+            await Promise.all([
+                window.advancedReporting.generateRevenueChart('revenue-chart'),
+                window.advancedReporting.generatePartUsageChart('parts-usage-chart'),
+                window.advancedReporting.generateServicePerformanceChart('service-performance-chart'),
+                window.advancedReporting.updateKPIDashboard()
+            ]);
             
-            return {
-                serviceName: service.serviceName,
-                bookings: serviceJobs.length,
-                completed: completedJobs.length,
-                successRate: successRate,
-                avgRevenue: avgRevenue
-            };
-        });
-        
-        populateServicePerformanceTable(servicePerformance);
-    } catch (error) {
-        console.error('Error loading service performance report:', error);
-        showError('Failed to load service performance report');
+            // Send notification
+            if (window.notificationManager) {
+                window.notificationManager.addNotification({
+                    type: 'success',
+                    title: 'Reports Updated',
+                    message: 'All reports have been refreshed with the latest data'
+                });
+            }
+        } catch (error) {
+            console.error('Error loading reports:', error);
+            showError('Failed to load reports');
+        }
     }
 }
 
-function populateServicePerformanceTable(servicePerformance) {
-    const tableBody = document.getElementById('service-performance-table-body');
-    tableBody.innerHTML = '';
-
-    if (servicePerformance.length === 0) {
-        tableBody.innerHTML = '<tr><td colspan="5" class="no-data">No service performance data found.</td></tr>';
-        return;
-    }
-
-    servicePerformance.forEach(data => {
-        const row = document.createElement('tr');
-        row.innerHTML = `
-            <td>${data.serviceName}</td>
-            <td>${data.bookings}</td>
-            <td>${data.completed}</td>
-            <td>${data.successRate}%</td>
-            <td>$${data.avgRevenue}</td>
-        `;
-        tableBody.appendChild(row);
-    });
-}
-
-async function loadEmployeePerformanceReport() {
-    try {
-        const [jobsResponse, usersResponse] = await Promise.all([
-            fetch('http://localhost:8080/api/admin/jobs'),
-            fetch('http://localhost:8080/api/admin/users')
-        ]);
-        
-        const jobs = await jobsResponse.json();
-        const users = await usersResponse.json();
-        const employees = users.filter(user => user.role === 'employee');
-        
-        // Calculate employee performance
-        const employeePerformance = employees.map(employee => {
-            const assignedJobs = jobs.filter(job => job.assignedEmployee === employee.fullName);
-            const completedJobs = assignedJobs.filter(job => ['Completed', 'Invoiced', 'Paid'].includes(job.status));
-            const completionRate = assignedJobs.length > 0 ? ((completedJobs.length / assignedJobs.length) * 100).toFixed(1) : '0.0';
-            
-            return {
-                employeeName: employee.fullName,
-                assigned: assignedJobs.length,
-                completed: completedJobs.length,
-                completionRate: completionRate,
-                avgTime: '3.2 days' // Placeholder - would need completion time calculation
-            };
-        });
-        
-        populateEmployeePerformanceTable(employeePerformance);
-    } catch (error) {
-        console.error('Error loading employee performance report:', error);
-        showError('Failed to load employee performance report');
-    }
-}
-
-function populateEmployeePerformanceTable(employeePerformance) {
-    const tableBody = document.getElementById('employee-performance-table-body');
-    tableBody.innerHTML = '';
-
-    if (employeePerformance.length === 0) {
-        tableBody.innerHTML = '<tr><td colspan="5" class="no-data">No employee performance data found.</td></tr>';
-        return;
-    }
-
-    employeePerformance.forEach(data => {
-        const row = document.createElement('tr');
-        row.innerHTML = `
-            <td>${data.employeeName}</td>
-            <td>${data.assigned}</td>
-            <td>${data.completed}</td>
-            <td>${data.completionRate}%</td>
-            <td>${data.avgTime}</td>
-        `;
-        tableBody.appendChild(row);
-    });
-}
-
-function exportReports() {
-    // Simple CSV export functionality
-    const reportData = [];
-    
-    // Add headers
-    reportData.push(['AutoRepairPro - Business Report']);
-    reportData.push(['Generated on:', new Date().toLocaleDateString()]);
-    reportData.push([]);
-    
-    // Add key metrics
-    reportData.push(['Key Metrics']);
-    reportData.push(['Total Revenue', document.getElementById('total-revenue').textContent]);
-    reportData.push(['Total Jobs', document.getElementById('total-jobs').textContent]);
-    reportData.push(['Active Customers', document.getElementById('active-customers').textContent]);
-    reportData.push(['Low Stock Items', document.getElementById('low-stock-items').textContent]);
-    reportData.push([]);
-    
-    // Convert to CSV
-    const csvContent = reportData.map(row => row.join(',')).join('\n');
-    
-    // Download CSV
-    const blob = new Blob([csvContent], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `autorepairpro-report-${new Date().toISOString().split('T')[0]}.csv`;
-    a.click();
-    window.URL.revokeObjectURL(url);
-    
-    showSuccess('Report exported successfully!');
-}
-
-// Assignment and Invoice Functions
+// Assignment and Invoice Functions (Enhanced from existing)
 async function showAssignModal(jobId) {
     try {
         // Load employees
@@ -997,6 +841,15 @@ async function assignEmployee() {
             hideModal(document.getElementById('assign-modal'));
             showSuccess('Employee assigned successfully');
             loadAllJobs();
+            
+            // Send notification
+            if (window.notificationManager) {
+                window.notificationManager.addNotification({
+                    type: 'success',
+                    title: 'Employee Assigned',
+                    message: `Job #${jobId} has been assigned to an employee`
+                });
+            }
         } else {
             showError(result.error || 'Failed to assign employee');
         }
@@ -1019,6 +872,15 @@ async function generateInvoice(jobId) {
         if (response.ok) {
             showSuccess(`Invoice generated successfully. Total cost: $${result.totalCost}`);
             loadAllJobs();
+            
+            // Send notification
+            if (window.notificationManager) {
+                window.notificationManager.addNotification({
+                    type: 'success',
+                    title: 'Invoice Generated',
+                    message: `Invoice for job #${jobId} has been generated. Total: $${result.totalCost}`
+                });
+            }
         } else {
             showError(result.error || 'Failed to generate invoice');
         }
@@ -1040,11 +902,9 @@ function hideModal(modal) {
 }
 
 function showSuccess(message) {
-    // Simple success notification - you can enhance this
     alert('Success: ' + message);
 }
 
 function showError(message) {
-    // Simple error notification - you can enhance this
     alert('Error: ' + message);
 }

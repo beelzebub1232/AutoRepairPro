@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Dashboard - AutoRepairPro</title>
     <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/notifications.css">
+    <link rel="stylesheet" href="css/enhanced-chatbot.css">
 </head>
 <body>
     <header>
@@ -18,15 +20,82 @@
     <main class="dashboard-container">
         <!-- Navigation Tabs -->
         <div class="tab-navigation">
-            <button class="tab-button active" data-tab="jobs">Jobs Overview</button>
+            <button class="tab-button active" data-tab="overview">Overview</button>
+            <button class="tab-button" data-tab="jobs">Jobs Management</button>
             <button class="tab-button" data-tab="services">Manage Services</button>
             <button class="tab-button" data-tab="inventory">Manage Inventory</button>
             <button class="tab-button" data-tab="users">Manage Users</button>
-            <button class="tab-button" data-tab="reports">Reports</button>
+            <button class="tab-button" data-tab="reports">Reports & Analytics</button>
+        </div>
+
+        <!-- Overview Tab -->
+        <div id="overview-tab" class="tab-content active">
+            <div class="section-header">
+                <h2>Business Overview</h2>
+                <button id="refresh-overview-btn" class="btn btn-primary">Refresh Data</button>
+            </div>
+            
+            <!-- Key Metrics Overview -->
+            <div class="metrics-overview">
+                <div class="metric-card">
+                    <div class="metric-icon">💰</div>
+                    <div class="metric-content">
+                        <h3 id="total-revenue">$0</h3>
+                        <p>Total Revenue</p>
+                    </div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-icon">🔧</div>
+                    <div class="metric-content">
+                        <h3 id="total-jobs">0</h3>
+                        <p>Total Jobs</p>
+                    </div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-icon">👥</div>
+                    <div class="metric-content">
+                        <h3 id="active-customers">0</h3>
+                        <p>Active Customers</p>
+                    </div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-icon">📦</div>
+                    <div class="metric-content">
+                        <h3 id="low-stock-items">0</h3>
+                        <p>Low Stock Items</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Additional KPIs -->
+            <div class="metrics-overview" id="additional-kpis">
+                <!-- Additional metrics will be inserted here -->
+            </div>
+
+            <!-- Quick Charts -->
+            <div class="reports-grid">
+                <div class="report-card">
+                    <div class="report-header">
+                        <h3>Revenue Trend</h3>
+                    </div>
+                    <div class="chart-container" id="overview-revenue-chart">
+                        <!-- Chart will be inserted here -->
+                    </div>
+                </div>
+
+                <div class="report-card">
+                    <div class="report-header">
+                        <h3>Service Distribution</h3>
+                    </div>
+                    <div class="chart-container" id="overview-service-chart">
+                        <!-- Chart will be inserted here -->
+                    </div>
+                </div>
+            </div>
         </div>
 
         <!-- Jobs Overview Tab -->
-        <div id="jobs-tab" class="tab-content active">
+        <div id="jobs-tab" class="tab-content">
             <div class="section-header">
                 <h2>All Repair Jobs</h2>
                 <button id="create-job-btn" class="btn btn-primary">Create New Job</button>
@@ -129,50 +198,78 @@
             </div>
         </div>
 
-        <!-- Reports Tab -->
+        <!-- Reports & Analytics Tab -->
         <div id="reports-tab" class="tab-content">
             <div class="section-header">
                 <h2>Reports & Analytics</h2>
+                <div class="header-actions">
+                    <button id="refresh-reports-btn" class="btn btn-primary">Refresh Data</button>
+                    <button id="export-csv-btn" class="btn btn-secondary">Export CSV</button>
+                    <button id="export-json-btn" class="btn btn-secondary">Export JSON</button>
+                </div>
             </div>
+            
             <div class="reports-grid">
+                <!-- Revenue Report -->
                 <div class="report-card">
-                    <h3>Revenue Report</h3>
-                    <div id="revenue-chart" class="chart-container">
-                        <table id="revenue-table">
-                            <thead>
-                                <tr>
-                                    <th>Month</th>
-                                    <th>Jobs Completed</th>
-                                    <th>Total Revenue</th>
-                                </tr>
-                            </thead>
-                            <tbody id="revenue-table-body">
-                                <!-- Revenue data will be inserted here -->
-                            </tbody>
-                        </table>
+                    <div class="report-header">
+                        <h3>Monthly Revenue Report</h3>
+                        <select id="revenue-period" class="report-filter">
+                            <option value="6">Last 6 Months</option>
+                            <option value="12" selected>Last 12 Months</option>
+                            <option value="24">Last 24 Months</option>
+                        </select>
+                    </div>
+                    <div class="chart-container" id="revenue-chart">
+                        <!-- Chart will be inserted here -->
                     </div>
                 </div>
+
+                <!-- Part Usage Report -->
                 <div class="report-card">
-                    <h3>Part Usage Report</h3>
-                    <div id="parts-chart" class="chart-container">
-                        <table id="parts-usage-table">
-                            <thead>
-                                <tr>
-                                    <th>Part Name</th>
-                                    <th>Total Used</th>
-                                    <th>Jobs Count</th>
-                                </tr>
-                            </thead>
-                            <tbody id="parts-usage-table-body">
-                                <!-- Parts usage data will be inserted here -->
-                            </tbody>
-                        </table>
+                    <div class="report-header">
+                        <h3>Parts Usage Analysis</h3>
+                        <select id="parts-period" class="report-filter">
+                            <option value="top10" selected>Top 10 Parts</option>
+                            <option value="top20">Top 20 Parts</option>
+                            <option value="all">All Parts</option>
+                        </select>
+                    </div>
+                    <div class="chart-container" id="parts-usage-chart">
+                        <!-- Chart will be inserted here -->
+                    </div>
+                </div>
+
+                <!-- Service Performance Report -->
+                <div class="report-card">
+                    <div class="report-header">
+                        <h3>Service Performance</h3>
+                        <button id="service-details-btn" class="btn btn-sm btn-secondary">View Details</button>
+                    </div>
+                    <div class="chart-container" id="service-performance-chart">
+                        <!-- Chart will be inserted here -->
+                    </div>
+                </div>
+
+                <!-- Employee Performance Report -->
+                <div class="report-card">
+                    <div class="report-header">
+                        <h3>Employee Performance</h3>
+                        <select id="employee-period" class="report-filter">
+                            <option value="month" selected>This Month</option>
+                            <option value="quarter">This Quarter</option>
+                            <option value="year">This Year</option>
+                        </select>
+                    </div>
+                    <div class="chart-container" id="employee-performance-chart">
+                        <!-- Chart will be inserted here -->
                     </div>
                 </div>
             </div>
         </div>
     </main>
 
+    <!-- All existing modals remain the same -->
     <!-- Modal for Service Form -->
     <div id="service-modal" class="modal">
         <div class="modal-content">
@@ -331,6 +428,9 @@
         </div>
     </div>
 
-    <script src="js/admin-dashboard.js"></script>
+    <script src="js/notifications.js"></script>
+    <script src="js/advanced-reporting.js"></script>
+    <script src="js/enhanced-chatbot.js"></script>
+    <script src="js/enhanced-admin-dashboard.js"></script>
 </body>
 </html>

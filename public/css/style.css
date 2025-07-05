@@ -282,6 +282,21 @@ header h1 {
     margin-top: 0.5rem;
 }
 
+/* Filter Container */
+.filter-container {
+    display: flex;
+    align-items: center;
+}
+
+.filter-select {
+    padding: 10px 15px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 14px;
+    background: white;
+    cursor: pointer;
+}
+
 /* Search Container */
 .search-container {
     display: flex;
@@ -301,21 +316,6 @@ header h1 {
     outline: none;
     border-color: #3498db;
     box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
-}
-
-/* Filter Container */
-.filter-container {
-    display: flex;
-    align-items: center;
-}
-
-.filter-select {
-    padding: 10px 15px;
-    border: 1px solid #ddd;
-    border-radius: 6px;
-    font-size: 14px;
-    background: white;
-    cursor: pointer;
 }
 
 /* Table Styles */
@@ -624,36 +624,6 @@ tbody tr:hover {
     color: #2c3e50;
 }
 
-/* Reports Grid */
-.reports-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
-    gap: 2rem;
-}
-
-.report-card {
-    background: white;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-    overflow: hidden;
-}
-
-.report-card h3 {
-    margin: 0;
-    padding: 1.5rem;
-    background-color: #f8f9fa;
-    color: #2c3e50;
-    border-bottom: 1px solid #ecf0f1;
-}
-
-.chart-container {
-    padding: 0;
-}
-
-.chart-container table {
-    margin: 0;
-}
-
 /* Customer-specific Styles */
 
 /* Booking Form */
@@ -835,6 +805,256 @@ tbody tr:hover {
     100% { transform: rotate(360deg); }
 }
 
+/* Reports & Analytics Styles */
+.metrics-overview {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.metric-card {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    padding: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.metric-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.metric-icon {
+    font-size: 2.5rem;
+    opacity: 0.8;
+}
+
+.metric-content h3 {
+    margin: 0;
+    font-size: 2rem;
+    color: #2c3e50;
+    font-weight: bold;
+}
+
+.metric-content p {
+    margin: 0.25rem 0 0 0;
+    color: #7f8c8d;
+    font-size: 0.875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Reports Grid */
+.reports-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+    gap: 2rem;
+}
+
+.report-card {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    overflow: hidden;
+}
+
+.report-header {
+    padding: 1.5rem;
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #ecf0f1;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.report-header h3 {
+    margin: 0;
+    color: #2c3e50;
+}
+
+.report-filter {
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 12px;
+    background: white;
+    cursor: pointer;
+}
+
+.chart-container {
+    padding: 0;
+}
+
+.chart-container table {
+    margin: 0;
+}
+
+/* Chatbot Styles */
+#chatbot-container {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 1000;
+}
+
+.chatbot-toggle {
+    width: 60px;
+    height: 60px;
+    background: linear-gradient(135deg, #3498db, #2980b9);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(52, 152, 219, 0.3);
+    transition: all 0.3s ease;
+}
+
+.chatbot-toggle:hover {
+    transform: scale(1.1);
+    box-shadow: 0 6px 20px rgba(52, 152, 219, 0.4);
+}
+
+.chatbot-icon {
+    font-size: 24px;
+    color: white;
+}
+
+.chatbot-window {
+    position: absolute;
+    bottom: 80px;
+    right: 0;
+    width: 350px;
+    height: 500px;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    display: none;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.chatbot-window.active {
+    display: flex;
+}
+
+.chatbot-header {
+    background: linear-gradient(135deg, #3498db, #2980b9);
+    color: white;
+    padding: 1rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.chatbot-header h4 {
+    margin: 0;
+    font-size: 1rem;
+}
+
+.chatbot-close {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 20px;
+    cursor: pointer;
+    width: auto;
+    padding: 0;
+}
+
+.chatbot-messages {
+    flex: 1;
+    padding: 1rem;
+    overflow-y: auto;
+    background: #f8f9fa;
+}
+
+.chatbot-message {
+    margin-bottom: 1rem;
+    max-width: 80%;
+}
+
+.chatbot-message p {
+    background: white;
+    padding: 0.75rem 1rem;
+    border-radius: 18px;
+    margin: 0;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+}
+
+.bot-message {
+    align-self: flex-start;
+}
+
+.user-message {
+    align-self: flex-end;
+    margin-left: auto;
+}
+
+.user-message p {
+    background: #3498db;
+    color: white;
+}
+
+.quick-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+}
+
+.quick-action {
+    background: #ecf0f1;
+    border: none;
+    padding: 0.5rem 0.75rem;
+    border-radius: 12px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+    width: auto;
+}
+
+.quick-action:hover {
+    background: #3498db;
+    color: white;
+}
+
+.chatbot-input {
+    padding: 1rem;
+    border-top: 1px solid #ecf0f1;
+    display: flex;
+    gap: 0.5rem;
+}
+
+#chatbot-input-field {
+    flex: 1;
+    padding: 0.75rem;
+    border: 1px solid #ddd;
+    border-radius: 20px;
+    outline: none;
+    font-size: 14px;
+}
+
+#chatbot-send {
+    background: #3498db;
+    color: white;
+    border: none;
+    padding: 0.75rem 1rem;
+    border-radius: 20px;
+    cursor: pointer;
+    font-size: 14px;
+    width: auto;
+}
+
+#chatbot-send:hover {
+    background: #2980b9;
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
     .dashboard-container {
@@ -895,6 +1115,10 @@ tbody tr:hover {
         grid-template-columns: 1fr;
     }
     
+    .metrics-overview {
+        grid-template-columns: 1fr;
+    }
+    
     .form-actions {
         flex-direction: column;
     }
@@ -933,6 +1157,16 @@ tbody tr:hover {
     
     .payment-option {
         padding: 0.5rem;
+    }
+    
+    .chatbot-window {
+        width: 300px;
+        height: 400px;
+    }
+    
+    #chatbot-container {
+        bottom: 10px;
+        right: 10px;
     }
 }
 
