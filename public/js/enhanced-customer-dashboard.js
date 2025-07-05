@@ -1,4 +1,4 @@
-// Enhanced Customer Dashboard - Complete Implementation with Modern UI/UX
+// Enhanced Customer Dashboard - Complete Implementation with Fixed Issues
 document.addEventListener('DOMContentLoaded', () => {
     const userRole = sessionStorage.getItem('userRole');
     const userName = sessionStorage.getItem('userName');
@@ -24,18 +24,21 @@ function initializeDashboard(userName, userId) {
     // Initialize modules
     initializeNavigation();
     initializeLogout();
-    initializeOverview();
     initializeBookingModule();
     initializeVehicleModule();
     initializeJobsModule();
     initializePaymentModule();
     initializeMapIntegration();
     
-    // Load initial data
+    // Load initial data and set active tab
     loadCustomerData();
+    
+    // Fix: Ensure overview tab is active on page load/refresh
+    setActiveTab('overview');
+    loadTabData('overview');
 }
 
-// Navigation System
+// Enhanced Navigation System with animations
 function initializeNavigation() {
     const navLinks = document.querySelectorAll('.nav-link');
     const tabContents = document.querySelectorAll('.tab-content');
@@ -44,49 +47,65 @@ function initializeNavigation() {
         link.addEventListener('click', (e) => {
             e.preventDefault();
             const targetTab = link.getAttribute('data-tab');
-            
-            // Update active states
-            navLinks.forEach(l => l.classList.remove('active'));
-            tabContents.forEach(content => content.classList.remove('active'));
-            
-            link.classList.add('active');
-            const targetElement = document.getElementById(`${targetTab}-tab`);
-            if (targetElement) {
-                targetElement.classList.add('active');
-            }
-            
-            // Load tab data
+            setActiveTab(targetTab);
             loadTabData(targetTab);
         });
-    });
 
-    // Quick book button
-    const quickBookBtn = document.getElementById('quick-book-btn');
-    if (quickBookBtn) {
-        quickBookBtn.addEventListener('click', () => {
-            document.querySelector('[data-tab="book-appointment"]').click();
-        });
-    }
-
-    // Fix "View All" and "Manage" buttons
-    document.addEventListener('click', (e) => {
-        if (e.target.matches('[data-tab]') || e.target.closest('[data-tab]')) {
-            const tabElement = e.target.matches('[data-tab]') ? e.target : e.target.closest('[data-tab]');
-            const targetTab = tabElement.getAttribute('data-tab');
-            
-            // Find and click the corresponding nav link
-            const navLink = document.querySelector(`.nav-link[data-tab="${targetTab}"]`);
-            if (navLink) {
-                navLink.click();
+        // Add hover effects
+        link.addEventListener('mouseenter', () => {
+            if (!link.classList.contains('active')) {
+                link.style.transform = 'translateX(8px)';
+                link.style.transition = 'all 0.3s ease';
             }
-        }
+        });
+
+        link.addEventListener('mouseleave', () => {
+            if (!link.classList.contains('active')) {
+                link.style.transform = 'translateX(0)';
+            }
+        });
     });
+}
+
+function setActiveTab(targetTab) {
+    const navLinks = document.querySelectorAll('.nav-link');
+    const tabContents = document.querySelectorAll('.tab-content');
+    
+    // Remove active class from all
+    navLinks.forEach(l => {
+        l.classList.remove('active');
+        l.style.transform = 'translateX(0)';
+    });
+    tabContents.forEach(content => {
+        content.classList.remove('active');
+        content.style.opacity = '0';
+        content.style.transform = 'translateY(20px)';
+    });
+    
+    // Add active class to target
+    const activeLink = document.querySelector(`[data-tab="${targetTab}"]`);
+    const activeContent = document.getElementById(`${targetTab}-tab`);
+    
+    if (activeLink) {
+        activeLink.classList.add('active');
+        activeLink.style.transform = 'translateX(8px)';
+    }
+    
+    if (activeContent) {
+        activeContent.classList.add('active');
+        // Animate content appearance
+        setTimeout(() => {
+            activeContent.style.opacity = '1';
+            activeContent.style.transform = 'translateY(0)';
+            activeContent.style.transition = 'all 0.4s ease';
+        }, 100);
+    }
 }
 
 function loadTabData(tab) {
     switch(tab) {
         case 'overview':
-            loadOverviewData();
+            loadCustomerData();
             break;
         case 'book-appointment':
             loadBookingData();
@@ -108,165 +127,23 @@ function initializeLogout() {
     const logoutButton = document.getElementById('logout-button');
     if (logoutButton) {
         logoutButton.addEventListener('click', () => {
-            sessionStorage.clear();
-            window.location.href = '/index.html';
+            // Add loading animation
+            logoutButton.innerHTML = `
+                <svg class="icon animate-spin" viewBox="0 0 24 24">
+                    <path d="M21 12a9 9 0 11-6.219-8.56"/>
+                </svg>
+                <span>Logging out...</span>
+            `;
+            
+            setTimeout(() => {
+                sessionStorage.clear();
+                window.location.href = '/index.html';
+            }, 1000);
         });
     }
 }
 
-// Overview Module
-function initializeOverview() {
-    // Initialize overview functionality
-}
-
-async function loadOverviewData() {
-    const userId = sessionStorage.getItem('userId');
-    
-    try {
-        const [jobsResponse, vehiclesResponse] = await Promise.all([
-            fetch(`http://localhost:8080/api/customer/jobs/${userId}`),
-            fetch(`http://localhost:8080/api/customer/vehicles/${userId}`)
-        ]);
-        
-        if (jobsResponse.ok && vehiclesResponse.ok) {
-            const jobs = await jobsResponse.json();
-            const vehicles = await vehiclesResponse.json();
-            
-            renderCustomerMetrics(jobs, vehicles);
-            renderRecentJobs(jobs.slice(0, 3));
-            renderVehiclesSummary(vehicles);
-        }
-    } catch (error) {
-        console.error('Error loading overview data:', error);
-    }
-}
-
-function renderCustomerMetrics(jobs, vehicles) {
-    const metricsGrid = document.getElementById('customer-metrics-grid');
-    
-    const pendingJobs = jobs.filter(job => ['Booked', 'In Progress'].includes(job.status)).length;
-    const completedJobs = jobs.filter(job => ['Completed', 'Invoiced', 'Paid'].includes(job.status)).length;
-    const totalSpent = jobs
-        .filter(job => job.totalCost && job.status === 'Paid')
-        .reduce((sum, job) => sum + parseFloat(job.totalCost), 0);
-
-    const metrics = [
-        {
-            title: 'Active Jobs',
-            value: pendingJobs,
-            icon: `<svg class="icon" viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>`,
-            change: 'In progress',
-            changeType: 'neutral',
-            class: 'jobs'
-        },
-        {
-            title: 'Completed Services',
-            value: completedJobs,
-            icon: `<svg class="icon" viewBox="0 0 24 24"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="9"/></svg>`,
-            change: 'All time',
-            changeType: 'positive',
-            class: 'completed'
-        },
-        {
-            title: 'My Vehicles',
-            value: vehicles.length,
-            icon: `<svg class="icon" viewBox="0 0 24 24"><path d="M7 17m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0"/><path d="M17 17m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0"/><path d="M5 17h-2v-6l2-5h9l4 5h1a2 2 0 0 1 2 2v4h-2"/><path d="M9 17v-6h8"/><path d="M2 6h15"/></svg>`,
-            change: 'Registered',
-            changeType: 'neutral',
-            class: 'vehicles'
-        },
-        {
-            title: 'Total Spent',
-            value: `$${totalSpent.toFixed(2)}`,
-            icon: `<svg class="icon" viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>`,
-            change: 'Lifetime',
-            changeType: 'neutral',
-            class: 'spent'
-        }
-    ];
-    
-    metricsGrid.innerHTML = metrics.map(metric => `
-        <div class="metric-card ${metric.class}">
-            <div class="metric-header">
-                <div class="metric-icon">${metric.icon}</div>
-            </div>
-            <div class="metric-value">${metric.value}</div>
-            <div class="metric-label">${metric.title}</div>
-            <div class="metric-change ${metric.changeType}">
-                ${metric.change}
-            </div>
-        </div>
-    `).join('');
-}
-
-function renderRecentJobs(jobs) {
-    const recentJobsList = document.getElementById('recent-jobs-list');
-    
-    if (jobs.length === 0) {
-        recentJobsList.innerHTML = `
-            <div class="empty-state">
-                <div class="empty-state-description">No recent jobs found</div>
-                <button class="btn btn-primary btn-sm" data-tab="book-appointment">
-                    Book Your First Service
-                </button>
-            </div>
-        `;
-        return;
-    }
-
-    recentJobsList.innerHTML = jobs.map(job => `
-        <div class="job-summary-item">
-            <div class="job-summary-header">
-                <span class="job-id">#${job.jobId}</span>
-                <span class="status-badge status-${job.status.toLowerCase().replace(' ', '-')}">${job.status}</span>
-            </div>
-            <div class="job-summary-details">
-                <div class="job-vehicle">${job.vehicle}</div>
-                <div class="job-service">${job.service}</div>
-                <div class="job-date">${new Date(job.bookingDate).toLocaleDateString()}</div>
-            </div>
-        </div>
-    `).join('');
-}
-
-function renderVehiclesSummary(vehicles) {
-    const vehiclesSummary = document.getElementById('vehicles-summary');
-    
-    if (vehicles.length === 0) {
-        vehiclesSummary.innerHTML = `
-            <div class="empty-state">
-                <div class="empty-state-description">No vehicles registered</div>
-                <button class="btn btn-primary btn-sm" onclick="showVehicleModal()">
-                    Add Your First Vehicle
-                </button>
-            </div>
-        `;
-        return;
-    }
-
-    vehiclesSummary.innerHTML = vehicles.slice(0, 3).map(vehicle => `
-        <div class="vehicle-summary-item">
-            <div class="vehicle-summary-icon">
-                <svg class="icon" viewBox="0 0 24 24">
-                    <path d="M7 17m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0"/>
-                    <path d="M17 17m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0"/>
-                    <path d="M5 17h-2v-6l2-5h9l4 5h1a2 2 0 0 1 2 2v4h-2"/>
-                    <path d="M9 17v-6h8"/>
-                    <path d="M2 6h15"/>
-                </svg>
-            </div>
-            <div class="vehicle-summary-details">
-                <div class="vehicle-name">${vehicle.make} ${vehicle.model}</div>
-                <div class="vehicle-year">${vehicle.year}</div>
-            </div>
-            <button class="btn btn-sm btn-primary" onclick="bookForVehicle(${vehicle.id})">
-                Book Service
-            </button>
-        </div>
-    `).join('');
-}
-
-// Map Integration
+// Enhanced Map Integration with animations
 function initializeMapIntegration() {
     const mapContainer = document.getElementById('branch-map-container');
     if (mapContainer) {
@@ -307,7 +184,7 @@ function createMapInterface() {
     ];
 
     return `
-        <div class="map-container">
+        <div class="map-container animate-slide-up">
             <div class="map-header">
                 <h3>
                     <svg class="icon" viewBox="0 0 24 24">
@@ -325,8 +202,8 @@ function createMapInterface() {
             </div>
             <div class="map-view">
                 <div class="branches-list">
-                    ${branches.map(branch => `
-                        <div class="branch-card" data-branch-id="${branch.id}">
+                    ${branches.map((branch, index) => `
+                        <div class="branch-card animate-slide-in-right" data-branch-id="${branch.id}" style="animation-delay: ${index * 0.1}s">
                             <div class="branch-header">
                                 <h4>${branch.name}</h4>
                                 <div class="branch-rating">
@@ -392,7 +269,7 @@ function createMapInterface() {
 }
 
 function attachMapEventListeners() {
-    // Branch selection
+    // Branch selection with enhanced animations
     document.querySelectorAll('.select-branch-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
             const branchId = parseInt(e.target.getAttribute('data-branch-id'));
@@ -400,12 +277,18 @@ function attachMapEventListeners() {
         });
     });
 
-    // Branch card click
+    // Enhanced branch card hover effects
     document.querySelectorAll('.branch-card').forEach(card => {
-        card.addEventListener('click', (e) => {
-            if (!e.target.classList.contains('select-branch-btn')) {
-                const branchId = parseInt(card.getAttribute('data-branch-id'));
-                selectBranch(branchId);
+        card.addEventListener('mouseenter', () => {
+            card.style.transform = 'translateY(-8px) scale(1.02)';
+            card.style.boxShadow = 'var(--shadow-2xl)';
+            card.style.transition = 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
+        });
+
+        card.addEventListener('mouseleave', () => {
+            if (!card.classList.contains('selected')) {
+                card.style.transform = 'translateY(0) scale(1)';
+                card.style.boxShadow = 'var(--shadow-sm)';
             }
         });
     });
@@ -418,17 +301,27 @@ function attachMapEventListeners() {
 }
 
 function selectBranch(branchId) {
-    // Update UI to show selection
+    // Update UI to show selection with animations
     document.querySelectorAll('.branch-card').forEach(card => {
         card.classList.remove('selected');
+        card.style.transform = 'translateY(0) scale(1)';
+        card.style.boxShadow = 'var(--shadow-sm)';
     });
     
     const selectedCard = document.querySelector(`[data-branch-id="${branchId}"]`);
     if (selectedCard) {
         selectedCard.classList.add('selected');
+        selectedCard.style.transform = 'translateY(-8px) scale(1.05)';
+        selectedCard.style.boxShadow = 'var(--shadow-2xl)';
+        
+        // Pulse effect
+        selectedCard.style.animation = 'pulse 0.6s ease-in-out';
+        setTimeout(() => {
+            selectedCard.style.animation = '';
+        }, 600);
     }
 
-    // Update selected branch info
+    // Update selected branch info with animation
     updateSelectedBranchInfo(branchId);
     
     // Update booking form
@@ -437,6 +330,7 @@ function selectBranch(branchId) {
         const branchName = selectedCard.querySelector('h4').textContent;
         branchNameElement.textContent = branchName;
         branchNameElement.style.color = 'var(--success-600)';
+        branchNameElement.style.fontWeight = '600';
     }
 }
 
@@ -451,35 +345,38 @@ function updateSelectedBranchInfo(branchId) {
     const infoContainer = document.getElementById('selected-branch-info');
     
     if (infoContainer && branch) {
-        infoContainer.innerHTML = `
-            <div class="selected-branch-details">
-                <h4>
-                    <svg class="icon" viewBox="0 0 24 24">
-                        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
-                        <circle cx="12" cy="10" r="3"/>
-                    </svg>
-                    ${branch.name}
-                </h4>
-                <div class="branch-info-grid">
-                    <div class="info-item">
-                        <strong>Address:</strong>
-                        <span>${branch.address}</span>
-                    </div>
-                    <div class="info-item">
-                        <strong>Status:</strong>
-                        <span class="status-success">Selected</span>
-                    </div>
-                </div>
-                <div class="branch-actions">
-                    <button class="btn btn-sm btn-secondary" onclick="getDirections()">
-                        <svg class="icon icon-sm" viewBox="0 0 24 24">
-                            <polygon points="3,11 22,2 13,21 11,13 3,11"/>
+        // Fade out animation
+        infoContainer.style.opacity = '0';
+        infoContainer.style.transform = 'translateY(20px)';
+        
+        setTimeout(() => {
+            infoContainer.innerHTML = `
+                <div class="selected-branch-details">
+                    <h4>
+                        <svg class="icon" viewBox="0 0 24 24">
+                            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+                            <circle cx="12" cy="10" r="3"/>
                         </svg>
-                        Get Directions
-                    </button>
+                        ${branch.name}
+                    </h4>
+                    <div class="branch-info-grid">
+                        <div class="info-item">
+                            <strong>Address:</strong>
+                            <span>${branch.address}</span>
+                        </div>
+                        <div class="info-item">
+                            <strong>Status:</strong>
+                            <span class="status-success">✓ Selected</span>
+                        </div>
+                    </div>
                 </div>
-            </div>
-        `;
+            `;
+            
+            // Fade in animation
+            infoContainer.style.opacity = '1';
+            infoContainer.style.transform = 'translateY(0)';
+            infoContainer.style.transition = 'all 0.4s ease';
+        }, 200);
     }
 }
 
@@ -491,13 +388,14 @@ function detectUserLocation() {
         return;
     }
 
+    // Enhanced loading state
     detectBtn.innerHTML = `
         <svg class="icon icon-sm animate-spin" viewBox="0 0 24 24">
             <path d="M21 12a9 9 0 11-6.219-8.56"/>
         </svg>
         Detecting...
     `;
-    detectBtn.classList.add('location-btn-detecting');
+    detectBtn.disabled = true;
 
     navigator.geolocation.getCurrentPosition(
         (position) => {
@@ -508,8 +406,9 @@ function detectUserLocation() {
                 </svg>
                 Location Detected
             `;
-            detectBtn.classList.remove('location-btn-detecting');
-            detectBtn.classList.add('location-btn-success');
+            detectBtn.classList.remove('btn-primary');
+            detectBtn.classList.add('btn-success');
+            detectBtn.disabled = false;
             showNotification('Location detected successfully', 'success');
         },
         (error) => {
@@ -520,22 +419,18 @@ function detectUserLocation() {
                 </svg>
                 Location Failed
             `;
-            detectBtn.classList.remove('location-btn-detecting');
-            detectBtn.classList.add('location-btn-error');
+            detectBtn.classList.remove('btn-primary');
+            detectBtn.classList.add('btn-danger');
+            detectBtn.disabled = false;
             showNotification('Failed to detect location', 'error');
         }
     );
 }
 
-function getDirections() {
-    showNotification('Opening directions in your default map app...', 'info');
-}
-
-// Booking Module
+// Enhanced Booking Module
 function initializeBookingModule() {
     const bookingForm = document.getElementById('booking-form');
     const serviceSelect = document.getElementById('booking-service');
-    const vehicleSelect = document.getElementById('booking-vehicle');
     const addVehicleBtn = document.getElementById('add-vehicle-btn');
 
     if (bookingForm) {
@@ -547,12 +442,6 @@ function initializeBookingModule() {
 
     if (serviceSelect) {
         serviceSelect.addEventListener('change', showServiceDetails);
-        // Apply custom styling
-        serviceSelect.classList.add('form-select');
-    }
-
-    if (vehicleSelect) {
-        vehicleSelect.classList.add('form-select');
     }
 
     if (addVehicleBtn) {
@@ -595,6 +484,7 @@ function populateVehicleSelect(vehicles) {
     const vehicleSelect = document.getElementById('booking-vehicle');
     if (!vehicleSelect) return;
     
+    // Clear existing options
     vehicleSelect.innerHTML = '<option value="">Choose your vehicle...</option>';
     
     vehicles.forEach(vehicle => {
@@ -602,6 +492,17 @@ function populateVehicleSelect(vehicles) {
         option.value = vehicle.id;
         option.textContent = `${vehicle.make} ${vehicle.model} (${vehicle.year})`;
         vehicleSelect.appendChild(option);
+    });
+
+    // Add enhanced styling and animation
+    vehicleSelect.addEventListener('change', () => {
+        if (vehicleSelect.value) {
+            vehicleSelect.style.borderColor = 'var(--success-500)';
+            vehicleSelect.style.boxShadow = '0 0 0 3px rgba(34, 197, 94, 0.1)';
+        } else {
+            vehicleSelect.style.borderColor = 'var(--secondary-200)';
+            vehicleSelect.style.boxShadow = 'none';
+        }
     });
 }
 
@@ -622,6 +523,7 @@ function populateServiceSelect(services) {
     const serviceSelect = document.getElementById('booking-service');
     if (!serviceSelect) return;
     
+    // Clear existing options
     serviceSelect.innerHTML = '<option value="">Choose a service...</option>';
     
     services.forEach(service => {
@@ -631,6 +533,17 @@ function populateServiceSelect(services) {
         option.setAttribute('data-price', service.price);
         option.setAttribute('data-description', service.description || '');
         serviceSelect.appendChild(option);
+    });
+
+    // Add enhanced styling and animation
+    serviceSelect.addEventListener('change', () => {
+        if (serviceSelect.value) {
+            serviceSelect.style.borderColor = 'var(--success-500)';
+            serviceSelect.style.boxShadow = '0 0 0 3px rgba(34, 197, 94, 0.1)';
+        } else {
+            serviceSelect.style.borderColor = 'var(--secondary-200)';
+            serviceSelect.style.boxShadow = 'none';
+        }
     });
 }
 
@@ -643,9 +556,23 @@ function showServiceDetails() {
         document.getElementById('selected-service-name').textContent = selectedOption.textContent.split(' - $')[0];
         document.getElementById('selected-service-price').textContent = '$' + selectedOption.getAttribute('data-price');
         document.getElementById('selected-service-description').textContent = selectedOption.getAttribute('data-description') || 'No description available';
+        
+        // Animate service details appearance
         serviceDetails.style.display = 'block';
+        serviceDetails.style.opacity = '0';
+        serviceDetails.style.transform = 'translateY(20px)';
+        
+        setTimeout(() => {
+            serviceDetails.style.opacity = '1';
+            serviceDetails.style.transform = 'translateY(0)';
+            serviceDetails.style.transition = 'all 0.4s ease';
+        }, 100);
     } else {
-        serviceDetails.style.display = 'none';
+        serviceDetails.style.opacity = '0';
+        serviceDetails.style.transform = 'translateY(20px)';
+        setTimeout(() => {
+            serviceDetails.style.display = 'none';
+        }, 300);
     }
 }
 
@@ -667,6 +594,17 @@ async function bookAppointment() {
         branchId: selectedBranch.getAttribute('data-branch-id')
     };
 
+    // Show loading state
+    const submitBtn = document.querySelector('#booking-form button[type="submit"]');
+    const originalText = submitBtn.innerHTML;
+    submitBtn.innerHTML = `
+        <svg class="icon icon-sm animate-spin" viewBox="0 0 24 24">
+            <path d="M21 12a9 9 0 11-6.219-8.56"/>
+        </svg>
+        Booking...
+    `;
+    submitBtn.disabled = true;
+
     try {
         const response = await fetch('http://localhost:8080/api/customer/bookings', {
             method: 'POST',
@@ -677,26 +615,64 @@ async function bookAppointment() {
         const result = await response.json();
         
         if (response.ok) {
-            showNotification('Appointment booked successfully!', 'success');
-            document.getElementById('booking-form').reset();
-            document.getElementById('service-details').style.display = 'none';
-            document.getElementById('selected-branch-name').textContent = 'Please select a branch above';
-            loadCustomerData(); // Refresh stats
+            submitBtn.innerHTML = `
+                <svg class="icon icon-sm" viewBox="0 0 24 24">
+                    <path d="M9 12l2 2 4-4"/>
+                    <circle cx="12" cy="12" r="9"/>
+                </svg>
+                Booked Successfully!
+            `;
+            submitBtn.classList.remove('btn-primary');
+            submitBtn.classList.add('btn-success');
             
-            // Notify chatbot
-            if (window.enhancedChatbot) {
-                window.enhancedChatbot.notifyBooking(document.getElementById('booking-service').selectedOptions[0].textContent);
-            }
+            showNotification('Appointment booked successfully!', 'success');
+            
+            // Reset form after delay
+            setTimeout(() => {
+                document.getElementById('booking-form').reset();
+                document.getElementById('service-details').style.display = 'none';
+                document.getElementById('selected-branch-name').textContent = 'Please select a branch above';
+                submitBtn.innerHTML = originalText;
+                submitBtn.classList.remove('btn-success');
+                submitBtn.classList.add('btn-primary');
+                submitBtn.disabled = false;
+                
+                // Clear branch selection
+                document.querySelectorAll('.branch-card').forEach(card => {
+                    card.classList.remove('selected');
+                    card.style.transform = 'translateY(0) scale(1)';
+                    card.style.boxShadow = 'var(--shadow-sm)';
+                });
+                
+                // Reset selected branch info
+                document.getElementById('selected-branch-info').innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">
+                            <svg class="icon icon-xl" viewBox="0 0 24 24">
+                                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+                                <circle cx="12" cy="10" r="3"/>
+                            </svg>
+                        </div>
+                        <div class="empty-state-title">Select a branch</div>
+                        <div class="empty-state-description">Choose a location to see details</div>
+                    </div>
+                `;
+            }, 2000);
+            
+            loadCustomerData(); // Refresh stats
         } else {
-            showNotification(result.error || 'Failed to book appointment', 'error');
+            throw new Error(result.error || 'Failed to book appointment');
         }
     } catch (error) {
         console.error('Error booking appointment:', error);
-        showNotification('Failed to book appointment', 'error');
+        showNotification(error.message || 'Failed to book appointment', 'error');
+        
+        submitBtn.innerHTML = originalText;
+        submitBtn.disabled = false;
     }
 }
 
-// Vehicle Module
+// Enhanced Vehicle Module
 function initializeVehicleModule() {
     const vehicleModal = document.getElementById('vehicle-modal');
     const vehicleForm = document.getElementById('vehicle-form');
@@ -742,6 +718,17 @@ async function addVehicle() {
         vin: document.getElementById('vehicle-vin').value
     };
 
+    // Show loading state
+    const submitBtn = document.querySelector('#vehicle-form button[type="submit"]');
+    const originalText = submitBtn.innerHTML;
+    submitBtn.innerHTML = `
+        <svg class="icon icon-sm animate-spin" viewBox="0 0 24 24">
+            <path d="M21 12a9 9 0 11-6.219-8.56"/>
+        </svg>
+        Adding Vehicle...
+    `;
+    submitBtn.disabled = true;
+
     try {
         const response = await fetch('http://localhost:8080/api/customer/vehicles', {
             method: 'POST',
@@ -756,13 +743,15 @@ async function addVehicle() {
             showNotification('Vehicle added successfully!', 'success');
             loadMyVehicles();
             loadCustomerVehicles(); // Refresh booking dropdown
-            loadOverviewData(); // Refresh overview
         } else {
-            showNotification(result.error || 'Failed to add vehicle', 'error');
+            throw new Error(result.error || 'Failed to add vehicle');
         }
     } catch (error) {
         console.error('Error adding vehicle:', error);
-        showNotification('Failed to add vehicle', 'error');
+        showNotification(error.message || 'Failed to add vehicle', 'error');
+    } finally {
+        submitBtn.innerHTML = originalText;
+        submitBtn.disabled = false;
     }
 }
 
@@ -787,7 +776,7 @@ function populateVehiclesGrid(vehicles) {
     
     if (vehicles.length === 0) {
         vehiclesGrid.innerHTML = `
-            <div class="empty-state">
+            <div class="empty-state animate-fade-in">
                 <div class="empty-state-icon">
                     <svg class="icon icon-xl" viewBox="0 0 24 24">
                         <path d="M7 17m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0"/>
@@ -799,20 +788,13 @@ function populateVehiclesGrid(vehicles) {
                 </div>
                 <div class="empty-state-title">No vehicles found</div>
                 <div class="empty-state-description">Add your first vehicle to get started!</div>
-                <button class="btn btn-primary" onclick="showVehicleModal()">
-                    <svg class="icon icon-sm" viewBox="0 0 24 24">
-                        <line x1="12" y1="5" x2="12" y2="19"/>
-                        <line x1="5" y1="12" x2="19" y2="12"/>
-                    </svg>
-                    Add Vehicle
-                </button>
             </div>
         `;
         return;
     }
 
-    vehiclesGrid.innerHTML = vehicles.map(vehicle => `
-        <div class="vehicle-card">
+    vehiclesGrid.innerHTML = vehicles.map((vehicle, index) => `
+        <div class="vehicle-card animate-slide-up" style="animation-delay: ${index * 0.1}s">
             <div class="vehicle-header">
                 <div class="vehicle-icon">
                     <svg class="icon" viewBox="0 0 24 24">
@@ -852,34 +834,47 @@ function populateVehiclesGrid(vehicles) {
                     </svg>
                     Book Service
                 </button>
-                <button class="btn btn-secondary" onclick="editVehicle(${vehicle.id})">
-                    <svg class="icon icon-sm" viewBox="0 0 24 24">
-                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-                    </svg>
-                    Edit
-                </button>
             </div>
         </div>
     `).join('');
+
+    // Add hover effects to vehicle cards
+    document.querySelectorAll('.vehicle-card').forEach(card => {
+        card.addEventListener('mouseenter', () => {
+            card.style.transform = 'translateY(-8px) scale(1.02)';
+            card.style.boxShadow = 'var(--shadow-2xl)';
+            card.style.transition = 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
+        });
+
+        card.addEventListener('mouseleave', () => {
+            card.style.transform = 'translateY(0) scale(1)';
+            card.style.boxShadow = 'var(--shadow-sm)';
+        });
+    });
 }
 
 function bookForVehicle(vehicleId) {
-    // Switch to booking tab and pre-select vehicle
-    document.querySelector('[data-tab="book-appointment"]').click();
+    // Switch to booking tab and pre-select vehicle with animation
+    setActiveTab('book-appointment');
+    loadTabData('book-appointment');
+    
     setTimeout(() => {
         const vehicleSelect = document.getElementById('booking-vehicle');
         if (vehicleSelect) {
             vehicleSelect.value = vehicleId;
+            vehicleSelect.style.borderColor = 'var(--success-500)';
+            vehicleSelect.style.boxShadow = '0 0 0 3px rgba(34, 197, 94, 0.1)';
+            
+            // Scroll to booking form
+            document.querySelector('.booking-container').scrollIntoView({ 
+                behavior: 'smooth',
+                block: 'center'
+            });
         }
-    }, 100);
+    }, 500);
 }
 
-function editVehicle(vehicleId) {
-    showNotification(`Edit vehicle #${vehicleId} - Feature coming soon!`, 'info');
-}
-
-// Jobs Module
+// Enhanced Jobs Module
 function initializeJobsModule() {
     const jobsSearch = document.getElementById('jobs-search');
     
@@ -920,17 +915,14 @@ function populateJobsTable(jobs) {
                     </div>
                     <div class="empty-state-title">No current jobs found</div>
                     <div class="empty-state-description">Book your first appointment to get started</div>
-                    <button class="btn btn-primary" data-tab="book-appointment">
-                        Book Appointment
-                    </button>
                 </td>
             </tr>
         `;
         return;
     }
 
-    tableBody.innerHTML = jobs.map(job => `
-        <tr class="job-row" data-status="${job.status.toLowerCase().replace(' ', '-')}">
+    tableBody.innerHTML = jobs.map((job, index) => `
+        <tr class="job-row animate-slide-in-right" data-status="${job.status.toLowerCase().replace(' ', '-')}" style="animation-delay: ${index * 0.05}s">
             <td><strong>#${job.jobId}</strong></td>
             <td>${job.vehicle}</td>
             <td>${job.service}</td>
@@ -957,17 +949,38 @@ function populateJobsTable(jobs) {
             </td>
         </tr>
     `).join('');
+
+    // Add hover effects to table rows
+    document.querySelectorAll('.job-row').forEach(row => {
+        row.addEventListener('mouseenter', () => {
+            row.style.backgroundColor = 'var(--primary-50)';
+            row.style.transform = 'translateX(4px)';
+            row.style.transition = 'all 0.2s ease';
+        });
+
+        row.addEventListener('mouseleave', () => {
+            row.style.backgroundColor = '';
+            row.style.transform = 'translateX(0)';
+        });
+    });
 }
 
 function filterJobs(searchTerm) {
     const rows = document.querySelectorAll('#my-jobs-table-body tr');
     rows.forEach(row => {
         const text = row.textContent.toLowerCase();
-        row.style.display = text.includes(searchTerm.toLowerCase()) ? '' : 'none';
+        const isVisible = text.includes(searchTerm.toLowerCase());
+        row.style.display = isVisible ? '' : 'none';
+        
+        if (isVisible && searchTerm) {
+            row.style.backgroundColor = 'var(--warning-50)';
+        } else {
+            row.style.backgroundColor = '';
+        }
     });
 }
 
-// Payment Module
+// Enhanced Payment Module
 function initializePaymentModule() {
     const paymentModal = document.getElementById('payment-modal');
     const paymentModalClose = document.getElementById('payment-modal-close');
@@ -1023,44 +1036,50 @@ function populateJobDetailsModal(job) {
     document.getElementById('detail-total-cost').textContent = job.totalCost ? '$' + job.totalCost : 'Not calculated';
     document.getElementById('detail-notes').textContent = job.notes || 'No notes';
 
-    // Payment section
+    // Enhanced payment section
     const paymentSection = document.getElementById('payment-section');
     if (job.status === 'Invoiced') {
         paymentSection.innerHTML = `
-            <div class="payment-amount-display">
-                <span class="amount-label">Amount Due</span>
-                <span class="amount-value">$${job.totalCost}</span>
+            <div class="payment-info">
+                <div class="payment-amount-display">
+                    <span class="amount-label">Amount Due</span>
+                    <span class="amount-value">$${job.totalCost}</span>
+                </div>
+                <button class="btn btn-success btn-full" onclick="showPaymentModal(${job.jobId})">
+                    <svg class="icon icon-sm" viewBox="0 0 24 24">
+                        <rect x="1" y="4" width="22" height="16" rx="2" ry="2"/>
+                        <line x1="1" y1="10" x2="23" y2="10"/>
+                    </svg>
+                    Pay Now
+                </button>
             </div>
-            <button class="btn btn-success btn-full" onclick="showPaymentModal(${job.jobId})">
-                <svg class="icon icon-sm" viewBox="0 0 24 24">
-                    <rect x="1" y="4" width="22" height="16" rx="2" ry="2"/>
-                    <line x1="1" y1="10" x2="23" y2="10"/>
-                </svg>
-                Pay Now
-            </button>
         `;
     } else if (job.status === 'Paid') {
         paymentSection.innerHTML = `
-            <div class="payment-status-paid">
-                <svg class="icon icon-sm" viewBox="0 0 24 24">
-                    <path d="M9 12l2 2 4-4"/>
-                    <circle cx="12" cy="12" r="9"/>
-                </svg>
-                Payment Completed
-            </div>
-            <div class="payment-details">
-                <div>Amount Paid: $${job.totalCost}</div>
-                <div>Payment Date: ${job.completionDate ? new Date(job.completionDate).toLocaleDateString() : 'N/A'}</div>
+            <div class="payment-info">
+                <div class="payment-status-paid">
+                    <svg class="icon icon-sm" viewBox="0 0 24 24">
+                        <path d="M9 12l2 2 4-4"/>
+                        <circle cx="12" cy="12" r="9"/>
+                    </svg>
+                    Payment Completed
+                </div>
+                <div class="payment-details">
+                    <p>Amount Paid: <strong>$${job.totalCost}</strong></p>
+                    <p>Payment Date: ${job.completionDate ? new Date(job.completionDate).toLocaleDateString() : 'N/A'}</p>
+                </div>
             </div>
         `;
     } else {
         paymentSection.innerHTML = `
-            <div class="payment-pending">
-                <svg class="icon icon-sm" viewBox="0 0 24 24">
-                    <circle cx="12" cy="12" r="10"/>
-                    <polyline points="12,6 12,12 16,14"/>
-                </svg>
-                Payment will be available once the job is completed and invoiced.
+            <div class="payment-info">
+                <div class="payment-pending">
+                    <svg class="icon icon-sm" viewBox="0 0 24 24">
+                        <circle cx="12" cy="12" r="10"/>
+                        <path d="M12 6v6l4 2"/>
+                    </svg>
+                    Payment will be available once the job is completed and invoiced.
+                </div>
             </div>
         `;
     }
@@ -1120,15 +1139,9 @@ async function processPayment() {
             showNotification('Payment processed successfully!', 'success');
             loadMyJobs(); // Refresh jobs table
             loadServiceHistory(); // Refresh history
-            loadOverviewData(); // Refresh overview
-            
-            // Notify chatbot
-            if (window.enhancedChatbot) {
-                const amount = document.getElementById('payment-amount').textContent;
-                window.enhancedChatbot.notifyPayment(amount);
-            }
+            loadCustomerData(); // Refresh stats
         } else {
-            showNotification(result.error || 'Payment failed', 'error');
+            throw new Error(result.error || 'Payment failed');
         }
     } catch (error) {
         hideProcessingMessage(processingOverlay);
@@ -1137,7 +1150,7 @@ async function processPayment() {
     }
 }
 
-// Service History Module
+// Enhanced Service History Module
 async function loadServiceHistory() {
     const userId = sessionStorage.getItem('userId');
     
@@ -1148,10 +1161,9 @@ async function loadServiceHistory() {
         const jobs = await response.json();
         populateServiceHistoryTable(jobs);
         
-        // Initialize filter with custom styling
+        // Initialize filter
         const historyFilter = document.getElementById('history-filter');
         if (historyFilter) {
-            historyFilter.classList.add('form-select');
             historyFilter.addEventListener('change', () => filterServiceHistory(jobs));
         }
     } catch (error) {
@@ -1183,8 +1195,8 @@ function populateServiceHistoryTable(jobs) {
         return;
     }
 
-    tableBody.innerHTML = jobs.map(job => `
-        <tr class="history-row status-${job.status.toLowerCase().replace(' ', '-')}">
+    tableBody.innerHTML = jobs.map((job, index) => `
+        <tr class="history-row status-${job.status.toLowerCase().replace(' ', '-')} animate-slide-in-right" style="animation-delay: ${index * 0.05}s">
             <td>${new Date(job.bookingDate).toLocaleDateString()}</td>
             <td>${job.vehicle}</td>
             <td>${job.service}</td>
@@ -1201,6 +1213,20 @@ function populateServiceHistoryTable(jobs) {
             </td>
         </tr>
     `).join('');
+
+    // Add hover effects to history rows
+    document.querySelectorAll('.history-row').forEach(row => {
+        row.addEventListener('mouseenter', () => {
+            row.style.backgroundColor = 'var(--primary-50)';
+            row.style.transform = 'translateX(4px)';
+            row.style.transition = 'all 0.2s ease';
+        });
+
+        row.addEventListener('mouseleave', () => {
+            row.style.backgroundColor = '';
+            row.style.transform = 'translateX(0)';
+        });
+    });
 }
 
 function filterServiceHistory(jobs) {
@@ -1209,46 +1235,230 @@ function filterServiceHistory(jobs) {
     populateServiceHistoryTable(filteredJobs);
 }
 
-// Customer Data Loading
+// Enhanced Customer Data Loading
 async function loadCustomerData() {
     const userId = sessionStorage.getItem('userId');
     
     try {
-        const response = await fetch(`http://localhost:8080/api/customer/jobs/${userId}`);
-        if (!response.ok) throw new Error('Failed to fetch customer data');
+        const [jobsResponse, vehiclesResponse] = await Promise.all([
+            fetch(`http://localhost:8080/api/customer/jobs/${userId}`),
+            fetch(`http://localhost:8080/api/customer/vehicles/${userId}`)
+        ]);
         
-        const jobs = await response.json();
-        updateCustomerStats(jobs);
+        if (!jobsResponse.ok || !vehiclesResponse.ok) {
+            throw new Error('Failed to fetch customer data');
+        }
+        
+        const jobs = await jobsResponse.json();
+        const vehicles = await vehiclesResponse.json();
+        
+        updateCustomerStats(jobs, vehicles);
+        updateRecentJobsSummary(jobs);
+        updateVehiclesSummary(vehicles);
     } catch (error) {
         console.error('Error loading customer data:', error);
     }
 }
 
-function updateCustomerStats(jobs) {
+function updateCustomerStats(jobs, vehicles) {
     const pendingJobs = jobs.filter(job => ['Booked', 'In Progress'].includes(job.status)).length;
     const completedJobs = jobs.filter(job => ['Completed', 'Invoiced', 'Paid'].includes(job.status)).length;
+    const totalSpent = jobs
+        .filter(job => job.totalCost && job.status === 'Paid')
+        .reduce((sum, job) => sum + parseFloat(job.totalCost), 0);
 
-    const pendingElement = document.getElementById('pending-jobs');
-    const completedElement = document.getElementById('completed-jobs');
-    
-    if (pendingElement) pendingElement.textContent = pendingJobs;
-    if (completedElement) completedElement.textContent = completedJobs;
+    // Enhanced metrics cards with animations
+    const metricsGrid = document.getElementById('customer-metrics-grid');
+    if (metricsGrid) {
+        const metrics = [
+            {
+                title: 'Active Jobs',
+                value: pendingJobs,
+                icon: '<svg class="icon" viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>',
+                class: 'jobs',
+                change: pendingJobs > 0 ? 'In progress' : 'All caught up!'
+            },
+            {
+                title: 'Completed Jobs',
+                value: completedJobs,
+                icon: '<svg class="icon" viewBox="0 0 24 24"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="9"/></svg>',
+                class: 'completed',
+                change: `${jobs.length} total jobs`
+            },
+            {
+                title: 'My Vehicles',
+                value: vehicles.length,
+                icon: '<svg class="icon" viewBox="0 0 24 24"><path d="M7 17m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0"/><path d="M17 17m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0"/><path d="M5 17h-2v-6l2-5h9l4 5h1a2 2 0 0 1 2 2v4h-2"/></svg>',
+                class: 'vehicles',
+                change: 'Registered'
+            },
+            {
+                title: 'Total Spent',
+                value: `$${totalSpent.toFixed(2)}`,
+                icon: '<svg class="icon" viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>',
+                class: 'spent',
+                change: 'This year'
+            }
+        ];
+
+        metricsGrid.innerHTML = metrics.map((metric, index) => `
+            <div class="metric-card ${metric.class} animate-slide-up" style="animation-delay: ${index * 0.1}s">
+                <div class="metric-header">
+                    <div class="metric-icon">${metric.icon}</div>
+                </div>
+                <div class="metric-value">${metric.value}</div>
+                <div class="metric-label">${metric.title}</div>
+                <div class="metric-change">${metric.change}</div>
+            </div>
+        `).join('');
+
+        // Add hover effects to metric cards
+        document.querySelectorAll('.metric-card').forEach(card => {
+            card.addEventListener('mouseenter', () => {
+                card.style.transform = 'translateY(-8px) scale(1.05)';
+                card.style.boxShadow = 'var(--shadow-2xl)';
+                card.style.transition = 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
+            });
+
+            card.addEventListener('mouseleave', () => {
+                card.style.transform = 'translateY(0) scale(1)';
+                card.style.boxShadow = 'var(--shadow-md)';
+            });
+        });
+    }
 }
 
-// Utility Functions
+function updateRecentJobsSummary(jobs) {
+    const recentJobsList = document.getElementById('recent-jobs-list');
+    if (!recentJobsList) return;
+
+    const recentJobs = jobs.slice(0, 3);
+    
+    if (recentJobs.length === 0) {
+        recentJobsList.innerHTML = `
+            <div class="empty-state">
+                <div class="empty-state-description">No recent jobs</div>
+            </div>
+        `;
+        return;
+    }
+
+    recentJobsList.innerHTML = recentJobs.map((job, index) => `
+        <div class="job-summary-item animate-slide-in-right" style="animation-delay: ${index * 0.1}s">
+            <div class="job-summary-header">
+                <span class="job-id">#${job.jobId}</span>
+                <span class="status-badge status-${job.status.toLowerCase().replace(' ', '-')}">${job.status}</span>
+            </div>
+            <div class="job-summary-details">
+                <div class="job-vehicle">${job.vehicle}</div>
+                <div class="job-service">${job.service}</div>
+                <div class="job-date">${new Date(job.bookingDate).toLocaleDateString()}</div>
+            </div>
+        </div>
+    `).join('');
+
+    // Add hover effects
+    document.querySelectorAll('.job-summary-item').forEach(item => {
+        item.addEventListener('mouseenter', () => {
+            item.style.transform = 'translateX(8px)';
+            item.style.transition = 'all 0.2s ease';
+        });
+
+        item.addEventListener('mouseleave', () => {
+            item.style.transform = 'translateX(0)';
+        });
+    });
+}
+
+function updateVehiclesSummary(vehicles) {
+    const vehiclesSummary = document.getElementById('vehicles-summary');
+    if (!vehiclesSummary) return;
+
+    if (vehicles.length === 0) {
+        vehiclesSummary.innerHTML = `
+            <div class="empty-state">
+                <div class="empty-state-description">No vehicles registered</div>
+            </div>
+        `;
+        return;
+    }
+
+    vehiclesSummary.innerHTML = vehicles.slice(0, 3).map((vehicle, index) => `
+        <div class="vehicle-summary-item animate-slide-in-right" style="animation-delay: ${index * 0.1}s">
+            <div class="vehicle-summary-icon">
+                <svg class="icon" viewBox="0 0 24 24">
+                    <path d="M7 17m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0"/>
+                    <path d="M17 17m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0"/>
+                    <path d="M5 17h-2v-6l2-5h9l4 5h1a2 2 0 0 1 2 2v4h-2"/>
+                </svg>
+            </div>
+            <div class="vehicle-summary-details">
+                <div class="vehicle-name">${vehicle.make} ${vehicle.model}</div>
+                <div class="vehicle-year">${vehicle.year}</div>
+            </div>
+        </div>
+    `).join('');
+
+    // Add hover effects
+    document.querySelectorAll('.vehicle-summary-item').forEach(item => {
+        item.addEventListener('mouseenter', () => {
+            item.style.transform = 'translateX(8px)';
+            item.style.transition = 'all 0.2s ease';
+        });
+
+        item.addEventListener('mouseleave', () => {
+            item.style.transform = 'translateX(0)';
+        });
+    });
+}
+
+// Enhanced Utility Functions
 function showModal(modal) {
     if (modal) {
-        modal.style.display = 'flex';
+        modal.style.display = 'block';
         modal.classList.add('show');
         document.body.style.overflow = 'hidden';
+        
+        // Add backdrop blur effect
+        const backdrop = document.createElement('div');
+        backdrop.className = 'modal-backdrop';
+        backdrop.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(4px);
+            z-index: 1040;
+        `;
+        document.body.appendChild(backdrop);
+        
+        // Animate modal appearance
+        setTimeout(() => {
+            modal.style.opacity = '1';
+            modal.style.transform = 'scale(1)';
+        }, 10);
     }
 }
 
 function hideModal(modal) {
     if (modal) {
-        modal.style.display = 'none';
-        modal.classList.remove('show');
-        document.body.style.overflow = 'auto';
+        // Animate modal disappearance
+        modal.style.opacity = '0';
+        modal.style.transform = 'scale(0.95)';
+        
+        setTimeout(() => {
+            modal.style.display = 'none';
+            modal.classList.remove('show');
+            document.body.style.overflow = 'auto';
+            
+            // Remove backdrop
+            const backdrop = document.querySelector('.modal-backdrop');
+            if (backdrop) {
+                backdrop.remove();
+            }
+        }, 200);
     }
 }
 
@@ -1263,11 +1473,22 @@ function showNotification(message, type = 'info') {
         // Fallback notification
         const notification = document.createElement('div');
         notification.className = `notification-toast ${type}`;
+        notification.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: white;
+            padding: 16px;
+            border-radius: 12px;
+            box-shadow: var(--shadow-lg);
+            z-index: 10000;
+            max-width: 300px;
+            border-left: 4px solid var(--${type === 'success' ? 'success' : type === 'error' ? 'error' : 'primary'}-500);
+            animation: slideInRight 0.3s ease;
+        `;
         notification.innerHTML = `
-            <div class="toast-content">
-                <div class="toast-title">${type === 'success' ? 'Success' : type === 'error' ? 'Error' : 'Info'}</div>
-                <div class="toast-message">${message}</div>
-            </div>
+            <div style="font-weight: 600; margin-bottom: 4px;">${type === 'success' ? 'Success' : type === 'error' ? 'Error' : 'Info'}</div>
+            <div>${message}</div>
         `;
         
         document.body.appendChild(notification);
@@ -1293,6 +1514,9 @@ function showProcessingMessage(message) {
 
 function hideProcessingMessage(overlay) {
     if (overlay && overlay.parentNode) {
-        overlay.parentNode.removeChild(overlay);
+        overlay.style.opacity = '0';
+        setTimeout(() => {
+            overlay.parentNode.removeChild(overlay);
+        }, 200);
     }
 }
