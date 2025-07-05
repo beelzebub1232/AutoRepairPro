@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Dashboard</title>
+    <title>Admin Dashboard - AutoRepairPro</title>
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -14,25 +14,323 @@
             <button id="logout-button">Logout</button>
         </div>
     </header>
+    
     <main class="dashboard-container">
-        <h2>All Repair Jobs</h2>
-        <div id="job-list-container">
-            <table id="job-table">
-                <thead>
-                    <tr>
-                        <th>Job ID</th>
-                        <th>Customer</th>
-                        <th>Vehicle</th>
-                        <th>Service</th>
-                        <th>Status</th>
-                    </tr>
-                </thead>
-                <tbody id="job-table-body">
-                    <!-- Job rows will be inserted here by JS -->
-                </tbody>
-            </table>
+        <!-- Navigation Tabs -->
+        <div class="tab-navigation">
+            <button class="tab-button active" data-tab="jobs">Jobs Overview</button>
+            <button class="tab-button" data-tab="services">Manage Services</button>
+            <button class="tab-button" data-tab="inventory">Manage Inventory</button>
+            <button class="tab-button" data-tab="users">Manage Users</button>
+            <button class="tab-button" data-tab="reports">Reports</button>
+        </div>
+
+        <!-- Jobs Overview Tab -->
+        <div id="jobs-tab" class="tab-content active">
+            <div class="section-header">
+                <h2>All Repair Jobs</h2>
+                <button id="create-job-btn" class="btn btn-primary">Create New Job</button>
+            </div>
+            <div class="table-container">
+                <table id="job-table">
+                    <thead>
+                        <tr>
+                            <th>Job ID</th>
+                            <th>Customer</th>
+                            <th>Vehicle</th>
+                            <th>Service</th>
+                            <th>Status</th>
+                            <th>Assigned Employee</th>
+                            <th>Total Cost</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="job-table-body">
+                        <!-- Job rows will be inserted here by JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Services Management Tab -->
+        <div id="services-tab" class="tab-content">
+            <div class="section-header">
+                <h2>Manage Services</h2>
+                <button id="add-service-btn" class="btn btn-primary">Add New Service</button>
+            </div>
+            <div class="table-container">
+                <table id="services-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Service Name</th>
+                            <th>Price</th>
+                            <th>Description</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="services-table-body">
+                        <!-- Service rows will be inserted here by JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Inventory Management Tab -->
+        <div id="inventory-tab" class="tab-content">
+            <div class="section-header">
+                <h2>Manage Inventory</h2>
+                <div class="header-actions">
+                    <button id="add-inventory-btn" class="btn btn-primary">Add New Item</button>
+                    <button id="low-stock-btn" class="btn btn-warning">View Low Stock</button>
+                </div>
+            </div>
+            <div class="table-container">
+                <table id="inventory-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Part Name</th>
+                            <th>Quantity</th>
+                            <th>Price per Unit</th>
+                            <th>Total Value</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="inventory-table-body">
+                        <!-- Inventory rows will be inserted here by JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Users Management Tab -->
+        <div id="users-tab" class="tab-content">
+            <div class="section-header">
+                <h2>Manage Users</h2>
+                <button id="add-user-btn" class="btn btn-primary">Add New User</button>
+            </div>
+            <div class="table-container">
+                <table id="users-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Username</th>
+                            <th>Full Name</th>
+                            <th>Role</th>
+                            <th>Created At</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="users-table-body">
+                        <!-- User rows will be inserted here by JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Reports Tab -->
+        <div id="reports-tab" class="tab-content">
+            <div class="section-header">
+                <h2>Reports & Analytics</h2>
+            </div>
+            <div class="reports-grid">
+                <div class="report-card">
+                    <h3>Revenue Report</h3>
+                    <div id="revenue-chart" class="chart-container">
+                        <table id="revenue-table">
+                            <thead>
+                                <tr>
+                                    <th>Month</th>
+                                    <th>Jobs Completed</th>
+                                    <th>Total Revenue</th>
+                                </tr>
+                            </thead>
+                            <tbody id="revenue-table-body">
+                                <!-- Revenue data will be inserted here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="report-card">
+                    <h3>Part Usage Report</h3>
+                    <div id="parts-chart" class="chart-container">
+                        <table id="parts-usage-table">
+                            <thead>
+                                <tr>
+                                    <th>Part Name</th>
+                                    <th>Total Used</th>
+                                    <th>Jobs Count</th>
+                                </tr>
+                            </thead>
+                            <tbody id="parts-usage-table-body">
+                                <!-- Parts usage data will be inserted here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
         </div>
     </main>
-    <script src="js/dashboard.js"></script>
+
+    <!-- Modal for Service Form -->
+    <div id="service-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="service-modal-title">Add New Service</h3>
+                <span class="close" id="service-modal-close">&times;</span>
+            </div>
+            <form id="service-form">
+                <input type="hidden" id="service-id">
+                <div class="form-group">
+                    <label for="service-name">Service Name:</label>
+                    <input type="text" id="service-name" required>
+                </div>
+                <div class="form-group">
+                    <label for="service-price">Price:</label>
+                    <input type="number" id="service-price" step="0.01" required>
+                </div>
+                <div class="form-group">
+                    <label for="service-description">Description:</label>
+                    <textarea id="service-description" rows="3"></textarea>
+                </div>
+                <div class="form-actions">
+                    <button type="button" id="service-cancel-btn" class="btn btn-secondary">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Service</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal for Inventory Form -->
+    <div id="inventory-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="inventory-modal-title">Add New Inventory Item</h3>
+                <span class="close" id="inventory-modal-close">&times;</span>
+            </div>
+            <form id="inventory-form">
+                <input type="hidden" id="inventory-id">
+                <div class="form-group">
+                    <label for="part-name">Part Name:</label>
+                    <input type="text" id="part-name" required>
+                </div>
+                <div class="form-group">
+                    <label for="part-quantity">Quantity:</label>
+                    <input type="number" id="part-quantity" required>
+                </div>
+                <div class="form-group">
+                    <label for="part-price">Price per Unit:</label>
+                    <input type="number" id="part-price" step="0.01" required>
+                </div>
+                <div class="form-actions">
+                    <button type="button" id="inventory-cancel-btn" class="btn btn-secondary">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Item</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal for User Form -->
+    <div id="user-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="user-modal-title">Add New User</h3>
+                <span class="close" id="user-modal-close">&times;</span>
+            </div>
+            <form id="user-form">
+                <input type="hidden" id="user-id">
+                <div class="form-group">
+                    <label for="user-username">Username:</label>
+                    <input type="text" id="user-username" required>
+                </div>
+                <div class="form-group">
+                    <label for="user-fullname">Full Name:</label>
+                    <input type="text" id="user-fullname" required>
+                </div>
+                <div class="form-group">
+                    <label for="user-role">Role:</label>
+                    <select id="user-role" required>
+                        <option value="">Select Role</option>
+                        <option value="admin">Admin</option>
+                        <option value="employee">Employee</option>
+                        <option value="customer">Customer</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="user-password">Password:</label>
+                    <input type="password" id="user-password">
+                    <small class="form-hint">Leave blank to keep existing password (for updates)</small>
+                </div>
+                <div class="form-actions">
+                    <button type="button" id="user-cancel-btn" class="btn btn-secondary">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save User</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal for Job Creation -->
+    <div id="job-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Create New Job</h3>
+                <span class="close" id="job-modal-close">&times;</span>
+            </div>
+            <form id="job-form">
+                <div class="form-group">
+                    <label for="job-customer">Customer:</label>
+                    <select id="job-customer" required>
+                        <option value="">Select Customer</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="job-vehicle">Vehicle:</label>
+                    <select id="job-vehicle" required>
+                        <option value="">Select Vehicle</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="job-service">Service:</label>
+                    <select id="job-service" required>
+                        <option value="">Select Service</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="job-booking-date">Booking Date:</label>
+                    <input type="datetime-local" id="job-booking-date" required>
+                </div>
+                <div class="form-actions">
+                    <button type="button" id="job-cancel-btn" class="btn btn-secondary">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Create Job</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal for Employee Assignment -->
+    <div id="assign-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Assign Employee</h3>
+                <span class="close" id="assign-modal-close">&times;</span>
+            </div>
+            <form id="assign-form">
+                <input type="hidden" id="assign-job-id">
+                <div class="form-group">
+                    <label for="assign-employee">Select Employee:</label>
+                    <select id="assign-employee" required>
+                        <option value="">Select Employee</option>
+                    </select>
+                </div>
+                <div class="form-actions">
+                    <button type="button" id="assign-cancel-btn" class="btn btn-secondary">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Assign Employee</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="js/admin-dashboard.js"></script>
 </body>
 </html>
