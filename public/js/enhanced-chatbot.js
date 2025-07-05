@@ -30,22 +30,36 @@ class EnhancedChatbot {
         const chatbotHTML = `
             <div id="enhanced-chatbot-container" class="enhanced-chatbot-container">
                 <div id="enhanced-chatbot-toggle" class="enhanced-chatbot-toggle">
-                    <div class="chatbot-icon">💬</div>
+                    <div class="chatbot-icon">
+                        <svg class="icon" viewBox="0 0 24 24">
+                            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                        </svg>
+                    </div>
                     <div class="chatbot-pulse"></div>
                 </div>
                 <div id="enhanced-chatbot-window" class="enhanced-chatbot-window">
                     <div class="chatbot-header">
-                        <div class="chatbot-avatar">🤖</div>
+                        <div class="chatbot-avatar">
+                            <svg class="icon" viewBox="0 0 24 24">
+                                <circle cx="12" cy="8" r="5"/>
+                                <path d="M20 21a8 8 0 1 0-16 0"/>
+                            </svg>
+                        </div>
                         <div class="chatbot-info">
                             <h4>RepairHub Assistant</h4>
                             <span class="chatbot-status">Online</span>
                         </div>
                         <div class="chatbot-controls">
                             <button id="chatbot-minimize" class="chatbot-control-btn" title="Minimize">
-                                <span>−</span>
+                                <svg class="icon" viewBox="0 0 24 24">
+                                    <line x1="5" y1="12" x2="19" y2="12"/>
+                                </svg>
                             </button>
                             <button id="chatbot-close" class="chatbot-control-btn" title="Close">
-                                <span>×</span>
+                                <svg class="icon" viewBox="0 0 24 24">
+                                    <line x1="18" y1="6" x2="6" y2="18"/>
+                                    <line x1="6" y1="6" x2="18" y2="18"/>
+                                </svg>
                             </button>
                         </div>
                     </div>
@@ -64,7 +78,10 @@ class EnhancedChatbot {
                         <div class="input-container">
                             <input type="text" id="chatbot-input-field" placeholder="Type your message..." autocomplete="off">
                             <button id="chatbot-send" class="send-button">
-                                <span>➤</span>
+                                <svg class="icon" viewBox="0 0 24 24">
+                                    <line x1="22" y1="2" x2="11" y2="13"/>
+                                    <polygon points="22,2 15,22 11,13 2,9"/>
+                                </svg>
                             </button>
                         </div>
                         <div class="quick-suggestions" id="quick-suggestions">
@@ -147,21 +164,21 @@ class EnhancedChatbot {
         
         const messages = {
             admin: {
-                text: `Hello ${name}! 👋 I'm your RepairHub assistant. I can help you with managing operations, viewing reports, and system administration. How can I assist you today?`,
+                text: `Hello ${name}! I'm your RepairHub assistant. I can help you with managing operations, viewing reports, and system administration. How can I assist you today?`,
                 suggestions: ['View Reports', 'Manage Inventory', 'Check Job Status', 'User Management']
             },
             employee: {
-                text: `Hi ${name}! 🔧 I'm here to help you with your assigned jobs, inventory management, and work-related queries. What do you need help with?`,
+                text: `Hi ${name}! I'm here to help you with your assigned jobs, inventory management, and work-related queries. What do you need help with?`,
                 suggestions: ['My Jobs', 'Update Job Status', 'Check Inventory', 'Report Issue']
             },
             customer: {
-                text: `Welcome ${name}! 🚗 I can help you book appointments, check your job status, and answer questions about our services. How may I help you?`,
+                text: `Welcome ${name}! I can help you book appointments, check your job status, and answer questions about our services. How may I help you?`,
                 suggestions: ['Book Appointment', 'Check Job Status', 'View Services', 'Payment Help']
             }
         };
 
         return messages[role] || {
-            text: "Hello! 👋 I'm your RepairHub assistant. How can I help you today?",
+            text: "Hello! I'm your RepairHub assistant. How can I help you today?",
             suggestions: ['View Services', 'Contact Info', 'How to Book', 'Help']
         };
     }
@@ -199,11 +216,11 @@ class EnhancedChatbot {
         }
         
         if (this.detectIntent(lowerMessage, ['book', 'appointment', 'schedule', 'reserve'])) {
-            return this.getBookingResponse();
+            return await this.getBookingResponse();
         }
         
         if (this.detectIntent(lowerMessage, ['status', 'progress', 'update', 'check', 'track'])) {
-            return this.getStatusResponse();
+            return await this.getStatusResponse();
         }
         
         if (this.detectIntent(lowerMessage, ['service', 'services', 'what do you offer', 'repair', 'maintenance'])) {
@@ -215,15 +232,15 @@ class EnhancedChatbot {
         }
         
         if (this.detectIntent(lowerMessage, ['payment', 'pay', 'invoice', 'bill', 'charge'])) {
-            return this.getPaymentResponse();
+            return await this.getPaymentResponse();
         }
         
         if (this.detectIntent(lowerMessage, ['inventory', 'parts', 'stock', 'supplies'])) {
-            return this.getInventoryResponse();
+            return await this.getInventoryResponse();
         }
         
         if (this.detectIntent(lowerMessage, ['report', 'analytics', 'dashboard', 'statistics'])) {
-            return this.getReportsResponse();
+            return await this.getReportsResponse();
         }
         
         if (this.detectIntent(lowerMessage, ['help', 'support', 'assistance', 'guide'])) {
@@ -248,7 +265,7 @@ class EnhancedChatbot {
         }
         
         if (role === 'employee' && this.detectIntent(lowerMessage, ['job', 'task', 'assigned', 'work', 'duty'])) {
-            return this.getEmployeeJobResponse();
+            return await this.getEmployeeJobResponse();
         }
         
         // Default response with suggestions
@@ -261,10 +278,10 @@ class EnhancedChatbot {
 
     getGreetingResponse() {
         const greetings = [
-            "Hello! 😊 How can I assist you today?",
-            "Hi there! 👋 What can I help you with?",
-            "Good to see you! 🌟 How may I help?",
-            "Hello! I'm here to help with any questions you have. 💬"
+            "Hello! How can I assist you today?",
+            "Hi there! What can I help you with?",
+            "Good to see you! How may I help?",
+            "Hello! I'm here to help with any questions you have."
         ];
         
         return {
@@ -273,38 +290,82 @@ class EnhancedChatbot {
         };
     }
 
-    getBookingResponse() {
+    async getBookingResponse() {
         const role = this.userContext.role;
         
         if (role === 'customer') {
-            return {
-                text: "I'd be happy to help you book an appointment! 📅 You can book through your dashboard by selecting your vehicle, choosing a service, and picking a date. Would you like me to guide you through the process?",
-                suggestions: ['Go to Booking', 'View Services', 'Select Branch', 'Check Availability']
-            };
+            // Actually navigate to booking page
+            const bookingTab = document.querySelector('[data-tab="book-appointment"]');
+            if (bookingTab) {
+                bookingTab.click();
+                return {
+                    text: "I've opened the booking page for you! You can select your vehicle, choose a service, and pick a date. Would you like me to guide you through the process?",
+                    suggestions: ['Select Vehicle', 'Choose Service', 'Pick Date', 'Select Branch']
+                };
+            } else {
+                return {
+                    text: "I'd be happy to help you book an appointment! You can book through your dashboard by selecting your vehicle, choosing a service, and picking a date. Would you like me to guide you through the process?",
+                    suggestions: ['Go to Booking', 'View Services', 'Select Branch', 'Check Availability']
+                };
+            }
         } else {
             return {
-                text: "To book appointments, customers can use their dashboard or you can help them through the admin panel. 📋 Would you like to know more about the booking process?",
+                text: "To book appointments, customers can use their dashboard or you can help them through the admin panel. Would you like to know more about the booking process?",
                 suggestions: ['Booking Process', 'Admin Tools', 'Customer Help']
             };
         }
     }
 
-    getStatusResponse() {
+    async getStatusResponse() {
         const role = this.userContext.role;
+        const userId = this.userContext.userId;
         
-        if (role === 'customer') {
+        if (role === 'customer' && userId) {
+            try {
+                const response = await fetch(`http://localhost:8080/api/customer/jobs/${userId}`);
+                if (response.ok) {
+                    const jobs = await response.json();
+                    const activeJobs = jobs.filter(job => ['Booked', 'In Progress'].includes(job.status));
+                    
+                    if (activeJobs.length > 0) {
+                        let statusText = `You have ${activeJobs.length} active job(s):\n\n`;
+                        activeJobs.slice(0, 3).forEach(job => {
+                            statusText += `• Job #${job.jobId}: ${job.service} - ${job.status}\n`;
+                        });
+                        
+                        // Navigate to jobs tab
+                        const jobsTab = document.querySelector('[data-tab="my-jobs"]');
+                        if (jobsTab) {
+                            jobsTab.click();
+                        }
+                        
+                        return {
+                            text: statusText,
+                            suggestions: ['View All Jobs', 'Job Details', 'Expected Timeline']
+                        };
+                    } else {
+                        return {
+                            text: "You don't have any active jobs at the moment. Would you like to book a new service?",
+                            suggestions: ['Book Service', 'View History', 'Service Options']
+                        };
+                    }
+                }
+            } catch (error) {
+                console.error('Error fetching job status:', error);
+            }
+            
             return {
-                text: "You can check your job status in the 'My Jobs' section of your dashboard. 📊 I can also help you understand what each status means. What would you like to know?",
+                text: "You can check your job status in the 'My Jobs' section of your dashboard. I can also help you understand what each status means. What would you like to know?",
                 suggestions: ['View My Jobs', 'Status Meanings', 'Expected Timeline']
             };
         } else if (role === 'employee') {
             return {
-                text: "You can view and update job statuses in your assigned jobs section. 🔧 Need help with updating a specific job status?",
+                text: "You can view and update job statuses in your assigned jobs section. Need help with updating a specific job status?",
                 suggestions: ['My Assigned Jobs', 'Update Status', 'Job Details']
             };
         } else {
             return {
-                text: "As an admin, you can view all job statuses and manage assignments. 📈 What specific information do you need?",
+                text: "As an admin, you can view all job statuses and manage assignments. What specific information do you need?",
                 suggestions: ['All Jobs', 'Job Analytics', 'Status Reports']
             };
         }
@@ -315,13 +376,13 @@ class EnhancedChatbot {
             const response = await fetch('http://localhost:8080/api/services');
             const services = await response.json();
             
-            let servicesList = "Here are our available services: 🔧\n\n";
+            let servicesList = "Here are our available services:\n\n";
             services.slice(0, 5).forEach(service => {
                 servicesList += `• ${service.serviceName} - $${service.price}\n`;
             });
             
             if (services.length > 5) {
-                servicesList += `\n...and ${services.length - 5} more services available! 📋`;
+                servicesList += `\n...and ${services.length - 5} more services available!`;
             }
             
             return {
@@ -330,7 +391,7 @@ class EnhancedChatbot {
             };
         } catch (error) {
             return {
-                text: "I'm having trouble loading our services right now. 😅 Please try again later or contact us directly for service information.",
+                text: "I'm having trouble loading our services right now. Please try again later or contact us directly for service information.",
                 suggestions: ['Contact Support', 'Try Again', 'View Dashboard']
             };
         }
@@ -338,45 +399,104 @@ class EnhancedChatbot {
 
     getPricingResponse() {
         return {
-            text: "Our pricing varies by service type and complexity. 💰 We provide detailed estimates before starting any work. You can view base prices in our services list, and we'll give you a complete quote after assessing your vehicle.",
+            text: "Our pricing varies by service type and complexity. We provide detailed estimates before starting any work. You can view base prices in our services list, and we'll give you a complete quote after assessing your vehicle.",
             suggestions: ['View Services', 'Get Quote', 'Book Consultation', 'Price Breakdown']
         };
     }
 
-    getPaymentResponse() {
+    async getPaymentResponse() {
+        const role = this.userContext.role;
+        const userId = this.userContext.userId;
+        
+        if (role === 'customer' && userId) {
+            try {
+                const response = await fetch(`http://localhost:8080/api/customer/jobs/${userId}`);
+                if (response.ok) {
+                    const jobs = await response.json();
+                    const invoicedJobs = jobs.filter(job => job.status === 'Invoiced');
+                    
+                    if (invoicedJobs.length > 0) {
+                        let paymentText = `You have ${invoicedJobs.length} invoice(s) ready for payment:\n\n`;
+                        invoicedJobs.forEach(job => {
+                            paymentText += `• Job #${job.jobId}: $${job.totalCost}\n`;
+                        });
+                        
+                        return {
+                            text: paymentText,
+                            suggestions: ['Pay Now', 'View Invoices', 'Payment Methods']
+                        };
+                    }
+                }
+            } catch (error) {
+                console.error('Error fetching payment info:', error);
+            }
+        }
+        
         return {
-            text: "We accept multiple payment methods including credit/debit cards, UPI, and digital wallets. 💳 Once your service is completed, you'll receive an invoice through your dashboard and can pay securely online.",
+            text: "We accept multiple payment methods including credit/debit cards, UPI, and digital wallets. Once your service is completed, you'll receive an invoice through your dashboard and can pay securely online.",
             suggestions: ['Payment Methods', 'View Invoices', 'Payment Help', 'Billing Questions']
         };
     }
 
-    getInventoryResponse() {
+    async getInventoryResponse() {
         const role = this.userContext.role;
         
         if (role === 'admin' || role === 'employee') {
+            try {
+                const response = await fetch('http://localhost:8080/api/admin/inventory/alerts');
+                if (response.ok) {
+                    const lowStockItems = await response.json();
+                    
+                    if (lowStockItems.length > 0) {
+                        let inventoryText = `⚠️ ${lowStockItems.length} item(s) are running low:\n\n`;
+                        lowStockItems.slice(0, 3).forEach(item => {
+                            inventoryText += `• ${item.partName}: ${item.quantity} remaining\n`;
+                        });
+                        
+                        return {
+                            text: inventoryText,
+                            suggestions: ['View All Inventory', 'Reorder Parts', 'Add Stock']
+                        };
+                    } else {
+                        return {
+                            text: "All inventory levels are good! No low stock alerts at the moment.",
+                            suggestions: ['View Inventory', 'Add Parts', 'Usage Reports']
+                        };
+                    }
+                }
+            } catch (error) {
+                console.error('Error fetching inventory:', error);
+            }
+            
             return {
-                text: "I can help you with inventory management. 📦 You can check stock levels, view low-stock alerts, and manage parts usage. What do you need to know?",
+                text: "I can help you with inventory management. You can check stock levels, view low-stock alerts, and manage parts usage. What do you need to know?",
                 suggestions: ['Check Stock', 'Low Stock Alerts', 'Add Parts', 'Usage Reports']
             };
         } else {
             return {
-                text: "We maintain a comprehensive inventory of quality parts for all our services. 🔧 If you have questions about specific parts for your vehicle, I can help connect you with our team.",
+                text: "We maintain a comprehensive inventory of quality parts for all our services. If you have questions about specific parts for your vehicle, I can help connect you with our team.",
                 suggestions: ['Contact Team', 'Service Info', 'Part Warranty']
             };
         }
     }
 
-    getReportsResponse() {
+    async getReportsResponse() {
         const role = this.userContext.role;
         
         if (role === 'admin') {
+            // Navigate to reports tab
+            const reportsTab = document.querySelector('[data-tab="reports"]');
+            if (reportsTab) {
+                reportsTab.click();
+            }
+            
             return {
-                text: "I can help you access various reports including revenue analytics, job performance, inventory usage, and employee productivity. 📊 What type of report are you looking for?",
+                text: "I've opened the reports section for you! You can access various reports including revenue analytics, job performance, inventory usage, and employee productivity. What type of report are you looking for?",
                 suggestions: ['Revenue Report', 'Job Analytics', 'Inventory Report', 'Export Data']
             };
         } else {
             return {
-                text: "Detailed reports are available through the admin dashboard. 📈 If you need specific information, I can help you find what you're looking for.",
+                text: "Detailed reports are available through the admin dashboard. If you need specific information, I can help you find what you're looking for.",
                 suggestions: ['Contact Admin', 'Basic Stats', 'My Performance']
             };
         }
@@ -384,21 +504,21 @@ class EnhancedChatbot {
 
     getLocationResponse() {
         return {
-            text: "We have multiple locations to serve you better! 📍 Our main branches are:\n\n• RepairHub Pro Downtown - 123 Main Street\n• RepairHub Pro Uptown - 456 Oak Avenue\n• RepairHub Pro Westside - 789 Pine Road\n\nYou can select your preferred location when booking an appointment.",
+            text: "We have multiple locations to serve you better!\n\n• RepairHub Pro Downtown - 123 Main Street\n• RepairHub Pro Uptown - 456 Oak Avenue\n• RepairHub Pro Westside - 789 Pine Road\n\nYou can select your preferred location when booking an appointment.",
             suggestions: ['Book Appointment', 'Get Directions', 'Branch Hours', 'Contact Branch']
         };
     }
 
     getHoursResponse() {
         return {
-            text: "Our operating hours vary by location: ⏰\n\n• Downtown: Mon-Fri 8AM-6PM, Sat 9AM-4PM\n• Uptown: Mon-Fri 7AM-7PM, Sat 8AM-5PM\n• Westside: Mon-Sat 8AM-6PM\n\nWe're closed on Sundays for maintenance and staff rest.",
+            text: "Our operating hours vary by location:\n\n• Downtown: Mon-Fri 8AM-6PM, Sat 9AM-4PM\n• Uptown: Mon-Fri 7AM-7PM, Sat 8AM-5PM\n• Westside: Mon-Sat 8AM-6PM\n\nWe're closed on Sundays for maintenance and staff rest.",
             suggestions: ['Book Appointment', 'Emergency Service', 'Holiday Hours', 'Contact Us']
         };
     }
 
     getContactResponse() {
         return {
-            text: "You can reach us through multiple channels: 📞\n\n• Phone: (555) 123-REPAIR\n• Email: support@repairhubpro.com\n• Live Chat: Right here with me!\n• Emergency: (555) 911-AUTO\n\nI'm available 24/7 to help with basic questions!",
+            text: "You can reach us through multiple channels:\n\n• Phone: (555) 123-REPAIR\n• Email: support@repairhubpro.com\n• Live Chat: Right here with me!\n• Emergency: (555) 911-AUTO\n\nI'm available 24/7 to help with basic questions!",
             suggestions: ['Call Now', 'Send Email', 'Emergency Help', 'Book Appointment']
         };
     }
@@ -407,37 +527,68 @@ class EnhancedChatbot {
         const role = this.userContext.role;
         
         const helpText = {
-            admin: "I can help you with system administration, user management, reports, inventory, and job oversight. 🛠️ What do you need assistance with?",
-            employee: "I can help you with job management, status updates, inventory usage, and work-related questions. 🔧 How can I assist?",
-            customer: "I can help you book appointments, check job status, understand our services, and handle payments. 🚗 What do you need help with?"
+            admin: "I can help you with system administration, user management, reports, inventory, and job oversight. What do you need assistance with?",
+            employee: "I can help you with job management, status updates, inventory usage, and work-related questions. How can I assist?",
+            customer: "I can help you book appointments, check job status, understand our services, and handle payments. What do you need help with?"
         };
         
         return {
-            text: helpText[role] || "I'm here to help! 😊 What do you need assistance with?",
+            text: helpText[role] || "I'm here to help! What do you need assistance with?",
             suggestions: this.getContextualSuggestions()
         };
     }
 
     getUserManagementResponse() {
         return {
-            text: "I can help you with user management tasks including adding new employees, managing customer accounts, and setting user permissions. 👥 What would you like to do?",
+            text: "I can help you with user management tasks including adding new employees, managing customer accounts, and setting user permissions. What would you like to do?",
             suggestions: ['Add Employee', 'Manage Customers', 'User Permissions', 'Account Settings']
         };
     }
 
-    getEmployeeJobResponse() {
+    async getEmployeeJobResponse() {
+        const userId = this.userContext.userId;
+        
+        if (userId) {
+            try {
+                const response = await fetch(`http://localhost:8080/api/employee/jobs/${userId}`);
+                if (response.ok) {
+                    const jobs = await response.json();
+                    const activeJobs = jobs.filter(job => ['Booked', 'In Progress'].includes(job.status));
+                    
+                    if (activeJobs.length > 0) {
+                        let jobText = `You have ${activeJobs.length} assigned job(s):\n\n`;
+                        activeJobs.slice(0, 3).forEach(job => {
+                            jobText += `• Job #${job.jobId}: ${job.service} - ${job.status}\n`;
+                        });
+                        
+                        return {
+                            text: jobText,
+                            suggestions: ['View All Jobs', 'Update Status', 'Use Parts', 'Job Details']
+                        };
+                    } else {
+                        return {
+                            text: "You don't have any assigned jobs at the moment. Check with your supervisor for new assignments.",
+                            suggestions: ['Check Inventory', 'View Completed Jobs', 'Contact Supervisor']
+                        };
+                    }
+                }
+            } catch (error) {
+                console.error('Error fetching employee jobs:', error);
+            }
+        }
+        
         return {
-            text: "I can help you with your assigned jobs, updating statuses, managing parts usage, and viewing job details. 🔧 What do you need help with?",
+            text: "I can help you with your assigned jobs, updating statuses, managing parts usage, and viewing job details. What do you need help with?",
             suggestions: ['View My Jobs', 'Update Status', 'Use Parts', 'Job Details']
         };
     }
 
     getDefaultResponse() {
         const responses = [
-            "I'm not sure I understand that. 🤔 Could you rephrase your question?",
-            "I didn't quite catch that. 😅 Can you try asking in a different way?",
-            "I'm here to help! 💪 Could you be more specific about what you need?",
-            "I want to make sure I give you the right information. 🎯 Could you clarify what you're looking for?"
+            "I'm not sure I understand that. Could you rephrase your question?",
+            "I didn't quite catch that. Can you try asking in a different way?",
+            "I'm here to help! Could you be more specific about what you need?",
+            "I want to make sure I give you the right information. Could you clarify what you're looking for?"
         ];
         
         return {

@@ -291,7 +291,7 @@ body {
     font-size: var(--text-sm);
 }
 
-.form-input {
+.form-input, .form-select {
     width: 100%;
     padding: var(--space-4);
     border: 2px solid var(--secondary-200);
@@ -300,9 +300,10 @@ body {
     transition: all var(--transition-fast);
     background: white;
     color: var(--secondary-900);
+    appearance: none;
 }
 
-.form-input:focus {
+.form-input:focus, .form-select:focus {
     outline: none;
     border-color: var(--primary-500);
     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
@@ -310,6 +311,20 @@ body {
 
 .form-input::placeholder {
     color: var(--secondary-400);
+}
+
+/* Custom Select Styling */
+.form-select {
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e");
+    background-position: right 0.75rem center;
+    background-repeat: no-repeat;
+    background-size: 1.5em 1.5em;
+    padding-right: 2.5rem;
+    cursor: pointer;
+}
+
+.form-select:hover {
+    border-color: var(--primary-300);
 }
 
 .input-group {

@@ -30,10 +30,17 @@
     box-shadow: var(--shadow-2xl);
     animation: modalSlideIn 0.3s ease;
     border: 1px solid var(--secondary-200);
+    position: relative;
+    margin: auto;
 }
 
 .modal-content.large-modal {
     max-width: 800px;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
 }
 
 @keyframes modalSlideIn {

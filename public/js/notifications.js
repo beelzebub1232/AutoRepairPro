@@ -25,7 +25,7 @@ class NotificationManager {
     }
 
     createNotificationBell() {
-        const header = document.querySelector('.customer-header, .sidebar-header');
+        const header = document.querySelector('.header-user, .sidebar-header, .customer-header');
         if (header) {
             const bellContainer = document.createElement('div');
             bellContainer.className = 'notification-bell-container';
@@ -39,16 +39,14 @@ class NotificationManager {
                 </button>
             `;
             
-            // Insert before user info or at the end
-            const userInfo = header.querySelector('.user-info, .header-user');
-            if (userInfo) {
-                userInfo.parentNode.insertBefore(bellContainer, userInfo);
-            } else {
-                header.appendChild(bellContainer);
-            }
+            // Insert at the beginning of header for proper positioning
+            header.insertBefore(bellContainer, header.firstChild);
 
             // Add click handler for bell
-            document.getElementById('notification-bell').addEventListener('click', () => this.toggleNotificationPanel());
+            document.getElementById('notification-bell').addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.toggleNotificationPanel();
+            });
         }
     }
 
@@ -63,6 +61,10 @@ class NotificationManager {
         const panel = document.createElement('div');
         panel.id = 'notification-panel';
         panel.className = 'notification-panel';
+        
+        // Position panel relative to the bell
+        const bell = document.getElementById('notification-bell');
+        const bellRect = bell.getBoundingClientRect();
         
         panel.innerHTML = `
             <div class="notification-header">
@@ -94,6 +96,11 @@ class NotificationManager {
                 </button>
             </div>
         `;
+
+        // Position the panel correctly
+        panel.style.position = 'fixed';
+        panel.style.top = (bellRect.bottom + 10) + 'px';
+        panel.style.left = Math.max(20, bellRect.left - 300) + 'px'; // Ensure it doesn't go off-screen
 
         document.body.appendChild(panel);
 

@@ -252,7 +252,7 @@ function renderVehiclesSummary(vehicles) {
     `).join('');
 }
 
-// Map Integration
+// Map Integration - Fixed Implementation
 function initializeMapIntegration() {
     const mapContainer = document.getElementById('branch-map-container');
     if (mapContainer) {
@@ -260,6 +260,8 @@ function initializeMapIntegration() {
         attachMapEventListeners();
     }
 }
+
+let selectedBranchId = null;
 
 function createMapInterface() {
     const branches = [
@@ -369,7 +371,7 @@ function createMapInterface() {
                             </svg>
                         </div>
                         <div class="empty-state-title">Select a branch</div>
-                        <div class="empty-state-description">Choose a location to see details</div>
+                        <div class="empty-state-description">Choose a location to see details and continue with booking</div>
                     </div>
                 </div>
             </div>
@@ -378,9 +380,20 @@ function createMapInterface() {
 }
 
 function attachMapEventListeners() {
-    // Branch selection
+    // Branch card click handlers
+    document.querySelectorAll('.branch-card').forEach(card => {
+        card.addEventListener('click', (e) => {
+            if (!e.target.classList.contains('select-branch-btn')) {
+                const branchId = parseInt(card.getAttribute('data-branch-id'));
+                selectBranch(branchId);
+            }
+        });
+    });
+
+    // Branch selection button handlers
     document.querySelectorAll('.select-branch-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
+            e.stopPropagation();
             const branchId = parseInt(e.target.getAttribute('data-branch-id'));
             selectBranch(branchId);
         });
@@ -394,6 +407,8 @@ function attachMapEventListeners() {
 }
 
 function selectBranch(branchId) {
+    selectedBranchId = branchId;
+    
     // Update UI to show selection
     document.querySelectorAll('.branch-card').forEach(card => {
         card.classList.remove('selected');
@@ -414,13 +429,15 @@ function selectBranch(branchId) {
         branchNameElement.textContent = branchName;
         branchNameElement.style.color = 'var(--success-600)';
     }
+
+    showNotification('Branch selected successfully!', 'success');
 }
 
 function updateSelectedBranchInfo(branchId) {
     const branches = [
-        { id: 1, name: "RepairHub Pro Downtown", address: "123 Main Street, Downtown" },
-        { id: 2, name: "RepairHub Pro Uptown", address: "456 Oak Avenue, Uptown" },
-        { id: 3, name: "RepairHub Pro Westside", address: "789 Pine Road, Westside" }
+        { id: 1, name: "RepairHub Pro Downtown", address: "123 Main Street, Downtown", phone: "(555) 123-4567" },
+        { id: 2, name: "RepairHub Pro Uptown", address: "456 Oak Avenue, Uptown", phone: "(555) 234-5678" },
+        { id: 3, name: "RepairHub Pro Westside", address: "789 Pine Road, Westside", phone: "(555) 345-6789" }
     ];
     
     const branch = branches.find(b => b.id === branchId);
@@ -431,19 +448,27 @@ function updateSelectedBranchInfo(branchId) {
             <div class="selected-branch-details">
                 <h4>
                     <svg class="icon" viewBox="0 0 24 24">
-                        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
-                        <circle cx="12" cy="10" r="3"/>
+                        <path d="M9 12l2 2 4-4"/>
+                        <circle cx="12" cy="12" r="9"/>
                     </svg>
-                    ${branch.name}
+                    Selected Branch
                 </h4>
                 <div class="branch-info-grid">
+                    <div class="info-item">
+                        <strong>Name:</strong>
+                        <span>${branch.name}</span>
+                    </div>
                     <div class="info-item">
                         <strong>Address:</strong>
                         <span>${branch.address}</span>
                     </div>
                     <div class="info-item">
+                        <strong>Phone:</strong>
+                        <span>${branch.phone}</span>
+                    </div>
+                    <div class="info-item">
                         <strong>Status:</strong>
-                        <span class="status-success">Selected</span>
+                        <span class="status-success">Ready for booking</span>
                     </div>
                 </div>
                 <div class="branch-actions">
@@ -452,6 +477,12 @@ function updateSelectedBranchInfo(branchId) {
                             <polygon points="3,11 22,2 13,21 11,13 3,11"/>
                         </svg>
                         Get Directions
+                    </button>
+                    <button class="btn btn-sm btn-primary" onclick="proceedToBooking()">
+                        <svg class="icon icon-sm" viewBox="0 0 24 24">
+                            <path d="M5 12l5 5L20 7"/>
+                        </svg>
+                        Continue Booking
                     </button>
                 </div>
             </div>
@@ -467,6 +498,8 @@ function detectUserLocation() {
         return;
     }
 
+    // Update button state
+    detectBtn.classList.add('location-btn-detecting');
     detectBtn.innerHTML = `
         <svg class="icon icon-sm animate-spin" viewBox="0 0 24 24">
             <path d="M21 12a9 9 0 11-6.219-8.56"/>
@@ -476,18 +509,26 @@ function detectUserLocation() {
 
     navigator.geolocation.getCurrentPosition(
         (position) => {
+            // Success - simulate finding nearest branch
+            detectBtn.classList.remove('location-btn-detecting');
+            detectBtn.classList.add('location-btn-success');
             detectBtn.innerHTML = `
                 <svg class="icon icon-sm" viewBox="0 0 24 24">
                     <path d="M9 12l2 2 4-4"/>
                     <circle cx="12" cy="12" r="9"/>
                 </svg>
-                Location Detected
+                Location Found
             `;
-            detectBtn.classList.remove('btn-primary');
-            detectBtn.classList.add('btn-success');
-            showNotification('Location detected successfully', 'success');
+            
+            // Auto-select nearest branch (simulate)
+            setTimeout(() => {
+                selectBranch(1); // Select first branch as "nearest"
+                showNotification('Nearest branch selected based on your location', 'success');
+            }, 1000);
         },
         (error) => {
+            detectBtn.classList.remove('location-btn-detecting');
+            detectBtn.classList.add('location-btn-error');
             detectBtn.innerHTML = `
                 <svg class="icon icon-sm" viewBox="0 0 24 24">
                     <line x1="18" y1="6" x2="6" y2="18"/>
@@ -495,15 +536,34 @@ function detectUserLocation() {
                 </svg>
                 Location Failed
             `;
-            detectBtn.classList.remove('btn-primary');
-            detectBtn.classList.add('btn-danger');
-            showNotification('Failed to detect location', 'error');
+            showNotification('Failed to detect location. Please select a branch manually.', 'error');
+            
+            // Reset button after 3 seconds
+            setTimeout(() => {
+                detectBtn.classList.remove('location-btn-error');
+                detectBtn.innerHTML = `
+                    <svg class="icon icon-sm" viewBox="0 0 24 24">
+                        <polygon points="3,11 22,2 13,21 11,13 3,11"/>
+                    </svg>
+                    Use My Location
+                `;
+            }, 3000);
         }
     );
 }
 
 function getDirections() {
     showNotification('Opening directions in your default map app...', 'info');
+    // In a real app, this would open the device's map app with directions
+}
+
+function proceedToBooking() {
+    // Scroll to booking form
+    const bookingContainer = document.querySelector('.booking-container');
+    if (bookingContainer) {
+        bookingContainer.scrollIntoView({ behavior: 'smooth' });
+        showNotification('Please complete the booking form below', 'info');
+    }
 }
 
 // Booking Module
@@ -619,10 +679,14 @@ function showServiceDetails() {
 
 async function bookAppointment() {
     const userId = sessionStorage.getItem('userId');
-    const selectedBranch = document.querySelector('.branch-card.selected');
     
-    if (!selectedBranch) {
+    if (!selectedBranchId) {
         showNotification('Please select a branch location before booking', 'error');
+        // Scroll to map
+        const mapContainer = document.querySelector('.map-container');
+        if (mapContainer) {
+            mapContainer.scrollIntoView({ behavior: 'smooth' });
+        }
         return;
     }
     
@@ -632,7 +696,7 @@ async function bookAppointment() {
         serviceId: document.getElementById('booking-service').value,
         bookingDate: document.getElementById('booking-date').value,
         notes: document.getElementById('booking-notes').value,
-        branchId: selectedBranch.getAttribute('data-branch-id')
+        branchId: selectedBranchId
     };
 
     try {
@@ -649,6 +713,25 @@ async function bookAppointment() {
             document.getElementById('booking-form').reset();
             document.getElementById('service-details').style.display = 'none';
             document.getElementById('selected-branch-name').textContent = 'Please select a branch above';
+            
+            // Reset branch selection
+            selectedBranchId = null;
+            document.querySelectorAll('.branch-card').forEach(card => {
+                card.classList.remove('selected');
+            });
+            document.getElementById('selected-branch-info').innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-state-icon">
+                        <svg class="icon icon-xl" viewBox="0 0 24 24">
+                            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+                            <circle cx="12" cy="10" r="3"/>
+                        </svg>
+                    </div>
+                    <div class="empty-state-title">Select a branch</div>
+                    <div class="empty-state-description">Choose a location to see details and continue with booking</div>
+                </div>
+            `;
+            
             loadCustomerData(); // Refresh stats
             
             // Notify chatbot
@@ -1205,7 +1288,7 @@ function updateCustomerStats(jobs) {
 // Utility Functions
 function showModal(modal) {
     if (modal) {
-        modal.style.display = 'block';
+        modal.style.display = 'flex';
         modal.classList.add('show');
         document.body.style.overflow = 'hidden';
     }
