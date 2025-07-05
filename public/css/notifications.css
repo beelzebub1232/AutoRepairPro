@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 /* Modern Notification System with Fixed Positioning */
+=======
+/* Modern Notification System Styles */
+>>>>>>> 3e3e1c4255b00c6a643aa726b199277750e16638
 
 .notification-container {
     position: fixed;
@@ -62,8 +66,20 @@
     transition: transform var(--transition-fast);
 }
 
+<<<<<<< HEAD
 .notification-bell:hover .bell-icon {
     transform: scale(1.1);
+=======
+.bell-icon.has-notifications {
+    animation: bellRing 1s ease-in-out infinite;
+    color: var(--primary-600);
+}
+
+@keyframes bellRing {
+    0%, 100% { transform: rotate(0deg); }
+    25% { transform: rotate(15deg); }
+    75% { transform: rotate(-15deg); }
+>>>>>>> 3e3e1c4255b00c6a643aa726b199277750e16638
 }
 
 .notification-count {
@@ -115,6 +131,8 @@
 
 .notification-panel {
     position: fixed;
+    top: 70px;
+    right: 20px;
     width: 380px;
     max-height: 500px;
     background: white;
@@ -461,7 +479,11 @@
         width: calc(100vw - 40px);
         right: 20px;
         left: 20px;
+<<<<<<< HEAD
         bottom: 180px; /* Above mobile chatbot */
+=======
+        top: 80px;
+>>>>>>> 3e3e1c4255b00c6a643aa726b199277750e16638
     }
     
     .notification-toast {
