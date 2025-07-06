@@ -2,6 +2,7 @@ package com.autorepairpro.handler;
 
 import com.autorepairpro.db.DatabaseConnector;
 import java.sql.*;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -562,9 +563,31 @@ public class EmployeeHandler {
 
     // Utility method for parsing JSON-like body
     private Map<String, String> parseBody(String body) {
-        return Stream.of(body.replace("{", "").replace("}", "").replace("\"", "").split(","))
-                .map(s -> s.split(":", 2))
-                .filter(a -> a.length == 2)
-                .collect(Collectors.toMap(a -> a[0].trim(), a -> a[1].trim()));
+        if (body == null || body.trim().isEmpty()) {
+            return new HashMap<>();
+        }
+        
+        // Simple JSON parsing for basic key-value pairs
+        Map<String, String> result = new HashMap<>();
+        body = body.trim();
+        
+        // Remove outer braces
+        if (body.startsWith("{") && body.endsWith("}")) {
+            body = body.substring(1, body.length() - 1);
+        }
+        
+        // Split by comma, but be careful about commas in values
+        String[] pairs = body.split(",(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)");
+        
+        for (String pair : pairs) {
+            String[] keyValue = pair.split(":", 2);
+            if (keyValue.length == 2) {
+                String key = keyValue[0].trim().replace("\"", "");
+                String value = keyValue[1].trim().replace("\"", "");
+                result.put(key, value);
+            }
+        }
+        
+        return result;
     }
 }

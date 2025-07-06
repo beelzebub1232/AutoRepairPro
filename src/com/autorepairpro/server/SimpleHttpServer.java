@@ -81,6 +81,9 @@ public class SimpleHttpServer {
         }
 
         private void handleApiRequest(String method, String path, BufferedReader in, OutputStream out) throws IOException {
+            // Debug logging
+            System.out.println("API Request: " + method + " " + path);
+            
             // Read headers to find Content-Length for POST requests.
             int contentLength = 0;
             String line;
@@ -98,12 +101,17 @@ public class SimpleHttpServer {
                 bodyBuilder.append(bodyChars);
             }
             String body = bodyBuilder.toString();
+            
+            // Debug logging
+            if (!body.isEmpty()) {
+                System.out.println("Request body: " + body);
+            }
 
             // Route API calls to specific handlers.
             String responseJson = "{\"error\":\"Not Found\"}";
             int statusCode = 404;
 
-            if (path.startsWith("/api/auth/") || path.equals("/api/services")) {
+            if (path.startsWith("/api/auth/") || path.equals("/api/services") || path.equals("/api/test")) {
                 AuthHandler handler = new AuthHandler();
                 responseJson = handler.handle(method, path, body);
                 statusCode = responseJson.contains("error") ? 401 : 200;
@@ -121,27 +129,44 @@ public class SimpleHttpServer {
                 statusCode = responseJson.contains("error") ? 500 : 200;
             }
 
+            // Debug logging
+            System.out.println("Response: " + statusCode + " - " + responseJson);
+
             sendJsonResponse(out, statusCode, responseJson);
         }
         
         private void handleFileRequest(String path, OutputStream out) throws IOException {
+            // Debug logging
+            System.out.println("File Request: " + path);
+            
             // Serve static files (HTML, CSS, JS) from the 'public' directory.
             if (path.equals("/")) {
                 path = "/index.html";
             }
 
-            Path filePath = Paths.get("public", path);
-            if (Files.exists(filePath) && !Files.isDirectory(filePath)) {
-                String contentType = Files.probeContentType(filePath);
+            // Remove query parameters from the path before creating file path
+            String filePath = path;
+            if (path.contains("?")) {
+                filePath = path.substring(0, path.indexOf("?"));
+                System.out.println("File path after removing query params: " + filePath);
+            }
+
+            Path fileSystemPath = Paths.get("public", filePath);
+            System.out.println("Looking for file: " + fileSystemPath.toAbsolutePath());
+            
+            if (Files.exists(fileSystemPath) && !Files.isDirectory(fileSystemPath)) {
+                String contentType = Files.probeContentType(fileSystemPath);
                 if (contentType == null) {
-                    if (path.endsWith(".css")) contentType = "text/css";
-                    else if (path.endsWith(".js")) contentType = "application/javascript";
+                    if (filePath.endsWith(".css")) contentType = "text/css";
+                    else if (filePath.endsWith(".js")) contentType = "application/javascript";
                     else contentType = "application/octet-stream";
                 }
                 
-                byte[] fileBytes = Files.readAllBytes(filePath);
+                byte[] fileBytes = Files.readAllBytes(fileSystemPath);
+                System.out.println("Serving file: " + filePath + " (" + fileBytes.length + " bytes)");
                 sendHttpResponse(out, 200, "OK", contentType, fileBytes);
             } else {
+                System.out.println("File not found: " + fileSystemPath.toAbsolutePath());
                 byte[] notFoundContent = "<h1>404 Not Found</h1>".getBytes();
                 sendHttpResponse(out, 404, "Not Found", "text/html", notFoundContent);
             }
