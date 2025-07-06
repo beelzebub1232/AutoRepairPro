@@ -1,11 +1,13 @@
 // Enhanced Customer Dashboard - Complete Implementation with Fixed Map
 document.addEventListener('DOMContentLoaded', () => {
-    const userRole = sessionStorage.getItem('userRole');
-    const userName = sessionStorage.getItem('userName');
-    const userId = sessionStorage.getItem('userId');
+    // Get user info from URL parameters
+    const urlParams = new URLSearchParams(window.location.search);
+    const userRole = urlParams.get('role');
+    const userName = urlParams.get('name');
+    const userId = urlParams.get('id');
     
     // Auth check
-    if (!userRole || userRole !== 'customer') {
+    if (!userRole || userRole !== 'customer' || !userName || !userId) {
         window.location.href = '/index.html';
         return;
     }
@@ -107,7 +109,6 @@ function initializeLogout() {
     const logoutButton = document.getElementById('logout-button');
     if (logoutButton) {
         logoutButton.addEventListener('click', () => {
-            sessionStorage.clear();
             window.location.href = '/index.html';
         });
     }
@@ -115,7 +116,8 @@ function initializeLogout() {
 
 // Overview Data Loading
 async function loadOverviewData() {
-    const userId = sessionStorage.getItem('userId');
+    const urlParams = new URLSearchParams(window.location.search);
+    const userId = urlParams.get('id');
     
     try {
         const response = await fetch(`http://localhost:8080/api/customer/jobs/${userId}`);
@@ -812,7 +814,8 @@ async function loadBookingData() {
 }
 
 async function loadCustomerVehicles() {
-    const userId = sessionStorage.getItem('userId');
+    const urlParams = new URLSearchParams(window.location.search);
+    const userId = urlParams.get('id');
     
     try {
         const response = await fetch(`http://localhost:8080/api/customer/vehicles/${userId}`);
@@ -886,7 +889,8 @@ function showServiceDetails() {
 }
 
 async function bookAppointment() {
-    const userId = sessionStorage.getItem('userId');
+    const urlParams = new URLSearchParams(window.location.search);
+    const userId = urlParams.get('id');
     const selectedBranch = document.querySelector('.branch-card.selected');
     
     if (!selectedBranch) {
@@ -976,7 +980,8 @@ function showVehicleModal() {
 }
 
 async function addVehicle() {
-    const userId = sessionStorage.getItem('userId');
+    const urlParams = new URLSearchParams(window.location.search);
+    const userId = urlParams.get('id');
     const formData = {
         customerId: userId,
         make: document.getElementById('vehicle-make').value,
@@ -1010,7 +1015,8 @@ async function addVehicle() {
 }
 
 async function loadMyVehicles() {
-    const userId = sessionStorage.getItem('userId');
+    const urlParams = new URLSearchParams(window.location.search);
+    const userId = urlParams.get('id');
     
     try {
         const response = await fetch(`http://localhost:8080/api/customer/vehicles/${userId}`);
@@ -1116,7 +1122,8 @@ function initializeJobsModule() {
 }
 
 async function loadMyJobs() {
-    const userId = sessionStorage.getItem('userId');
+    const urlParams = new URLSearchParams(window.location.search);
+    const userId = urlParams.get('id');
     
     try {
         const response = await fetch(`http://localhost:8080/api/customer/jobs/${userId}`);
@@ -1216,7 +1223,8 @@ function initializePaymentModule() {
 }
 
 async function showJobDetails(jobId) {
-    const userId = sessionStorage.getItem('userId');
+    const urlParams = new URLSearchParams(window.location.search);
+    const userId = urlParams.get('id');
     
     try {
         const response = await fetch(`http://localhost:8080/api/customer/jobs/${userId}`);
@@ -1289,7 +1297,8 @@ function populateJobDetailsModal(job) {
 }
 
 async function showPaymentModal(jobId) {
-    const userId = sessionStorage.getItem('userId');
+    const urlParams = new URLSearchParams(window.location.search);
+    const userId = urlParams.get('id');
     
     try {
         const response = await fetch(`http://localhost:8080/api/customer/jobs/${userId}`);
@@ -1327,6 +1336,8 @@ async function processPayment() {
         // Simulate payment delay
         await new Promise(resolve => setTimeout(resolve, 2000));
         
+        const urlParams = new URLSearchParams(window.location.search);
+        const userId = urlParams.get('id');
         const response = await fetch(`http://localhost:8080/api/customer/payment/${jobId}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -1361,7 +1372,8 @@ async function processPayment() {
 
 // Service History Module
 async function loadServiceHistory() {
-    const userId = sessionStorage.getItem('userId');
+    const urlParams = new URLSearchParams(window.location.search);
+    const userId = urlParams.get('id');
     
     try {
         const response = await fetch(`http://localhost:8080/api/customer/jobs/${userId}`);
@@ -1432,7 +1444,8 @@ function filterServiceHistory(jobs) {
 
 // Customer Data Loading
 async function loadCustomerData() {
-    const userId = sessionStorage.getItem('userId');
+    const urlParams = new URLSearchParams(window.location.search);
+    const userId = urlParams.get('id');
     
     try {
         const response = await fetch(`http://localhost:8080/api/customer/jobs/${userId}`);

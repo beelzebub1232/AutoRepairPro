@@ -1,7 +1,14 @@
 document.addEventListener('DOMContentLoaded', () => {
-    // If user is already logged in, redirect them
-    if (sessionStorage.getItem('userRole')) {
-        window.location.href = `/${sessionStorage.getItem('userRole')}.html`;
+    // Check if user is already logged in via URL parameters
+    const urlParams = new URLSearchParams(window.location.search);
+    const userRole = urlParams.get('role');
+    const userName = urlParams.get('name');
+    const userId = urlParams.get('id');
+    
+    if (userRole && userName && userId) {
+        // User is already logged in, redirect to appropriate dashboard
+        window.location.href = `/${userRole}.html?role=${userRole}&name=${encodeURIComponent(userName)}&id=${userId}`;
+        return;
     }
 
     const loginForm = document.getElementById('login-form');
@@ -56,17 +63,12 @@ document.addEventListener('DOMContentLoaded', () => {
             const data = await response.json();
 
             if (response.ok) {
-                // Store user info in session storage
-                sessionStorage.setItem('userRole', data.role);
-                sessionStorage.setItem('userName', data.fullName);
-                sessionStorage.setItem('userId', data.userId);
-
                 // Show success state
                 submitBtn.innerHTML = '<span>Success!</span><span class="btn-arrow">✅</span>';
                 
-                // Redirect to the appropriate dashboard
+                // Redirect to the appropriate dashboard with user info in URL
                 setTimeout(() => {
-                    window.location.href = `/${data.role}.html`;
+                    window.location.href = `/${data.role}.html?role=${data.role}&name=${encodeURIComponent(data.fullName)}&id=${data.userId}`;
                 }, 500);
             } else {
                 throw new Error(data.error || 'Login failed');
