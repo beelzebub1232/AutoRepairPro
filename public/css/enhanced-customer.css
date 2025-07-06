@@ -755,6 +755,13 @@
     animation: pulse 2s infinite;
 }
 
+/* Highlighted branch card */
+.branch-card.highlighted {
+    border-color: var(--primary-500) !important;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1) !important;
+    transform: scale(1.02) !important;
+}
+
 /* Enhanced Booking Container */
 .booking-container {
     background: white;

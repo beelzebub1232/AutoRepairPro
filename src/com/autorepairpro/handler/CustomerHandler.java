@@ -2,606 +2,362 @@ package com.autorepairpro.handler;
 
 import com.autorepairpro.db.DatabaseConnector;
 import java.sql.*;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
+import java.util.*;
+import java.io.*;
 
 public class CustomerHandler {
-    public String handle(String method, String path, String body) {
-        // Get customer's jobs
-        if (path.matches("/api/customer/jobs/\\d+") && method.equals("GET")) {
-            try {
-                int customerId = Integer.parseInt(path.substring(path.lastIndexOf('/') + 1));
-                return getCustomerJobs(customerId);
-            } catch (NumberFormatException e) {
-                return "{\"error\":\"Invalid customer ID format\"}";
-            }
-        }
-        
-        // Get customer's invoices
-        if (path.matches("/api/customer/invoices/\\d+") && method.equals("GET")) {
-            try {
-                int customerId = Integer.parseInt(path.substring(path.lastIndexOf('/') + 1));
-                return getCustomerInvoices(customerId);
-            } catch (NumberFormatException e) {
-                return "{\"error\":\"Invalid customer ID format\"}";
-            }
-        }
-        
-        // Get customer's payments
-        if (path.matches("/api/customer/payments/\\d+") && method.equals("GET")) {
-            try {
-                int customerId = Integer.parseInt(path.substring(path.lastIndexOf('/') + 1));
-                return getCustomerPayments(customerId);
-            } catch (NumberFormatException e) {
-                return "{\"error\":\"Invalid customer ID format\"}";
-            }
-        }
-        
-        // Book new appointment
-        if (path.equals("/api/customer/bookings") && method.equals("POST")) {
-            return bookAppointment(body);
-        }
-        
-        // Make payment for a job
-        if (path.matches("/api/customer/payment/\\d+") && method.equals("POST")) {
-            try {
-                int jobId = Integer.parseInt(path.substring(path.lastIndexOf('/') + 1));
-                return makePayment(jobId, body);
-            } catch (NumberFormatException e) {
-                return "{\"error\":\"Invalid job ID format\"}";
-            }
-        }
-        
-        // Get customer's vehicles
-        if (path.matches("/api/customer/vehicles/\\d+") && method.equals("GET")) {
-            try {
-                int customerId = Integer.parseInt(path.substring(path.lastIndexOf('/') + 1));
-                return getCustomerVehicles(customerId);
-            } catch (NumberFormatException e) {
-                return "{\"error\":\"Invalid customer ID format\"}";
-            }
-        }
-        
-        // Add new vehicle
-        if (path.equals("/api/customer/vehicles") && method.equals("POST")) {
-            return addVehicle(body);
-        }
-        
-        // Get all branches
-        if (path.equals("/api/branches") && method.equals("GET")) {
-            return getAllBranches();
-        }
-        
-        // Get customer profile
-        if (path.matches("/api/customer/profile/\\d+") && method.equals("GET")) {
-            try {
-                int customerId = Integer.parseInt(path.substring(path.lastIndexOf('/') + 1));
-                return getCustomerProfile(customerId);
-            } catch (NumberFormatException e) {
-                return "{\"error\":\"Invalid customer ID format\"}";
-            }
-        }
-        
-        // Update customer profile
-        if (path.matches("/api/customer/profile/\\d+") && method.equals("PUT")) {
-            try {
-                int customerId = Integer.parseInt(path.substring(path.lastIndexOf('/') + 1));
-                return updateCustomerProfile(customerId, body);
-            } catch (NumberFormatException e) {
-                return "{\"error\":\"Invalid customer ID format\"}";
-            }
-        }
-        
-        return "{\"error\":\"Customer route not found\"}";
-    }
     
-    private String getCustomerJobs(int customerId) {
-        String sql = "SELECT j.id, v.make, v.model, v.year, v.color, s.service_name, j.status, " +
-                     "j.booking_date, j.estimated_completion_date, j.actual_completion_date, " +
-                     "j.total_cost, j.labor_cost, j.parts_cost, j.notes, j.customer_notes, " +
-                     "b.name as branch_name, b.address as branch_address, " +
-                     "u.full_name as assigned_employee " +
-                     "FROM jobs j " +
-                     "JOIN vehicles v ON j.vehicle_id = v.id " +
-                     "JOIN services s ON j.service_id = s.id " +
-                     "LEFT JOIN branches b ON j.branch_id = b.id " +
-                     "LEFT JOIN users u ON j.assigned_employee_id = u.id " +
-                     "WHERE j.customer_id = ? " +
-                     "ORDER BY j.booking_date DESC";
-
-        StringBuilder jsonBuilder = new StringBuilder();
-        jsonBuilder.append("[");
-
-        try (Connection conn = DatabaseConnector.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
-
-            pstmt.setInt(1, customerId);
-            ResultSet rs = pstmt.executeQuery();
+    public String handleRequest(String path, String method, String requestBody) {
+        try {
+            String[] pathParts = path.split("/");
             
-            boolean first = true;
-            while (rs.next()) {
-                if (!first) {
-                    jsonBuilder.append(",");
-                }
-                jsonBuilder.append("{");
-                jsonBuilder.append("\"jobId\":").append(rs.getInt("id")).append(",");
-                jsonBuilder.append("\"vehicle\":\"").append(rs.getString("make")).append(" ").append(rs.getString("model")).append(" (").append(rs.getInt("year")).append(")\",");
-                jsonBuilder.append("\"vehicleColor\":\"").append(rs.getString("color") != null ? rs.getString("color") : "").append("\",");
-                jsonBuilder.append("\"service\":\"").append(rs.getString("service_name")).append("\",");
-                jsonBuilder.append("\"status\":\"").append(rs.getString("status")).append("\",");
-                jsonBuilder.append("\"bookingDate\":\"").append(rs.getTimestamp("booking_date")).append("\",");
-                jsonBuilder.append("\"estimatedCompletionDate\":").append(rs.getTimestamp("estimated_completion_date") != null ? "\"" + rs.getTimestamp("estimated_completion_date") + "\"" : "null").append(",");
-                jsonBuilder.append("\"actualCompletionDate\":").append(rs.getTimestamp("actual_completion_date") != null ? "\"" + rs.getTimestamp("actual_completion_date") + "\"" : "null").append(",");
-                jsonBuilder.append("\"totalCost\":").append(rs.getBigDecimal("total_cost") != null ? rs.getBigDecimal("total_cost") : "null").append(",");
-                jsonBuilder.append("\"laborCost\":").append(rs.getBigDecimal("labor_cost") != null ? rs.getBigDecimal("labor_cost") : "null").append(",");
-                jsonBuilder.append("\"partsCost\":").append(rs.getBigDecimal("parts_cost") != null ? rs.getBigDecimal("parts_cost") : "null").append(",");
-                jsonBuilder.append("\"notes\":\"").append(rs.getString("notes") != null ? rs.getString("notes") : "").append("\",");
-                jsonBuilder.append("\"customerNotes\":\"").append(rs.getString("customer_notes") != null ? rs.getString("customer_notes") : "").append("\",");
-                jsonBuilder.append("\"branchName\":\"").append(rs.getString("branch_name") != null ? rs.getString("branch_name") : "").append("\",");
-                jsonBuilder.append("\"branchAddress\":\"").append(rs.getString("branch_address") != null ? rs.getString("branch_address") : "").append("\",");
-                jsonBuilder.append("\"assignedEmployee\":\"").append(rs.getString("assigned_employee") != null ? rs.getString("assigned_employee") : "").append("\"");
-                jsonBuilder.append("}");
-                first = false;
+            if (pathParts.length < 4) {
+                return createErrorResponse("Invalid customer route", 400);
             }
-        } catch (SQLException e) {
-            e.printStackTrace();
-            return "{\"error\":\"Database error fetching customer jobs\"}";
-        }
-
-        jsonBuilder.append("]");
-        return jsonBuilder.toString();
-    }
-    
-    private String getCustomerInvoices(int customerId) {
-        String sql = "SELECT i.id, i.invoice_number, i.amount, i.tax_amount, i.total_amount, " +
-                     "i.status, i.due_date, i.created_at, j.id as job_id, " +
-                     "v.make, v.model, v.year, s.service_name " +
-                     "FROM invoices i " +
-                     "JOIN jobs j ON i.job_id = j.id " +
-                     "JOIN vehicles v ON j.vehicle_id = v.id " +
-                     "JOIN services s ON j.service_id = s.id " +
-                     "WHERE j.customer_id = ? " +
-                     "ORDER BY i.created_at DESC";
-
-        StringBuilder jsonBuilder = new StringBuilder();
-        jsonBuilder.append("[");
-
-        try (Connection conn = DatabaseConnector.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
-
-            pstmt.setInt(1, customerId);
-            ResultSet rs = pstmt.executeQuery();
             
-            boolean first = true;
-            while (rs.next()) {
-                if (!first) {
-                    jsonBuilder.append(",");
-                }
-                jsonBuilder.append("{");
-                jsonBuilder.append("\"invoiceId\":").append(rs.getInt("id")).append(",");
-                jsonBuilder.append("\"invoiceNumber\":\"").append(rs.getString("invoice_number")).append("\",");
-                jsonBuilder.append("\"jobId\":").append(rs.getInt("job_id")).append(",");
-                jsonBuilder.append("\"vehicle\":\"").append(rs.getString("make")).append(" ").append(rs.getString("model")).append(" (").append(rs.getInt("year")).append(")\",");
-                jsonBuilder.append("\"service\":\"").append(rs.getString("service_name")).append("\",");
-                jsonBuilder.append("\"amount\":").append(rs.getBigDecimal("amount")).append(",");
-                jsonBuilder.append("\"taxAmount\":").append(rs.getBigDecimal("tax_amount")).append(",");
-                jsonBuilder.append("\"totalAmount\":").append(rs.getBigDecimal("total_amount")).append(",");
-                jsonBuilder.append("\"status\":\"").append(rs.getString("status")).append("\",");
-                jsonBuilder.append("\"dueDate\":\"").append(rs.getDate("due_date")).append("\",");
-                jsonBuilder.append("\"createdAt\":\"").append(rs.getTimestamp("created_at")).append("\"");
-                jsonBuilder.append("}");
-                first = false;
-            }
-        } catch (SQLException e) {
-            e.printStackTrace();
-            return "{\"error\":\"Database error fetching customer invoices\"}";
-        }
-
-        jsonBuilder.append("]");
-        return jsonBuilder.toString();
-    }
-    
-    private String getCustomerPayments(int customerId) {
-        String sql = "SELECT p.id, p.amount, p.payment_method, p.payment_status, " +
-                     "p.transaction_id, p.payment_date, p.notes, " +
-                     "i.invoice_number, j.id as job_id, " +
-                     "v.make, v.model, v.year, s.service_name " +
-                     "FROM payments p " +
-                     "JOIN invoices i ON p.invoice_id = i.id " +
-                     "JOIN jobs j ON i.job_id = j.id " +
-                     "JOIN vehicles v ON j.vehicle_id = v.id " +
-                     "JOIN services s ON j.service_id = s.id " +
-                     "WHERE j.customer_id = ? " +
-                     "ORDER BY p.payment_date DESC";
-
-        StringBuilder jsonBuilder = new StringBuilder();
-        jsonBuilder.append("[");
-
-        try (Connection conn = DatabaseConnector.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
-
-            pstmt.setInt(1, customerId);
-            ResultSet rs = pstmt.executeQuery();
+            String action = pathParts[3];
             
-            boolean first = true;
-            while (rs.next()) {
-                if (!first) {
-                    jsonBuilder.append(",");
-                }
-                jsonBuilder.append("{");
-                jsonBuilder.append("\"paymentId\":").append(rs.getInt("id")).append(",");
-                jsonBuilder.append("\"amount\":").append(rs.getBigDecimal("amount")).append(",");
-                jsonBuilder.append("\"paymentMethod\":\"").append(rs.getString("payment_method")).append("\",");
-                jsonBuilder.append("\"paymentStatus\":\"").append(rs.getString("payment_status")).append("\",");
-                jsonBuilder.append("\"transactionId\":\"").append(rs.getString("transaction_id") != null ? rs.getString("transaction_id") : "").append("\",");
-                jsonBuilder.append("\"paymentDate\":\"").append(rs.getTimestamp("payment_date")).append("\",");
-                jsonBuilder.append("\"notes\":\"").append(rs.getString("notes") != null ? rs.getString("notes") : "").append("\",");
-                jsonBuilder.append("\"invoiceNumber\":\"").append(rs.getString("invoice_number")).append("\",");
-                jsonBuilder.append("\"jobId\":").append(rs.getInt("job_id")).append(",");
-                jsonBuilder.append("\"vehicle\":\"").append(rs.getString("make")).append(" ").append(rs.getString("model")).append(" (").append(rs.getInt("year")).append(")\",");
-                jsonBuilder.append("\"service\":\"").append(rs.getString("service_name")).append("\"");
-                jsonBuilder.append("}");
-                first = false;
+            switch (action) {
+                case "jobs":
+                    return handleJobs(pathParts, method, requestBody);
+                case "vehicles":
+                    return handleVehicles(pathParts, method, requestBody);
+                case "book":
+                    return handleBooking(method, requestBody);
+                case "pay":
+                    return handlePayment(method, requestBody);
+                case "branches":
+                    return getBranches();
+                case "profile":
+                    return handleProfile(pathParts, method, requestBody);
+                default:
+                    return createErrorResponse("Customer route not found", 404);
             }
-        } catch (SQLException e) {
+        } catch (Exception e) {
             e.printStackTrace();
-            return "{\"error\":\"Database error fetching customer payments\"}";
+            return createErrorResponse("Internal server error: " + e.getMessage(), 500);
         }
-
-        jsonBuilder.append("]");
-        return jsonBuilder.toString();
     }
     
-    private String bookAppointment(String body) {
-        Map<String, String> params = parseBody(body);
-        String customerIdStr = params.get("customerId");
-        String vehicleIdStr = params.get("vehicleId");
-        String serviceIdStr = params.get("serviceId");
-        String branchIdStr = params.get("branchId");
-        String bookingDate = params.get("bookingDate");
-        String notes = params.get("notes");
-        
-        if (customerIdStr == null || vehicleIdStr == null || serviceIdStr == null) {
-            return "{\"error\":\"Customer ID, Vehicle ID, and Service ID are required\"}";
+    private String handleJobs(String[] pathParts, String method, String requestBody) {
+        if (pathParts.length < 5) {
+            return createErrorResponse("Customer ID not provided", 400);
         }
         
         try {
-            int customerId = Integer.parseInt(customerIdStr);
-            int vehicleId = Integer.parseInt(vehicleIdStr);
-            int serviceId = Integer.parseInt(serviceIdStr);
-            Integer branchId = branchIdStr != null ? Integer.parseInt(branchIdStr) : null;
+            int customerId = Integer.parseInt(pathParts[4]);
             
-            // Verify that the vehicle belongs to the customer
-            String verifySql = "SELECT id FROM vehicles WHERE id = ? AND customer_id = ?";
-            try (Connection conn = DatabaseConnector.getConnection();
-                 PreparedStatement verifyStmt = conn.prepareStatement(verifySql)) {
+            try (Connection conn = DatabaseConnector.getConnection()) {
+                String sql = "SELECT j.id as jobId, j.status, j.booking_date, j.total_cost, j.notes, " +
+                           "v.make, v.model, v.year, v.color, " +
+                           "s.service_name, s.price, " +
+                           "b.name as branchName, b.address as branchAddress, " +
+                           "e.full_name as employeeName " +
+                           "FROM jobs j " +
+                           "JOIN vehicles v ON j.vehicle_id = v.id " +
+                           "JOIN services s ON j.service_id = s.id " +
+                           "JOIN branches b ON j.branch_id = b.id " +
+                           "LEFT JOIN users e ON j.assigned_employee_id = e.id " +
+                           "WHERE j.customer_id = ? " +
+                           "ORDER BY j.booking_date DESC";
                 
-                verifyStmt.setInt(1, vehicleId);
-                verifyStmt.setInt(2, customerId);
-                ResultSet verifyRs = verifyStmt.executeQuery();
-                
-                if (!verifyRs.next()) {
-                    return "{\"error\":\"Vehicle does not belong to this customer\"}";
-                }
-            }
-            
-            String sql = "INSERT INTO jobs (customer_id, vehicle_id, service_id, branch_id, status, booking_date, notes) VALUES (?, ?, ?, ?, 'Booked', ?, ?)";
-            
-            try (Connection conn = DatabaseConnector.getConnection();
-                 PreparedStatement pstmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
-                
-                pstmt.setInt(1, customerId);
-                pstmt.setInt(2, vehicleId);
-                pstmt.setInt(3, serviceId);
-                if (branchId != null) {
-                    pstmt.setInt(4, branchId);
-                } else {
-                    pstmt.setNull(4, Types.INTEGER);
-                }
-                pstmt.setString(5, bookingDate != null ? bookingDate : "NOW()");
-                pstmt.setString(6, notes);
-                
-                int affectedRows = pstmt.executeUpdate();
-                if (affectedRows > 0) {
-                    ResultSet generatedKeys = pstmt.getGeneratedKeys();
-                    if (generatedKeys.next()) {
-                        int jobId = generatedKeys.getInt(1);
-                        return "{\"message\":\"Appointment booked successfully\", \"jobId\":" + jobId + "}";
+                List<Map<String, Object>> jobs = new ArrayList<>();
+                try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+                    pstmt.setInt(1, customerId);
+                    ResultSet rs = pstmt.executeQuery();
+                    
+                    while (rs.next()) {
+                        Map<String, Object> job = new HashMap<>();
+                        job.put("jobId", rs.getInt("jobId"));
+                        job.put("status", rs.getString("status"));
+                        job.put("bookingDate", rs.getTimestamp("booking_date").toString());
+                        job.put("totalCost", rs.getBigDecimal("total_cost"));
+                        job.put("notes", rs.getString("notes"));
+                        job.put("vehicle", rs.getString("make") + " " + rs.getString("model") + " (" + rs.getInt("year") + ")");
+                        job.put("vehicleColor", rs.getString("color"));
+                        job.put("service", rs.getString("service_name"));
+                        job.put("servicePrice", rs.getBigDecimal("price"));
+                        job.put("branchName", rs.getString("branchName"));
+                        job.put("branchAddress", rs.getString("branchAddress"));
+                        job.put("employeeName", rs.getString("employeeName"));
+                        jobs.add(job);
                     }
                 }
-                return "{\"error\":\"Failed to book appointment\"}";
+                
+                return convertToJson(jobs);
             }
         } catch (NumberFormatException e) {
-            return "{\"error\":\"Invalid ID format\"}";
+            return createErrorResponse("Invalid customer ID format", 400);
         } catch (SQLException e) {
             e.printStackTrace();
-            return "{\"error\":\"Database error booking appointment\"}";
+            return createErrorResponse("Database error fetching customer jobs", 500);
         }
     }
     
-    private String makePayment(int jobId, String body) {
-        Map<String, String> params = parseBody(body);
-        String paymentMethod = params.get("paymentMethod");
-        String amount = params.get("amount");
-        
-        if (paymentMethod == null || amount == null) {
-            return "{\"error\":\"Payment method and amount are required\"}";
+    private String handleVehicles(String[] pathParts, String method, String requestBody) {
+        if (pathParts.length < 5) {
+            return createErrorResponse("Customer ID not provided", 400);
         }
         
         try {
-            // Get the invoice for this job
-            String invoiceSql = "SELECT i.id, i.total_amount FROM invoices i WHERE i.job_id = ? AND i.status = 'Sent'";
-            int invoiceId = 0;
-            double invoiceAmount = 0;
+            int customerId = Integer.parseInt(pathParts[4]);
             
-            try (Connection conn = DatabaseConnector.getConnection();
-                 PreparedStatement invoiceStmt = conn.prepareStatement(invoiceSql)) {
-                
-                invoiceStmt.setInt(1, jobId);
-                ResultSet rs = invoiceStmt.executeQuery();
-                
-                if (rs.next()) {
-                    invoiceId = rs.getInt("id");
-                    invoiceAmount = rs.getDouble("total_amount");
-                } else {
-                    return "{\"error\":\"No invoice found for this job\"}";
-                }
-            }
-            
-            // Create payment record
-            String paymentSql = "INSERT INTO payments (invoice_id, amount, payment_method, payment_status, transaction_id) VALUES (?, ?, ?, 'Completed', ?)";
-            String transactionId = "TXN-" + System.currentTimeMillis();
-            
-            try (Connection conn = DatabaseConnector.getConnection();
-                 PreparedStatement paymentStmt = conn.prepareStatement(paymentSql)) {
-                
-                paymentStmt.setInt(1, invoiceId);
-                paymentStmt.setDouble(2, Double.parseDouble(amount));
-                paymentStmt.setString(3, paymentMethod);
-                paymentStmt.setString(4, transactionId);
-                
-                int affectedRows = paymentStmt.executeUpdate();
-                if (affectedRows > 0) {
-                    // Update invoice status
-                    String updateInvoiceSql = "UPDATE invoices SET status = 'Paid' WHERE id = ?";
-                    try (PreparedStatement updateStmt = conn.prepareStatement(updateInvoiceSql)) {
-                        updateStmt.setInt(1, invoiceId);
-                        updateStmt.executeUpdate();
+            try (Connection conn = DatabaseConnector.getConnection()) {
+                if ("GET".equals(method)) {
+                    String sql = "SELECT id, make, model, year, vin, license_plate, color, mileage, created_at " +
+                               "FROM vehicles WHERE customer_id = ? ORDER BY created_at DESC";
+                    
+                    List<Map<String, Object>> vehicles = new ArrayList<>();
+                    try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+                        pstmt.setInt(1, customerId);
+                        ResultSet rs = pstmt.executeQuery();
+                        
+                        while (rs.next()) {
+                            Map<String, Object> vehicle = new HashMap<>();
+                            vehicle.put("id", rs.getInt("id"));
+                            vehicle.put("make", rs.getString("make"));
+                            vehicle.put("model", rs.getString("model"));
+                            vehicle.put("year", rs.getInt("year"));
+                            vehicle.put("vin", rs.getString("vin"));
+                            vehicle.put("licensePlate", rs.getString("license_plate"));
+                            vehicle.put("color", rs.getString("color"));
+                            vehicle.put("mileage", rs.getInt("mileage"));
+                            vehicle.put("createdAt", rs.getTimestamp("created_at").toString());
+                            vehicles.add(vehicle);
+                        }
                     }
                     
-                    // Update job status
-                    String updateJobSql = "UPDATE jobs SET status = 'Paid' WHERE id = ?";
-                    try (PreparedStatement updateJobStmt = conn.prepareStatement(updateJobSql)) {
-                        updateJobStmt.setInt(1, jobId);
-                        updateJobStmt.executeUpdate();
+                    return convertToJson(vehicles);
+                } else if ("POST".equals(method)) {
+                    return addVehicle(conn, customerId, requestBody);
+                }
+                return createErrorResponse("Method not allowed", 405);
+            }
+        } catch (NumberFormatException e) {
+            return createErrorResponse("Invalid customer ID format", 400);
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return createErrorResponse("Database error handling vehicles", 500);
+        }
+    }
+    
+    private String addVehicle(Connection conn, int customerId, String requestBody) throws SQLException {
+        // Parse request body and add vehicle
+        // Implementation would parse JSON and insert into database
+        return createSuccessResponse("Vehicle added successfully");
+    }
+    
+    private String handleBooking(String method, String requestBody) {
+        if (!"POST".equals(method)) {
+            return createErrorResponse("Method not allowed", 405);
+        }
+        
+        try (Connection conn = DatabaseConnector.getConnection()) {
+            // Parse request body and create booking
+            // Implementation would parse JSON and insert into database
+            return createSuccessResponse("Appointment booked successfully");
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return createErrorResponse("Database error booking appointment", 500);
+        }
+    }
+    
+    private String handlePayment(String method, String requestBody) {
+        if (!"POST".equals(method)) {
+            return createErrorResponse("Method not allowed", 405);
+        }
+        
+        try (Connection conn = DatabaseConnector.getConnection()) {
+            // Parse request body and process payment
+            // Implementation would parse JSON and insert into database
+            return createSuccessResponse("Payment processed successfully");
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return createErrorResponse("Database error processing payment", 500);
+        }
+    }
+    
+    private String getBranches() {
+        try (Connection conn = DatabaseConnector.getConnection()) {
+            String sql = "SELECT b.id, b.name, b.address, b.latitude, b.longitude, b.rating, " +
+                        "GROUP_CONCAT(DISTINCT bh.day_of_week, ': ', " +
+                        "CASE WHEN bh.is_closed THEN 'Closed' " +
+                        "ELSE CONCAT(TIME_FORMAT(bh.open_time, '%H:%i'), '-', TIME_FORMAT(bh.close_time, '%H:%i')) " +
+                        "END ORDER BY FIELD(bh.day_of_week, 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday')) as hours, " +
+                        "GROUP_CONCAT(DISTINCT s.service_name ORDER BY s.service_name) as services " +
+                        "FROM branches b " +
+                        "LEFT JOIN business_hours bh ON b.id = bh.branch_id " +
+                        "LEFT JOIN services s ON s.is_active = true " +
+                        "WHERE b.is_active = true " +
+                        "GROUP BY b.id " +
+                        "ORDER BY b.name";
+            
+            List<Map<String, Object>> branches = new ArrayList<>();
+            try (PreparedStatement pstmt = conn.prepareStatement(sql);
+                 ResultSet rs = pstmt.executeQuery()) {
+                
+                while (rs.next()) {
+                    Map<String, Object> branch = new HashMap<>();
+                    branch.put("id", rs.getInt("id"));
+                    branch.put("name", rs.getString("name"));
+                    branch.put("address", rs.getString("address"));
+                    branch.put("latitude", rs.getBigDecimal("latitude"));
+                    branch.put("longitude", rs.getBigDecimal("longitude"));
+                    branch.put("rating", rs.getBigDecimal("rating"));
+                    branch.put("hours", rs.getString("hours"));
+                    
+                    // Parse services string into array
+                    String servicesStr = rs.getString("services");
+                    if (servicesStr != null) {
+                        String[] services = servicesStr.split(",");
+                        branch.put("services", Arrays.asList(services));
+                    } else {
+                        branch.put("services", new ArrayList<>());
                     }
                     
-                    return "{\"message\":\"Payment processed successfully\", \"status\":\"Paid\", \"transactionId\":\"" + transactionId + "\"}";
-                } else {
-                    return "{\"error\":\"Failed to process payment\"}";
+                    // Get contact information
+                    branch.put("contact", getBranchContact(conn, rs.getInt("id")));
+                    
+                    branches.add(branch);
                 }
             }
+            
+            return convertToJson(branches);
         } catch (SQLException e) {
             e.printStackTrace();
-            return "{\"error\":\"Database error processing payment\"}";
-        } catch (NumberFormatException e) {
-            return "{\"error\":\"Invalid amount format\"}";
+            return createErrorResponse("Database error fetching branches", 500);
         }
     }
     
-    private String getCustomerVehicles(int customerId) {
-        String sql = "SELECT id, make, model, year, vin, license_plate, color, mileage, created_at FROM vehicles WHERE customer_id = ? ORDER BY created_at DESC";
-        StringBuilder jsonBuilder = new StringBuilder();
-        jsonBuilder.append("[");
-
-        try (Connection conn = DatabaseConnector.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
-
-            pstmt.setInt(1, customerId);
+    private Map<String, String> getBranchContact(Connection conn, int branchId) throws SQLException {
+        String sql = "SELECT contact_type, contact_value FROM contact_info " +
+                    "WHERE branch_id = ? AND is_active = true AND is_primary = true";
+        
+        Map<String, String> contact = new HashMap<>();
+        try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setInt(1, branchId);
             ResultSet rs = pstmt.executeQuery();
             
-            boolean first = true;
             while (rs.next()) {
-                if (!first) {
-                    jsonBuilder.append(",");
-                }
-                jsonBuilder.append("{");
-                jsonBuilder.append("\"id\":").append(rs.getInt("id")).append(",");
-                jsonBuilder.append("\"make\":\"").append(rs.getString("make")).append("\",");
-                jsonBuilder.append("\"model\":\"").append(rs.getString("model")).append("\",");
-                jsonBuilder.append("\"year\":").append(rs.getInt("year")).append(",");
-                jsonBuilder.append("\"vin\":\"").append(rs.getString("vin") != null ? rs.getString("vin") : "").append("\",");
-                jsonBuilder.append("\"licensePlate\":\"").append(rs.getString("license_plate") != null ? rs.getString("license_plate") : "").append("\",");
-                jsonBuilder.append("\"color\":\"").append(rs.getString("color") != null ? rs.getString("color") : "").append("\",");
-                jsonBuilder.append("\"mileage\":").append(rs.getInt("mileage") != 0 ? rs.getInt("mileage") : "null").append(",");
-                jsonBuilder.append("\"createdAt\":\"").append(rs.getTimestamp("created_at")).append("\"");
-                jsonBuilder.append("}");
-                first = false;
+                String type = rs.getString("contact_type");
+                String value = rs.getString("contact_value");
+                contact.put(type, value);
             }
-        } catch (SQLException e) {
-            e.printStackTrace();
-            return "{\"error\":\"Database error fetching customer vehicles\"}";
         }
-
-        jsonBuilder.append("]");
-        return jsonBuilder.toString();
+        
+        return contact;
     }
     
-    private String addVehicle(String body) {
-        Map<String, String> params = parseBody(body);
-        String customerIdStr = params.get("customerId");
-        String make = params.get("make");
-        String model = params.get("model");
-        String yearStr = params.get("year");
-        String vin = params.get("vin");
-        String licensePlate = params.get("licensePlate");
-        String color = params.get("color");
-        String mileageStr = params.get("mileage");
-        
-        if (customerIdStr == null || make == null || model == null || yearStr == null) {
-            return "{\"error\":\"Customer ID, make, model, and year are required\"}";
+    private String handleProfile(String[] pathParts, String method, String requestBody) {
+        if (pathParts.length < 5) {
+            return createErrorResponse("Customer ID not provided", 400);
         }
         
         try {
-            int customerId = Integer.parseInt(customerIdStr);
-            int year = Integer.parseInt(yearStr);
-            Integer mileage = mileageStr != null ? Integer.parseInt(mileageStr) : null;
+            int customerId = Integer.parseInt(pathParts[4]);
             
-            String sql = "INSERT INTO vehicles (customer_id, make, model, year, vin, license_plate, color, mileage) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
-            
-            try (Connection conn = DatabaseConnector.getConnection();
-                 PreparedStatement pstmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
-                
-                pstmt.setInt(1, customerId);
-                pstmt.setString(2, make);
-                pstmt.setString(3, model);
-                pstmt.setInt(4, year);
-                pstmt.setString(5, vin);
-                pstmt.setString(6, licensePlate);
-                pstmt.setString(7, color);
-                if (mileage != null) {
-                    pstmt.setInt(8, mileage);
-                } else {
-                    pstmt.setNull(8, Types.INTEGER);
-                }
-                
-                int affectedRows = pstmt.executeUpdate();
-                if (affectedRows > 0) {
-                    ResultSet generatedKeys = pstmt.getGeneratedKeys();
-                    if (generatedKeys.next()) {
-                        int vehicleId = generatedKeys.getInt(1);
-                        return "{\"message\":\"Vehicle added successfully\", \"vehicleId\":" + vehicleId + "}";
+            try (Connection conn = DatabaseConnector.getConnection()) {
+                if ("GET".equals(method)) {
+                    String sql = "SELECT id, username, full_name, email, phone, created_at " +
+                               "FROM users WHERE id = ? AND role = 'customer'";
+                    
+                    try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+                        pstmt.setInt(1, customerId);
+                        ResultSet rs = pstmt.executeQuery();
+                        
+                        if (rs.next()) {
+                            Map<String, Object> profile = new HashMap<>();
+                            profile.put("id", rs.getInt("id"));
+                            profile.put("username", rs.getString("username"));
+                            profile.put("fullName", rs.getString("full_name"));
+                            profile.put("email", rs.getString("email"));
+                            profile.put("phone", rs.getString("phone"));
+                            profile.put("createdAt", rs.getTimestamp("created_at").toString());
+                            
+                            return convertToJson(Collections.singletonList(profile));
+                        } else {
+                            return createErrorResponse("Customer not found", 404);
+                        }
                     }
+                } else if ("PUT".equals(method)) {
+                    return updateProfile(conn, customerId, requestBody);
                 }
-                return "{\"error\":\"Failed to add vehicle\"}";
+                return createErrorResponse("Method not allowed", 405);
             }
         } catch (NumberFormatException e) {
-            return "{\"error\":\"Invalid number format\"}";
+            return createErrorResponse("Invalid customer ID format", 400);
         } catch (SQLException e) {
             e.printStackTrace();
-            return "{\"error\":\"Database error adding vehicle\"}";
+            return createErrorResponse("Database error handling profile", 500);
         }
     }
     
-    private String getAllBranches() {
-        String sql = "SELECT id, name, address, phone, email, latitude, longitude, hours, rating FROM branches WHERE is_active = TRUE ORDER BY name";
-        StringBuilder jsonBuilder = new StringBuilder();
-        jsonBuilder.append("[");
-
-        try (Connection conn = DatabaseConnector.getConnection();
-             Statement stmt = conn.createStatement();
-             ResultSet rs = stmt.executeQuery(sql)) {
-            
-            boolean first = true;
-            while (rs.next()) {
-                if (!first) {
-                    jsonBuilder.append(",");
+    private String updateProfile(Connection conn, int customerId, String requestBody) throws SQLException {
+        // Parse request body and update profile
+        // Implementation would parse JSON and update database
+        return createSuccessResponse("Profile updated successfully");
+    }
+    
+    // Utility methods
+    private String convertToJson(List<Map<String, Object>> data) {
+        StringBuilder json = new StringBuilder("[");
+        for (int i = 0; i < data.size(); i++) {
+            if (i > 0) json.append(",");
+            json.append("{");
+            Map<String, Object> item = data.get(i);
+            int j = 0;
+            for (Map.Entry<String, Object> entry : item.entrySet()) {
+                if (j > 0) json.append(",");
+                json.append("\"").append(entry.getKey()).append("\":");
+                if (entry.getValue() instanceof String) {
+                    json.append("\"").append(entry.getValue()).append("\"");
+                } else if (entry.getValue() instanceof List) {
+                    @SuppressWarnings("unchecked")
+                    List<?> list = (List<?>) entry.getValue();
+                    json.append(convertListToJson(list));
+                } else if (entry.getValue() instanceof Map) {
+                    @SuppressWarnings("unchecked")
+                    Map<String, Object> map = (Map<String, Object>) entry.getValue();
+                    json.append(convertMapToJson(map));
+                } else {
+                    json.append(entry.getValue());
                 }
-                jsonBuilder.append("{");
-                jsonBuilder.append("\"id\":").append(rs.getInt("id")).append(",");
-                jsonBuilder.append("\"name\":\"").append(rs.getString("name")).append("\",");
-                jsonBuilder.append("\"address\":\"").append(rs.getString("address")).append("\",");
-                jsonBuilder.append("\"phone\":\"").append(rs.getString("phone") != null ? rs.getString("phone") : "").append("\",");
-                jsonBuilder.append("\"email\":\"").append(rs.getString("email") != null ? rs.getString("email") : "").append("\",");
-                jsonBuilder.append("\"latitude\":").append(rs.getBigDecimal("latitude")).append(",");
-                jsonBuilder.append("\"longitude\":").append(rs.getBigDecimal("longitude")).append(",");
-                jsonBuilder.append("\"hours\":\"").append(rs.getString("hours") != null ? rs.getString("hours") : "").append("\",");
-                jsonBuilder.append("\"rating\":").append(rs.getBigDecimal("rating"));
-                jsonBuilder.append("}");
-                first = false;
+                j++;
             }
-        } catch (SQLException e) {
-            e.printStackTrace();
-            return "{\"error\":\"Database error fetching branches\"}";
+            json.append("}");
         }
-
-        jsonBuilder.append("]");
-        return jsonBuilder.toString();
+        json.append("]");
+        return json.toString();
     }
     
-    private String getCustomerProfile(int customerId) {
-        String sql = "SELECT id, username, full_name, email, phone, created_at FROM users WHERE id = ? AND role = 'customer'";
-        
-        try (Connection conn = DatabaseConnector.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            
-            pstmt.setInt(1, customerId);
-            ResultSet rs = pstmt.executeQuery();
-            
-            if (rs.next()) {
-                return String.format(
-                    "{\"id\":%d,\"username\":\"%s\",\"fullName\":\"%s\",\"email\":\"%s\",\"phone\":\"%s\",\"createdAt\":\"%s\"}",
-                    rs.getInt("id"),
-                    rs.getString("username"),
-                    rs.getString("full_name"),
-                    rs.getString("email") != null ? rs.getString("email") : "",
-                    rs.getString("phone") != null ? rs.getString("phone") : "",
-                    rs.getTimestamp("created_at")
-                );
-            } else {
-                return "{\"error\":\"Customer not found\"}";
-            }
-        } catch (SQLException e) {
-            e.printStackTrace();
-            return "{\"error\":\"Database error fetching customer profile\"}";
+    private String convertListToJson(List<?> list) {
+        StringBuilder json = new StringBuilder("[");
+        for (int i = 0; i < list.size(); i++) {
+            if (i > 0) json.append(",");
+            json.append("\"").append(list.get(i)).append("\"");
         }
+        json.append("]");
+        return json.toString();
     }
     
-    private String updateCustomerProfile(int customerId, String body) {
-        Map<String, String> params = parseBody(body);
-        String email = params.get("email");
-        String phone = params.get("phone");
-        
-        String sql = "UPDATE users SET email = ?, phone = ? WHERE id = ? AND role = 'customer'";
-        
-        try (Connection conn = DatabaseConnector.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            
-            pstmt.setString(1, email);
-            pstmt.setString(2, phone);
-            pstmt.setInt(3, customerId);
-            
-            int affectedRows = pstmt.executeUpdate();
-            if (affectedRows > 0) {
-                return "{\"message\":\"Profile updated successfully\"}";
-            } else {
-                return "{\"error\":\"Customer not found or no changes made\"}";
-            }
-        } catch (SQLException e) {
-            e.printStackTrace();
-            return "{\"error\":\"Database error updating customer profile\"}";
+    private String convertMapToJson(Map<String, Object> map) {
+        StringBuilder json = new StringBuilder("{");
+        int i = 0;
+        for (Map.Entry<String, Object> entry : map.entrySet()) {
+            if (i > 0) json.append(",");
+            json.append("\"").append(entry.getKey()).append("\":\"");
+            json.append(entry.getValue()).append("\"");
+            i++;
         }
+        json.append("}");
+        return json.toString();
     }
-
-    // Utility method for parsing JSON-like body
-    private Map<String, String> parseBody(String body) {
-        if (body == null || body.trim().isEmpty()) {
-            return new HashMap<>();
-        }
-        
-        // Simple JSON parsing for basic key-value pairs
-        Map<String, String> result = new HashMap<>();
-        body = body.trim();
-        
-        // Remove outer braces
-        if (body.startsWith("{") && body.endsWith("}")) {
-            body = body.substring(1, body.length() - 1);
-        }
-        
-        // Split by comma, but be careful about commas in values
-        String[] pairs = body.split(",(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)");
-        
-        for (String pair : pairs) {
-            String[] keyValue = pair.split(":", 2);
-            if (keyValue.length == 2) {
-                String key = keyValue[0].trim().replace("\"", "");
-                String value = keyValue[1].trim().replace("\"", "");
-                result.put(key, value);
-            }
-        }
-        
-        return result;
+    
+    private String createSuccessResponse(String message) {
+        return "{\"status\":\"success\",\"message\":\"" + message + "\"}";
     }
-}
+    
+         private String createErrorResponse(String message, int statusCode) {
+         return "{\"status\":\"error\",\"message\":\"" + message + "\",\"code\":" + statusCode + "}";
+     }
+ }

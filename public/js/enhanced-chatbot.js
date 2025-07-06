@@ -1,4 +1,4 @@
-// Enhanced Chatbot with Modern UI and Better Functionality
+// Enhanced Chatbot with Database-Driven Responses
 class EnhancedChatbot {
     constructor() {
         this.isOpen = false;
@@ -199,76 +199,71 @@ class EnhancedChatbot {
         // Process message and get response
         setTimeout(async () => {
             const response = await this.processMessage(message);
-            this.hideTypingIndicator();
             this.addMessage(response.text, 'bot', response.suggestions);
-        }, 1000 + Math.random() * 1000); // Simulate thinking time
+            this.hideTypingIndicator();
+        }, 1000);
     }
 
     async processMessage(message) {
         const lowerMessage = message.toLowerCase();
         
-        // Context-aware responses based on user role
-        const role = this.userContext.role;
-        
-        // Intent detection with enhanced responses
-        if (this.detectIntent(lowerMessage, ['hello', 'hi', 'hey', 'good morning', 'good afternoon', 'greetings'])) {
+        // Detect intent and get appropriate response
+        if (this.detectIntent(lowerMessage, ['hello', 'hi', 'hey', 'good morning', 'good afternoon'])) {
             return this.getGreetingResponse();
         }
         
-        if (this.detectIntent(lowerMessage, ['book', 'appointment', 'schedule', 'reserve'])) {
+        if (this.detectIntent(lowerMessage, ['book', 'appointment', 'schedule', 'service'])) {
             return await this.getBookingResponse();
         }
         
-        if (this.detectIntent(lowerMessage, ['status', 'progress', 'update', 'check', 'track'])) {
+        if (this.detectIntent(lowerMessage, ['status', 'job', 'progress', 'update'])) {
             return await this.getStatusResponse();
         }
         
-        if (this.detectIntent(lowerMessage, ['service', 'services', 'what do you offer', 'repair', 'maintenance'])) {
+        if (this.detectIntent(lowerMessage, ['service', 'services', 'what do you do', 'offer'])) {
             return await this.getServicesResponse();
         }
         
-        if (this.detectIntent(lowerMessage, ['price', 'cost', 'quote', 'estimate', 'how much', 'pricing'])) {
-            return this.getPricingResponse();
+        if (this.detectIntent(lowerMessage, ['price', 'cost', 'how much', 'pricing'])) {
+            return await this.getPricingResponse();
         }
         
-        if (this.detectIntent(lowerMessage, ['payment', 'pay', 'invoice', 'bill', 'charge'])) {
+        if (this.detectIntent(lowerMessage, ['pay', 'payment', 'invoice', 'bill'])) {
             return await this.getPaymentResponse();
         }
         
-        if (this.detectIntent(lowerMessage, ['inventory', 'parts', 'stock', 'supplies'])) {
+        if (this.detectIntent(lowerMessage, ['inventory', 'parts', 'stock'])) {
             return await this.getInventoryResponse();
         }
         
-        if (this.detectIntent(lowerMessage, ['report', 'analytics', 'dashboard', 'statistics'])) {
+        if (this.detectIntent(lowerMessage, ['report', 'reports', 'analytics'])) {
             return await this.getReportsResponse();
         }
         
-        if (this.detectIntent(lowerMessage, ['help', 'support', 'assistance', 'guide'])) {
-            return this.getHelpResponse();
-        }
-
-        if (this.detectIntent(lowerMessage, ['location', 'address', 'where', 'branch', 'office'])) {
-            return this.getLocationResponse();
-        }
-
-        if (this.detectIntent(lowerMessage, ['hours', 'open', 'close', 'time', 'when'])) {
-            return this.getHoursResponse();
-        }
-
-        if (this.detectIntent(lowerMessage, ['contact', 'phone', 'email', 'reach'])) {
-            return this.getContactResponse();
+        if (this.detectIntent(lowerMessage, ['location', 'where', 'address', 'branch'])) {
+            return await this.getLocationResponse();
         }
         
-        // Role-specific responses
-        if (role === 'admin' && this.detectIntent(lowerMessage, ['user', 'employee', 'customer', 'manage', 'staff'])) {
+        if (this.detectIntent(lowerMessage, ['hours', 'open', 'close', 'time'])) {
+            return await this.getHoursResponse();
+        }
+        
+        if (this.detectIntent(lowerMessage, ['contact', 'phone', 'email', 'call'])) {
+            return await this.getContactResponse();
+        }
+        
+        if (this.detectIntent(lowerMessage, ['help', 'support', 'assist'])) {
+            return this.getHelpResponse();
+        }
+        
+        if (this.detectIntent(lowerMessage, ['user', 'employee', 'staff', 'manage'])) {
             return this.getUserManagementResponse();
         }
         
-        if (role === 'employee' && this.detectIntent(lowerMessage, ['job', 'task', 'assigned', 'work', 'duty'])) {
+        if (this.detectIntent(lowerMessage, ['job', 'work', 'assigned'])) {
             return await this.getEmployeeJobResponse();
         }
         
-        // Default response with suggestions
         return this.getDefaultResponse();
     }
 
@@ -277,318 +272,253 @@ class EnhancedChatbot {
     }
 
     getGreetingResponse() {
-        const greetings = [
-            "Hello! How can I assist you today?",
-            "Hi there! What can I help you with?",
-            "Good to see you! How may I help?",
-            "Hello! I'm here to help with any questions you have."
+        const responses = [
+            "Hello! How can I help you today?",
+            "Hi there! What can I assist you with?",
+            "Welcome! How may I help you?",
+            "Greetings! What would you like to know?"
         ];
         
         return {
-            text: greetings[Math.floor(Math.random() * greetings.length)],
+            text: responses[Math.floor(Math.random() * responses.length)],
             suggestions: this.getContextualSuggestions()
         };
     }
 
     async getBookingResponse() {
-        const role = this.userContext.role;
-        
-        if (role === 'customer') {
-            // Actually navigate to booking page
-            const bookingTab = document.querySelector('[data-tab="book-appointment"]');
-            if (bookingTab) {
-                bookingTab.click();
-                return {
-                    text: "I've opened the booking page for you! You can select your vehicle, choose a service, and pick a date. Would you like me to guide you through the process?",
-                    suggestions: ['Select Vehicle', 'Choose Service', 'Pick Date', 'Select Branch']
-                };
-            } else {
-                return {
-                    text: "I'd be happy to help you book an appointment! You can book through your dashboard by selecting your vehicle, choosing a service, and picking a date. Would you like me to guide you through the process?",
-                    suggestions: ['Go to Booking', 'View Services', 'Select Branch', 'Check Availability']
-                };
-            }
-        } else {
+        try {
+            const response = await fetch('http://localhost:8080/api/admin/services');
+            if (!response.ok) throw new Error('Failed to fetch services');
+            
+            const services = await response.json();
+            const serviceList = services.slice(0, 5).map(service => 
+                `${service.serviceName}: $${service.price}`
+            ).join('\n• ');
+            
             return {
-                text: "To book appointments, customers can use their dashboard or you can help them through the admin panel. Would you like to know more about the booking process?",
-                suggestions: ['Booking Process', 'Admin Tools', 'Customer Help']
+                text: `I can help you book an appointment! Here are some of our popular services:\n\n• ${serviceList}\n\nTo book an appointment, please visit the "Book Appointment" section in your dashboard or contact us directly.`,
+                suggestions: ['View All Services', 'Check Availability', 'Contact Support']
+            };
+        } catch (error) {
+            return {
+                text: "I can help you book an appointment! Please visit the 'Book Appointment' section in your dashboard or contact our support team for assistance.",
+                suggestions: ['Contact Support', 'Check Dashboard', 'Help']
             };
         }
     }
 
     async getStatusResponse() {
-        const role = this.userContext.role;
-        const userId = this.userContext.userId;
-        
-        if (role === 'customer' && userId) {
-            try {
-                const response = await fetch(`http://localhost:8080/api/customer/jobs/${userId}`);
-                if (response.ok) {
-                    const jobs = await response.json();
-                    const activeJobs = jobs.filter(job => ['Booked', 'In Progress'].includes(job.status));
-                    
-                    if (activeJobs.length > 0) {
-                        let statusText = `You have ${activeJobs.length} active job(s):\n\n`;
-                        activeJobs.slice(0, 3).forEach(job => {
-                            statusText += `• Job #${job.jobId}: ${job.service} - ${job.status}\n`;
-                        });
-                        
-                        // Navigate to jobs tab
-                        const jobsTab = document.querySelector('[data-tab="my-jobs"]');
-                        if (jobsTab) {
-                            jobsTab.click();
-                        }
-                        
-                        return {
-                            text: statusText,
-                            suggestions: ['View All Jobs', 'Job Details', 'Expected Timeline']
-                        };
-                    } else {
-                        return {
-                            text: "You don't have any active jobs at the moment. Would you like to book a new service?",
-                            suggestions: ['Book Service', 'View History', 'Service Options']
-                        };
-                    }
-                }
-            } catch (error) {
-                console.error('Error fetching job status:', error);
-            }
-            
+        if (this.userContext.role === 'customer') {
             return {
-                text: "You can check your job status in the 'My Jobs' section of your dashboard. I can also help you understand what each status means. What would you like to know?",
-                suggestions: ['View My Jobs', 'Status Meanings', 'Expected Timeline']
+                text: "To check your job status, please visit the 'My Jobs' section in your dashboard. You can see all your current and past jobs there.",
+                suggestions: ['View My Jobs', 'Contact Support', 'Dashboard']
             };
-        } else if (role === 'employee') {
+        } else if (this.userContext.role === 'employee') {
             return {
-                text: "You can view and update job statuses in your assigned jobs section. Need help with updating a specific job status?",
-                suggestions: ['My Assigned Jobs', 'Update Status', 'Job Details']
+                text: "To check your assigned jobs, please visit the 'Assigned Jobs' section in your dashboard. You can update job status and add notes there.",
+                suggestions: ['View Assigned Jobs', 'Update Status', 'Dashboard']
             };
         } else {
             return {
-                text: "As an admin, you can view all job statuses and manage assignments. What specific information do you need?",
-                suggestions: ['All Jobs', 'Job Analytics', 'Status Reports']
+                text: "To check job status, please visit the 'Jobs' section in your admin dashboard. You can view and manage all jobs there.",
+                suggestions: ['View All Jobs', 'Manage Jobs', 'Dashboard']
             };
         }
     }
 
     async getServicesResponse() {
         try {
-            const response = await fetch('http://localhost:8080/api/services');
+            const response = await fetch('http://localhost:8080/api/admin/services');
+            if (!response.ok) throw new Error('Failed to fetch services');
+            
             const services = await response.json();
-            
-            let servicesList = "Here are our available services:\n\n";
-            services.slice(0, 5).forEach(service => {
-                servicesList += `• ${service.serviceName} - $${service.price}\n`;
-            });
-            
-            if (services.length > 5) {
-                servicesList += `\n...and ${services.length - 5} more services available!`;
-            }
+            const serviceList = services.map(service => 
+                `${service.serviceName} (${service.category})`
+            ).join('\n• ');
             
             return {
-                text: servicesList,
-                suggestions: ['Book Service', 'Get Quote', 'Service Details', 'Compare Prices']
+                text: `Here are our available services:\n\n• ${serviceList}\n\nEach service includes professional workmanship and quality parts. Contact us for detailed pricing and availability.`,
+                suggestions: ['View Pricing', 'Book Service', 'Contact Support']
             };
         } catch (error) {
             return {
-                text: "I'm having trouble loading our services right now. Please try again later or contact us directly for service information.",
-                suggestions: ['Contact Support', 'Try Again', 'View Dashboard']
+                text: "We offer a wide range of automotive services including body repair, paint jobs, maintenance, and more. Please contact us for specific service details and pricing.",
+                suggestions: ['Contact Support', 'View Pricing', 'Book Service']
             };
         }
     }
 
-    getPricingResponse() {
-        return {
-            text: "Our pricing varies by service type and complexity. We provide detailed estimates before starting any work. You can view base prices in our services list, and we'll give you a complete quote after assessing your vehicle.",
-            suggestions: ['View Services', 'Get Quote', 'Book Consultation', 'Price Breakdown']
-        };
+    async getPricingResponse() {
+        try {
+            const response = await fetch('http://localhost:8080/api/admin/services');
+            if (!response.ok) throw new Error('Failed to fetch services');
+            
+            const services = await response.json();
+            const pricingList = services.slice(0, 6).map(service => 
+                `${service.serviceName}: $${service.price}`
+            ).join('\n• ');
+            
+            return {
+                text: `Here are our current service prices:\n\n• ${pricingList}\n\nPrices may vary based on vehicle type and specific requirements. Contact us for a detailed quote.`,
+                suggestions: ['Get Quote', 'Book Service', 'Contact Support']
+            };
+        } catch (error) {
+            return {
+                text: "Our pricing varies based on the service and vehicle type. Please contact us for a detailed quote or visit our services page for general pricing information.",
+                suggestions: ['Contact Support', 'Get Quote', 'View Services']
+            };
+        }
     }
 
     async getPaymentResponse() {
-        const role = this.userContext.role;
-        const userId = this.userContext.userId;
-        
-        if (role === 'customer' && userId) {
-            try {
-                const response = await fetch(`http://localhost:8080/api/customer/jobs/${userId}`);
-                if (response.ok) {
-                    const jobs = await response.json();
-                    const invoicedJobs = jobs.filter(job => job.status === 'Invoiced');
-                    
-                    if (invoicedJobs.length > 0) {
-                        let paymentText = `You have ${invoicedJobs.length} invoice(s) ready for payment:\n\n`;
-                        invoicedJobs.forEach(job => {
-                            paymentText += `• Job #${job.jobId}: $${job.totalCost}\n`;
-                        });
-                        
-                        return {
-                            text: paymentText,
-                            suggestions: ['Pay Now', 'View Invoices', 'Payment Methods']
-                        };
-                    }
-                }
-            } catch (error) {
-                console.error('Error fetching payment info:', error);
-            }
-        }
-        
-        return {
-            text: "We accept multiple payment methods including credit/debit cards, UPI, and digital wallets. Once your service is completed, you'll receive an invoice through your dashboard and can pay securely online.",
-            suggestions: ['Payment Methods', 'View Invoices', 'Payment Help', 'Billing Questions']
-        };
-    }
-
-    async getInventoryResponse() {
-        const role = this.userContext.role;
-        
-        if (role === 'admin' || role === 'employee') {
-            try {
-                const response = await fetch('http://localhost:8080/api/admin/inventory/alerts');
-                if (response.ok) {
-                    const lowStockItems = await response.json();
-                    
-                    if (lowStockItems.length > 0) {
-                        let inventoryText = `⚠️ ${lowStockItems.length} item(s) are running low:\n\n`;
-                        lowStockItems.slice(0, 3).forEach(item => {
-                            inventoryText += `• ${item.partName}: ${item.quantity} remaining\n`;
-                        });
-                        
-                        return {
-                            text: inventoryText,
-                            suggestions: ['View All Inventory', 'Reorder Parts', 'Add Stock']
-                        };
-                    } else {
-                        return {
-                            text: "All inventory levels are good! No low stock alerts at the moment.",
-                            suggestions: ['View Inventory', 'Add Parts', 'Usage Reports']
-                        };
-                    }
-                }
-            } catch (error) {
-                console.error('Error fetching inventory:', error);
-            }
-            
+        if (this.userContext.role === 'customer') {
             return {
-                text: "I can help you with inventory management. You can check stock levels, view low-stock alerts, and manage parts usage. What do you need to know?",
-                suggestions: ['Check Stock', 'Low Stock Alerts', 'Add Parts', 'Usage Reports']
+                text: "To make a payment, please visit the 'My Jobs' section in your dashboard. You can view invoices and make payments for completed jobs there.",
+                suggestions: ['View My Jobs', 'Make Payment', 'Contact Support']
             };
         } else {
             return {
-                text: "We maintain a comprehensive inventory of quality parts for all our services. If you have questions about specific parts for your vehicle, I can help connect you with our team.",
-                suggestions: ['Contact Team', 'Service Info', 'Part Warranty']
+                text: "For payment information, please contact our support team or visit the payments section in your dashboard.",
+                suggestions: ['Contact Support', 'View Payments', 'Help']
+            };
+        }
+    }
+
+    async getInventoryResponse() {
+        if (this.userContext.role === 'admin' || this.userContext.role === 'employee') {
+            return {
+                text: "To check inventory, please visit the 'Inventory' section in your dashboard. You can view stock levels, add items, and manage inventory there.",
+                suggestions: ['View Inventory', 'Add Items', 'Check Stock']
+            };
+        } else {
+            return {
+                text: "For inventory and parts information, please contact our support team. They can help you with specific part availability and pricing.",
+                suggestions: ['Contact Support', 'View Services', 'Help']
             };
         }
     }
 
     async getReportsResponse() {
-        const role = this.userContext.role;
-        
-        if (role === 'admin') {
-            // Navigate to reports tab
-            const reportsTab = document.querySelector('[data-tab="reports"]');
-            if (reportsTab) {
-                reportsTab.click();
-            }
-            
+        if (this.userContext.role === 'admin') {
             return {
-                text: "I've opened the reports section for you! You can access various reports including revenue analytics, job performance, inventory usage, and employee productivity. What type of report are you looking for?",
-                suggestions: ['Revenue Report', 'Job Analytics', 'Inventory Report', 'Export Data']
+                text: "To view reports, please visit the 'Reports' section in your admin dashboard. You can access revenue reports, employee performance, and other analytics there.",
+                suggestions: ['View Reports', 'Export Data', 'Analytics']
             };
         } else {
             return {
-                text: "Detailed reports are available through the admin dashboard. If you need specific information, I can help you find what you're looking for.",
-                suggestions: ['Contact Admin', 'Basic Stats', 'My Performance']
+                text: "Reports are available to administrators only. Please contact your administrator for access to reports and analytics.",
+                suggestions: ['Contact Admin', 'Help', 'Support']
             };
         }
     }
 
-    getLocationResponse() {
-        return {
-            text: "We have multiple locations to serve you better!\n\n• RepairHub Pro Downtown - 123 Main Street\n• RepairHub Pro Uptown - 456 Oak Avenue\n• RepairHub Pro Westside - 789 Pine Road\n\nYou can select your preferred location when booking an appointment.",
-            suggestions: ['Book Appointment', 'Get Directions', 'Branch Hours', 'Contact Branch']
-        };
+    async getLocationResponse() {
+        try {
+            const response = await fetch('http://localhost:8080/api/customer/branches');
+            if (!response.ok) throw new Error('Failed to fetch branches');
+            
+            const branches = await response.json();
+            const branchList = branches.map(branch => 
+                `${branch.name}: ${branch.address}`
+            ).join('\n• ');
+            
+            return {
+                text: `Here are our branch locations:\n\n• ${branchList}\n\nVisit any of our locations for service or contact us for directions.`,
+                suggestions: ['Get Directions', 'Book Appointment', 'Contact Support']
+            };
+        } catch (error) {
+            return {
+                text: "We have multiple branch locations. Please contact our support team for the nearest location and directions.",
+                suggestions: ['Contact Support', 'Book Appointment', 'Help']
+            };
+        }
     }
 
-    getHoursResponse() {
-        return {
-            text: "Our operating hours vary by location:\n\n• Downtown: Mon-Fri 8AM-6PM, Sat 9AM-4PM\n• Uptown: Mon-Fri 7AM-7PM, Sat 8AM-5PM\n• Westside: Mon-Sat 8AM-6PM\n\nWe're closed on Sundays for maintenance and staff rest.",
-            suggestions: ['Book Appointment', 'Emergency Service', 'Holiday Hours', 'Contact Us']
-        };
+    async getHoursResponse() {
+        try {
+            const response = await fetch('http://localhost:8080/api/customer/branches');
+            if (!response.ok) throw new Error('Failed to fetch branches');
+            
+            const branches = await response.json();
+            const hoursList = branches.map(branch => 
+                `${branch.name}: ${branch.hours || 'Contact for hours'}`
+            ).join('\n• ');
+            
+            return {
+                text: `Here are our business hours:\n\n• ${hoursList}\n\nHours may vary on holidays. Contact us for specific availability.`,
+                suggestions: ['Book Appointment', 'Contact Support', 'View Locations']
+            };
+        } catch (error) {
+            return {
+                text: "Our business hours vary by location. Please contact our support team for specific hours at your nearest branch.",
+                suggestions: ['Contact Support', 'Book Appointment', 'View Locations']
+            };
+        }
     }
 
-    getContactResponse() {
-        return {
-            text: "You can reach us through multiple channels:\n\n• Phone: (555) 123-REPAIR\n• Email: support@repairhubpro.com\n• Live Chat: Right here with me!\n• Emergency: (555) 911-AUTO\n\nI'm available 24/7 to help with basic questions!",
-            suggestions: ['Call Now', 'Send Email', 'Emergency Help', 'Book Appointment']
-        };
+    async getContactResponse() {
+        try {
+            const response = await fetch('http://localhost:8080/api/customer/branches');
+            if (!response.ok) throw new Error('Failed to fetch branches');
+            
+            const branches = await response.json();
+            const contactList = branches.map(branch => 
+                `${branch.name}: ${branch.contact?.phone || 'Contact for phone'}`
+            ).join('\n• ');
+            
+            return {
+                text: `Here are our contact numbers:\n\n• ${contactList}\n\nYou can also email us at support@repairhub.com for assistance.`,
+                suggestions: ['Book Appointment', 'Get Support', 'View Locations']
+            };
+        } catch (error) {
+            return {
+                text: "You can contact us by phone or email. Please call our main office or email support@repairhub.com for assistance.",
+                suggestions: ['Book Appointment', 'Get Support', 'Help']
+            };
+        }
     }
 
     getHelpResponse() {
-        const role = this.userContext.role;
-        
-        const helpText = {
-            admin: "I can help you with system administration, user management, reports, inventory, and job oversight. What do you need assistance with?",
-            employee: "I can help you with job management, status updates, inventory usage, and work-related questions. How can I assist?",
-            customer: "I can help you book appointments, check job status, understand our services, and handle payments. What do you need help with?"
-        };
-        
         return {
-            text: helpText[role] || "I'm here to help! What do you need assistance with?",
-            suggestions: this.getContextualSuggestions()
+            text: "I'm here to help! You can ask me about:\n• Booking appointments\n• Checking job status\n• Service pricing\n• Branch locations\n• Business hours\n• Contact information\n\nWhat would you like to know?",
+            suggestions: ['Book Appointment', 'Check Status', 'View Services', 'Contact Info']
         };
     }
 
     getUserManagementResponse() {
-        return {
-            text: "I can help you with user management tasks including adding new employees, managing customer accounts, and setting user permissions. What would you like to do?",
-            suggestions: ['Add Employee', 'Manage Customers', 'User Permissions', 'Account Settings']
-        };
+        if (this.userContext.role === 'admin') {
+            return {
+                text: "To manage users, please visit the 'Users' section in your admin dashboard. You can add, edit, and manage user accounts there.",
+                suggestions: ['View Users', 'Add User', 'Manage Roles']
+            };
+        } else {
+            return {
+                text: "User management is available to administrators only. Please contact your administrator for user-related requests.",
+                suggestions: ['Contact Admin', 'Help', 'Support']
+            };
+        }
     }
 
     async getEmployeeJobResponse() {
-        const userId = this.userContext.userId;
-        
-        if (userId) {
-            try {
-                const response = await fetch(`http://localhost:8080/api/employee/jobs/${userId}`);
-                if (response.ok) {
-                    const jobs = await response.json();
-                    const activeJobs = jobs.filter(job => ['Booked', 'In Progress'].includes(job.status));
-                    
-                    if (activeJobs.length > 0) {
-                        let jobText = `You have ${activeJobs.length} assigned job(s):\n\n`;
-                        activeJobs.slice(0, 3).forEach(job => {
-                            jobText += `• Job #${job.jobId}: ${job.service} - ${job.status}\n`;
-                        });
-                        
-                        return {
-                            text: jobText,
-                            suggestions: ['View All Jobs', 'Update Status', 'Use Parts', 'Job Details']
-                        };
-                    } else {
-                        return {
-                            text: "You don't have any assigned jobs at the moment. Check with your supervisor for new assignments.",
-                            suggestions: ['Check Inventory', 'View Completed Jobs', 'Contact Supervisor']
-                        };
-                    }
-                }
-            } catch (error) {
-                console.error('Error fetching employee jobs:', error);
-            }
+        if (this.userContext.role === 'employee') {
+            return {
+                text: "To view your assigned jobs, please visit the 'Assigned Jobs' section in your dashboard. You can update job status and add notes there.",
+                suggestions: ['View Jobs', 'Update Status', 'Add Notes']
+            };
+        } else {
+            return {
+                text: "Job management is available to employees and administrators. Please contact your supervisor for job-related information.",
+                suggestions: ['Contact Supervisor', 'Help', 'Support']
+            };
         }
-        
-        return {
-            text: "I can help you with your assigned jobs, updating statuses, managing parts usage, and viewing job details. What do you need help with?",
-            suggestions: ['View My Jobs', 'Update Status', 'Use Parts', 'Job Details']
-        };
     }
 
     getDefaultResponse() {
         const responses = [
-            "I'm not sure I understand that. Could you rephrase your question?",
-            "I didn't quite catch that. Can you try asking in a different way?",
-            "I'm here to help! Could you be more specific about what you need?",
-            "I want to make sure I give you the right information. Could you clarify what you're looking for?"
+            "I'm not sure I understand. Could you please rephrase that?",
+            "I don't have information about that. Can I help you with something else?",
+            "I'm still learning. Could you try asking about our services, appointments, or contact information?",
+            "I'm not sure about that. Would you like to know about our services or how to book an appointment?"
         ];
         
         return {
@@ -600,13 +530,13 @@ class EnhancedChatbot {
     getContextualSuggestions() {
         const role = this.userContext.role;
         
-        const suggestions = {
-            admin: ['View Reports', 'Manage Users', 'Check Inventory', 'Job Overview'],
-            employee: ['My Jobs', 'Update Status', 'Check Parts', 'Help'],
-            customer: ['Book Appointment', 'Check Status', 'View Services', 'Payment']
-        };
-        
-        return suggestions[role] || ['Help', 'Services', 'Contact', 'About'];
+        if (role === 'admin') {
+            return ['View Reports', 'Manage Users', 'Check Inventory', 'System Settings'];
+        } else if (role === 'employee') {
+            return ['My Jobs', 'Update Status', 'Check Inventory', 'Report Issue'];
+        } else {
+            return ['Book Appointment', 'Check Status', 'View Services', 'Contact Support'];
+        }
     }
 
     addMessage(text, sender, suggestions = []) {
@@ -614,34 +544,36 @@ class EnhancedChatbot {
         const messageDiv = document.createElement('div');
         messageDiv.className = `chatbot-message ${sender}-message`;
         
-        const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        const avatar = sender === 'bot' ? `
+            <div class="message-avatar">
+                <svg class="icon" viewBox="0 0 24 24">
+                    <circle cx="12" cy="8" r="5"/>
+                    <path d="M20 21a8 8 0 1 0-16 0"/>
+                </svg>
+            </div>
+        ` : '';
         
-        messageDiv.innerHTML = `
+        const messageContent = `
             <div class="message-content">
                 <div class="message-text">${text}</div>
-                <div class="message-time">${timestamp}</div>
+                ${suggestions.length > 0 ? `
+                    <div class="message-suggestions">
+                        ${suggestions.map(suggestion => 
+                            `<button class="quick-suggestion">${suggestion}</button>`
+                        ).join('')}
+                    </div>
+                ` : ''}
             </div>
-            ${suggestions.length > 0 ? `
-                <div class="message-suggestions">
-                    ${suggestions.map(suggestion => 
-                        `<button class="quick-suggestion">${suggestion}</button>`
-                    ).join('')}
-                </div>
-            ` : ''}
         `;
         
+        messageDiv.innerHTML = avatar + messageContent;
         messagesContainer.appendChild(messageDiv);
-        this.scrollToBottom();
         
-        // Save to conversation history
-        this.conversationHistory.push({
-            text,
-            sender,
-            timestamp: new Date().toISOString(),
-            suggestions
-        });
-        
+        // Add to conversation history
+        this.conversationHistory.push({ text, sender, timestamp: new Date() });
         this.saveConversationHistory();
+        
+        this.scrollToBottom();
     }
 
     handleQuickSuggestion(suggestion) {
@@ -676,56 +608,47 @@ class EnhancedChatbot {
     }
 
     startTypingAnimation() {
-        // Add subtle animation to the toggle button
-        const toggle = document.getElementById('enhanced-chatbot-toggle');
-        if (toggle) {
-            setInterval(() => {
-                if (!this.isOpen) {
-                    toggle.style.transform = 'scale(1.05)';
-                    setTimeout(() => {
-                        toggle.style.transform = 'scale(1)';
-                    }, 200);
-                }
-            }, 5000);
-        }
+        const dots = document.querySelectorAll('.typing-dots span');
+        let currentDot = 0;
+        
+        setInterval(() => {
+            dots.forEach((dot, index) => {
+                dot.style.opacity = index === currentDot ? '1' : '0.3';
+            });
+            currentDot = (currentDot + 1) % dots.length;
+        }, 300);
     }
 
     saveConversationHistory() {
-        localStorage.setItem('repairhub_enhanced_chatbot_history', JSON.stringify(this.conversationHistory.slice(-50)));
+        localStorage.setItem('chatbotHistory', JSON.stringify(this.conversationHistory.slice(-50)));
     }
 
     loadConversationHistory() {
-        const saved = localStorage.getItem('repairhub_enhanced_chatbot_history');
-        if (saved) {
-            this.conversationHistory = JSON.parse(saved);
+        const history = localStorage.getItem('chatbotHistory');
+        if (history) {
+            this.conversationHistory = JSON.parse(history);
         }
     }
 
-    // Public methods for other parts of the application
+    // Notification methods for real-time updates
     notifyJobUpdate(jobId, status) {
-        this.addMessage(`🔔 Job #${jobId} status updated to ${status}`, 'bot');
+        this.addMessage(`Job #${jobId} status updated to: ${status}`, 'bot');
     }
 
     notifyPayment(amount) {
-        this.addMessage(`💳 Payment of $${amount} has been processed successfully`, 'bot');
+        this.addMessage(`Payment of $${amount} received successfully!`, 'bot');
     }
 
     notifyBooking(service) {
-        this.addMessage(`📅 Your ${service} appointment has been confirmed`, 'bot');
+        this.addMessage(`Appointment booked for ${service}! We'll contact you with confirmation details.`, 'bot');
     }
 
     notifyInventoryLow(item) {
-        this.addMessage(`⚠️ ${item} is running low in inventory`, 'bot');
+        this.addMessage(`Low stock alert: ${item} is running low. Please reorder soon.`, 'bot');
     }
 }
 
-// Initialize enhanced chatbot
+// Initialize chatbot when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
-    // Remove old chatbot if exists
-    const oldChatbot = document.getElementById('chatbot-container');
-    if (oldChatbot) {
-        oldChatbot.remove();
-    }
-    
     window.enhancedChatbot = new EnhancedChatbot();
 });

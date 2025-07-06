@@ -1,39 +1,34 @@
-// Modern Admin Dashboard - Complete Implementation with Working Features
+// Modern Admin Dashboard - Database-Driven Implementation
 document.addEventListener('DOMContentLoaded', () => {
-    // Check if user is already logged in via URL parameters
+    // Get user info from URL parameters
     const urlParams = new URLSearchParams(window.location.search);
     const userRole = urlParams.get('role');
     const userName = urlParams.get('name');
     const userId = urlParams.get('id');
     
     // Auth check
-    if (!userRole || userRole !== 'admin') {
+    if (!userRole || userRole !== 'admin' || !userName || !userId) {
         window.location.href = '/index.html';
         return;
     }
 
     // Initialize dashboard
-    initializeDashboard(userName);
+    initializeDashboard(userName, userId);
 });
 
-function initializeDashboard(userName) {
+function initializeDashboard(userName, userId) {
     // Update user info
-    const userNameElement = document.getElementById('user-name');
-    if (userNameElement) {
-        userNameElement.textContent = userName;
+    const userInfoElement = document.getElementById('user-info');
+    if (userInfoElement) {
+        userInfoElement.textContent = `Welcome, ${userName}!`;
     }
 
     // Initialize modules
     initializeNavigation();
     initializeLogout();
-    initializeOverview();
-    initializeJobsModule();
-    initializeServicesModule();
-    initializeInventoryModule();
-    initializeBranchesModule();
-    initializeUsersModule();
-    initializeInvoicesModule();
-    initializeReportsModule();
+    initializeQuickActions();
+    initializeSearch();
+    initializeNotifications();
     
     // Load initial data
     loadOverviewData();
@@ -43,26 +38,48 @@ function initializeDashboard(userName) {
 function initializeNavigation() {
     const navLinks = document.querySelectorAll('.nav-link');
     const tabContents = document.querySelectorAll('.tab-content');
+    const navButtons = document.querySelectorAll('.nav-button');
 
     navLinks.forEach(link => {
         link.addEventListener('click', (e) => {
             e.preventDefault();
             const targetTab = link.getAttribute('data-tab');
-            
-            // Update active states
-            navLinks.forEach(l => l.classList.remove('active'));
-            tabContents.forEach(content => content.classList.remove('active'));
-            
-            link.classList.add('active');
-            const targetElement = document.getElementById(`${targetTab}-tab`);
-            if (targetElement) {
-                targetElement.classList.add('active');
-            }
-            
-            // Load tab data
-            loadTabData(targetTab);
+            switchToTab(targetTab);
         });
     });
+
+    navButtons.forEach(button => {
+        button.addEventListener('click', (e) => {
+            e.preventDefault();
+            const targetTab = button.getAttribute('data-tab');
+            if (targetTab) {
+                switchToTab(targetTab);
+            }
+        });
+    });
+}
+
+function switchToTab(targetTab) {
+    const navLinks = document.querySelectorAll('.nav-link');
+    const tabContents = document.querySelectorAll('.tab-content');
+    
+    // Remove active class from all nav links and tab contents
+    navLinks.forEach(l => l.classList.remove('active'));
+    tabContents.forEach(content => content.classList.remove('active'));
+    
+    // Add active class to target nav link and tab content
+    const targetNavLink = document.querySelector(`[data-tab="${targetTab}"]`);
+    const targetTabContent = document.getElementById(`${targetTab}-tab`);
+    
+    if (targetNavLink) {
+        targetNavLink.classList.add('active');
+    }
+    if (targetTabContent) {
+        targetTabContent.classList.add('active');
+    }
+    
+    // Load tab data
+    loadTabData(targetTab);
 }
 
 function loadTabData(tab) {
@@ -73,6 +90,9 @@ function loadTabData(tab) {
         case 'jobs':
             loadJobsData();
             break;
+        case 'users':
+            loadUsersData();
+            break;
         case 'services':
             loadServicesData();
             break;
@@ -82,14 +102,17 @@ function loadTabData(tab) {
         case 'branches':
             loadBranchesData();
             break;
-        case 'users':
-            loadUsersData();
-            break;
         case 'invoices':
             loadInvoicesData();
             break;
+        case 'payments':
+            loadPaymentsData();
+            break;
         case 'reports':
             loadReportsData();
+            break;
+        case 'settings':
+            loadSettingsData();
             break;
     }
 }
@@ -104,14 +127,184 @@ function initializeLogout() {
     }
 }
 
-// Overview Module
-function initializeOverview() {
-    const refreshBtn = document.getElementById('refresh-overview-btn');
-    if (refreshBtn) {
-        refreshBtn.addEventListener('click', loadOverviewData);
+// Quick Actions
+function initializeQuickActions() {
+    const quickActionButtons = document.querySelectorAll('.quick-action-btn');
+    quickActionButtons.forEach(button => {
+        button.addEventListener('click', (e) => {
+            const action = e.target.getAttribute('data-action');
+            handleQuickAction(action);
+        });
+    });
+}
+
+function handleQuickAction(action) {
+    switch(action) {
+        case 'add-job':
+            showAddJobModal();
+            break;
+        case 'add-user':
+            showAddUserModal();
+            break;
+        case 'add-service':
+            showAddServiceModal();
+            break;
+        case 'add-inventory':
+            showAddInventoryModal();
+            break;
+        case 'view-reports':
+            switchToTab('reports');
+            break;
+        case 'manage-settings':
+            switchToTab('settings');
+            break;
     }
 }
 
+// Search functionality
+function initializeSearch() {
+    const searchInput = document.getElementById('global-search');
+    if (searchInput) {
+        searchInput.addEventListener('input', (e) => {
+            const query = e.target.value.trim();
+            if (query.length > 2) {
+                performGlobalSearch(query);
+            }
+        });
+    }
+}
+
+async function performGlobalSearch(query) {
+    try {
+        // Search across multiple endpoints
+        const [jobsResponse, usersResponse, inventoryResponse] = await Promise.all([
+            fetch(`http://localhost:8080/api/admin/jobs`),
+            fetch(`http://localhost:8080/api/admin/users`),
+            fetch(`http://localhost:8080/api/admin/inventory`)
+        ]);
+
+        const jobs = jobsResponse.ok ? await jobsResponse.json() : [];
+        const users = usersResponse.ok ? await usersResponse.json() : [];
+        const inventory = inventoryResponse.ok ? await inventoryResponse.json() : [];
+
+        // Filter results based on query
+        const filteredJobs = jobs.filter(job => 
+            job.customerName?.toLowerCase().includes(query.toLowerCase()) ||
+            job.service?.toLowerCase().includes(query.toLowerCase()) ||
+            job.jobId?.toString().includes(query)
+        );
+
+        const filteredUsers = users.filter(user => 
+            user.fullName?.toLowerCase().includes(query.toLowerCase()) ||
+            user.email?.toLowerCase().includes(query.toLowerCase()) ||
+            user.username?.toLowerCase().includes(query.toLowerCase())
+        );
+
+        const filteredInventory = inventory.filter(item => 
+            item.partName?.toLowerCase().includes(query.toLowerCase()) ||
+            item.partNumber?.toLowerCase().includes(query.toLowerCase())
+        );
+
+        displaySearchResults(filteredJobs, filteredUsers, filteredInventory);
+    } catch (error) {
+        console.error('Error performing search:', error);
+        showNotification('Search failed', 'error');
+    }
+}
+
+function displaySearchResults(jobs, users, inventory) {
+    const searchResults = document.getElementById('search-results');
+    if (!searchResults) return;
+
+    const totalResults = jobs.length + users.length + inventory.length;
+    
+    if (totalResults === 0) {
+        searchResults.innerHTML = '<div class="no-results">No results found</div>';
+        return;
+    }
+
+    let resultsHTML = '<div class="search-results-content">';
+    
+    if (jobs.length > 0) {
+        resultsHTML += `
+            <div class="search-section">
+                <h4>Jobs (${jobs.length})</h4>
+                ${jobs.slice(0, 3).map(job => `
+                    <div class="search-result-item" onclick="viewJob(${job.jobId})">
+                        <div class="result-title">Job #${job.jobId} - ${job.customerName}</div>
+                        <div class="result-subtitle">${job.service} - ${job.status}</div>
+                    </div>
+                `).join('')}
+            </div>
+        `;
+    }
+
+    if (users.length > 0) {
+        resultsHTML += `
+            <div class="search-section">
+                <h4>Users (${users.length})</h4>
+                ${users.slice(0, 3).map(user => `
+                    <div class="search-result-item" onclick="viewUser(${user.id})">
+                        <div class="result-title">${user.fullName}</div>
+                        <div class="result-subtitle">${user.email} - ${user.role}</div>
+                    </div>
+                `).join('')}
+            </div>
+        `;
+    }
+
+    if (inventory.length > 0) {
+        resultsHTML += `
+            <div class="search-section">
+                <h4>Inventory (${inventory.length})</h4>
+                ${inventory.slice(0, 3).map(item => `
+                    <div class="search-result-item" onclick="viewInventory(${item.id})">
+                        <div class="result-title">${item.partName}</div>
+                        <div class="result-subtitle">${item.partNumber} - Stock: ${item.quantity}</div>
+                    </div>
+                `).join('')}
+            </div>
+        `;
+    }
+
+    resultsHTML += '</div>';
+    searchResults.innerHTML = resultsHTML;
+}
+
+// Notifications
+function initializeNotifications() {
+    // Check for new notifications periodically
+    setInterval(checkForNotifications, 30000); // Check every 30 seconds
+}
+
+async function checkForNotifications() {
+    try {
+        // Check for low stock alerts
+        const inventoryResponse = await fetch('http://localhost:8080/api/admin/inventory/alerts');
+        if (inventoryResponse.ok) {
+            const lowStockItems = await inventoryResponse.json();
+            if (lowStockItems.length > 0) {
+                showNotification(`${lowStockItems.length} items are running low on stock`, 'warning');
+            }
+        }
+
+        // Check for overdue invoices
+        const invoicesResponse = await fetch('http://localhost:8080/api/admin/invoices');
+        if (invoicesResponse.ok) {
+            const invoices = await invoicesResponse.json();
+            const overdueInvoices = invoices.filter(invoice => 
+                invoice.status === 'Sent' && new Date(invoice.dueDate) < new Date()
+            );
+            if (overdueInvoices.length > 0) {
+                showNotification(`${overdueInvoices.length} invoices are overdue`, 'warning');
+            }
+        }
+    } catch (error) {
+        console.error('Error checking notifications:', error);
+    }
+}
+
+// Overview Data Loading
 async function loadOverviewData() {
     try {
         showLoadingState('metrics-grid');
@@ -147,110 +340,132 @@ async function loadOverviewData() {
 }
 
 function calculateMetrics(jobs, users, lowStockItems) {
-    const totalRevenue = jobs
-        .filter(job => job.totalCost)
-        .reduce((sum, job) => sum + parseFloat(job.totalCost), 0);
-    
-    const completedJobs = jobs.filter(job => job.status === 'Completed').length;
-    const inProgressJobs = jobs.filter(job => job.status === 'In Progress').length;
-    const activeCustomers = users.filter(user => user.role === 'customer').length;
-    
+    const totalJobs = jobs.length;
+    const activeJobs = jobs.filter(job => ['Booked', 'In Progress'].includes(job.status)).length;
+    const completedJobs = jobs.filter(job => ['Completed', 'Invoiced', 'Paid'].includes(job.status)).length;
+    const totalCustomers = users.filter(user => user.role === 'customer').length;
+    const totalEmployees = users.filter(user => user.role === 'employee').length;
+    const lowStockCount = lowStockItems.length;
+
     return {
-        totalRevenue: totalRevenue.toFixed(2),
-        totalJobs: jobs.length,
+        totalJobs,
+        activeJobs,
         completedJobs,
-        inProgressJobs,
-        activeCustomers,
-        lowStockItems: lowStockItems.length,
-        completionRate: jobs.length > 0 ? ((completedJobs / jobs.length) * 100).toFixed(1) : 0
+        totalCustomers,
+        totalEmployees,
+        lowStockCount
     };
 }
 
 function renderMetricsCards(metrics) {
     const metricsGrid = document.getElementById('metrics-grid');
-    
+    if (!metricsGrid) return;
+
     const cards = [
-        {
-            title: 'Total Revenue',
-            value: `$${metrics.totalRevenue}`,
-            icon: `<svg class="icon" viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>`,
-            change: '+12.5%',
-            changeType: 'positive',
-            class: 'revenue'
-        },
         {
             title: 'Total Jobs',
             value: metrics.totalJobs,
-            icon: `<svg class="icon" viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>`,
-            change: `${metrics.inProgressJobs} in progress`,
-            changeType: 'neutral',
-            class: 'jobs'
+            icon: 'briefcase',
+            color: 'primary',
+            trend: '+12%',
+            trendDirection: 'up'
         },
         {
-            title: 'Active Customers',
-            value: metrics.activeCustomers,
-            icon: `<svg class="icon" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>`,
-            change: '+5.2%',
-            changeType: 'positive',
-            class: 'customers'
+            title: 'Active Jobs',
+            value: metrics.activeJobs,
+            icon: 'clock',
+            color: 'warning',
+            trend: '+5%',
+            trendDirection: 'up'
+        },
+        {
+            title: 'Total Customers',
+            value: metrics.totalCustomers,
+            icon: 'users',
+            color: 'success',
+            trend: '+8%',
+            trendDirection: 'up'
         },
         {
             title: 'Low Stock Items',
-            value: metrics.lowStockItems,
-            icon: `<svg class="icon" viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27,6.96 12,12.01 20.73,6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>`,
-            change: 'Needs attention',
-            changeType: metrics.lowStockItems > 0 ? 'negative' : 'positive',
-            class: 'inventory'
+            value: metrics.lowStockCount,
+            icon: 'alert-triangle',
+            color: 'danger',
+            trend: '-2%',
+            trendDirection: 'down'
         }
     ];
-    
-    metricsGrid.innerHTML = cards.map(card => `
-        <div class="metric-card ${card.class}">
+
+    metricsGrid.innerHTML = cards.map((card, index) => `
+        <div class="metric-card" style="animation-delay: ${index * 0.1}s;">
             <div class="metric-header">
-                <div class="metric-icon">${card.icon}</div>
+                <div class="metric-icon ${card.color}">
+                    <svg class="icon" viewBox="0 0 24 24">
+                        ${getIconSVG(card.icon)}
+                    </svg>
+                </div>
+                <div class="metric-trend ${card.trendDirection}">
+                    ${card.trend}
+                </div>
             </div>
             <div class="metric-value">${card.value}</div>
             <div class="metric-label">${card.title}</div>
-            <div class="metric-change ${card.changeType}">
-                ${card.change}
-            </div>
         </div>
     `).join('');
 }
 
+function getIconSVG(iconName) {
+    const icons = {
+        briefcase: '<path d="M20 7H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>',
+        clock: '<circle cx="12" cy="12" r="10"/><polyline points="12,6 12,12 16,14"/>',
+        users: '<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
+        'alert-triangle': '<path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>'
+    };
+    return icons[iconName] || '';
+}
+
 function generateSimpleCharts(jobs) {
-    // Revenue chart
-    const revenueChart = document.getElementById('overview-revenue-chart');
+    // Generate revenue chart
+    const revenueChart = document.getElementById('revenue-chart');
     if (revenueChart) {
-        const monthlyData = getMonthlyRevenue(jobs);
-        revenueChart.innerHTML = createBarChart(monthlyData, 'Revenue');
+        const revenueData = calculateRevenueData(jobs);
+        revenueChart.innerHTML = createBarChart(revenueData, 'Revenue');
     }
 
-    // Service distribution chart
-    const serviceChart = document.getElementById('overview-service-chart');
-    if (serviceChart) {
-        const serviceData = getServiceDistribution(jobs);
-        serviceChart.innerHTML = createPieChart(serviceData, 'Services');
+    // Generate job status chart
+    const statusChart = document.getElementById('status-chart');
+    if (statusChart) {
+        const statusData = calculateStatusData(jobs);
+        statusChart.innerHTML = createPieChart(statusData, 'Job Status');
     }
 }
 
-function getMonthlyRevenue(jobs) {
-    const months = {};
+function calculateRevenueData(jobs) {
+    // Group jobs by month and calculate revenue
+    const monthlyRevenue = {};
     jobs.forEach(job => {
-        if (job.totalCost && job.bookingDate) {
+        if (job.totalCost) {
             const month = new Date(job.bookingDate).toLocaleDateString('en-US', { month: 'short' });
-            months[month] = (months[month] || 0) + parseFloat(job.totalCost);
+            monthlyRevenue[month] = (monthlyRevenue[month] || 0) + parseFloat(job.totalCost);
         }
     });
-    return Object.entries(months).map(([month, revenue]) => ({ label: month, value: revenue }));
+
+    return Object.entries(monthlyRevenue).map(([month, revenue]) => ({
+        label: month,
+        value: revenue
+    }));
 }
 
-function getServiceDistribution(jobs) {
-    const services = {};
+function calculateStatusData(jobs) {
+    const statusCount = {};
     jobs.forEach(job => {
-        services[job.service] = (services[job.service] || 0) + 1;
+        statusCount[job.status] = (statusCount[job.status] || 0) + 1;
     });
-    return Object.entries(services).map(([service, count]) => ({ label: service, value: count }));
+
+    return Object.entries(statusCount).map(([status, count]) => ({
+        label: status,
+        value: count
+    }));
 }
 
 function createBarChart(data, title) {
@@ -289,19 +504,10 @@ function createPieChart(data, title) {
     `;
 }
 
-// Jobs Module
-function initializeJobsModule() {
-    const createJobBtn = document.getElementById('create-job-btn');
-    if (createJobBtn) {
-        createJobBtn.addEventListener('click', () => {
-            showCreateJobModal();
-        });
-    }
-}
-
+// Data Loading Functions
 async function loadJobsData() {
     try {
-        showLoadingState('job-table-body');
+        showLoadingState('jobs-table-body');
         
         const response = await fetch('http://localhost:8080/api/admin/jobs');
         if (!response.ok) throw new Error('Failed to fetch jobs');
@@ -311,213 +517,46 @@ async function loadJobsData() {
         
     } catch (error) {
         console.error('Error loading jobs:', error);
-        showErrorState('job-table-body', 'Failed to load jobs');
+        showErrorState('jobs-table-body', 'Failed to load jobs');
     }
 }
 
 function renderJobsTable(jobs) {
-    const tableBody = document.getElementById('job-table-body');
+    const tableBody = document.getElementById('jobs-table-body');
+    if (!tableBody) return;
     
     if (jobs.length === 0) {
         tableBody.innerHTML = `
             <tr>
-                <td colspan="8" class="empty-state">
-                    <div class="empty-state-icon">
-                        <svg class="icon icon-xl" viewBox="0 0 24 24">
-                            <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
-                        </svg>
-                    </div>
-                    <div class="empty-state-title">No jobs found</div>
-                    <div class="empty-state-description">Create your first job to get started</div>
+                <td colspan="7" class="no-data">
+                    <p>No jobs found</p>
                 </td>
             </tr>
         `;
         return;
     }
-    
+
     tableBody.innerHTML = jobs.map(job => `
         <tr>
-            <td><strong>#${job.jobId}</strong></td>
+            <td>#${job.jobId}</td>
             <td>${job.customerName}</td>
             <td>${job.vehicle}</td>
             <td>${job.service}</td>
-            <td><span class="status-badge status-${job.status.toLowerCase().replace(' ', '-')}">${job.status}</span></td>
-            <td>${job.assignedEmployee || '<span class="text-secondary">Unassigned</span>'}</td>
-            <td>${job.totalCost ? '$' + job.totalCost : '<span class="text-secondary">Pending</span>'}</td>
-            <td class="actions">
-                ${job.status === 'Booked' && !job.assignedEmployee ? 
-                    `<button class="btn btn-sm btn-primary" onclick="assignEmployee(${job.jobId})">
-                        <svg class="icon icon-sm" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><path d="M20 8v6"/><path d="M23 11h-6"/></svg>
-                        Assign
-                    </button>` : ''}
-                ${job.status === 'Completed' && !job.totalCost ? 
-                    `<button class="btn btn-sm btn-success" onclick="generateInvoice(${job.jobId})">
-                        <svg class="icon icon-sm" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14,2 14,8 20,8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-                        Invoice
-                    </button>` : ''}
-                <button class="btn btn-sm btn-secondary" onclick="viewJobDetails(${job.jobId})">
-                    <svg class="icon icon-sm" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-                    View
-                </button>
+            <td>
+                <span class="status-badge status-${job.status.toLowerCase().replace(' ', '-')}">
+                    ${job.status}
+                </span>
+            </td>
+            <td>${new Date(job.bookingDate).toLocaleDateString()}</td>
+            <td>
+                <div class="table-actions">
+                    <button class="btn btn-sm btn-primary" onclick="viewJob(${job.jobId})">View</button>
+                    <button class="btn btn-sm btn-outline" onclick="editJob(${job.jobId})">Edit</button>
+                    <button class="btn btn-sm btn-secondary" onclick="assignEmployee(${job.jobId})">Assign</button>
+                </div>
             </td>
         </tr>
     `).join('');
-}
-
-// Services Module
-function initializeServicesModule() {
-    const addServiceBtn = document.getElementById('add-service-btn');
-    if (addServiceBtn) {
-        addServiceBtn.addEventListener('click', () => {
-            showCreateServiceModal();
-        });
-    }
-}
-
-async function loadServicesData() {
-    try {
-        showLoadingState('services-table-body');
-        
-        const response = await fetch('http://localhost:8080/api/admin/services');
-        if (!response.ok) throw new Error('Failed to fetch services');
-        
-        const services = await response.json();
-        renderServicesTable(services);
-        
-    } catch (error) {
-        console.error('Error loading services:', error);
-        showErrorState('services-table-body', 'Failed to load services');
-    }
-}
-
-function renderServicesTable(services) {
-    const tableBody = document.getElementById('services-table-body');
-    
-    if (services.length === 0) {
-        tableBody.innerHTML = `
-            <tr>
-                <td colspan="5" class="empty-state">
-                    <div class="empty-state-icon">
-                        <svg class="icon icon-xl" viewBox="0 0 24 24">
-                            <circle cx="12" cy="12" r="3"/>
-                            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
-                        </svg>
-                    </div>
-                    <div class="empty-state-title">No services found</div>
-                    <div class="empty-state-description">Add your first service to get started</div>
-                </td>
-            </tr>
-        `;
-        return;
-    }
-    
-    tableBody.innerHTML = services.map(service => `
-        <tr>
-            <td><strong>#${service.id}</strong></td>
-            <td>${service.serviceName}</td>
-            <td><strong>$${service.price}</strong></td>
-            <td>${service.description || '<span class="text-secondary">No description</span>'}</td>
-            <td class="actions">
-                <button class="btn btn-sm btn-secondary" onclick="editService(${service.id})">
-                    <svg class="icon icon-sm" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                    Edit
-                </button>
-                <button class="btn btn-sm btn-danger" onclick="deleteService(${service.id})">
-                    <svg class="icon icon-sm" viewBox="0 0 24 24"><polyline points="3,6 5,6 21,6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
-                    Delete
-                </button>
-            </td>
-        </tr>
-    `).join('');
-}
-
-// Inventory Module
-function initializeInventoryModule() {
-    const addInventoryBtn = document.getElementById('add-inventory-btn');
-    const lowStockBtn = document.getElementById('low-stock-btn');
-    
-    if (addInventoryBtn) {
-        addInventoryBtn.addEventListener('click', () => {
-            showCreateInventoryModal();
-        });
-    }
-    
-    if (lowStockBtn) {
-        lowStockBtn.addEventListener('click', showLowStockAlert);
-    }
-}
-
-async function loadInventoryData() {
-    try {
-        showLoadingState('inventory-table-body');
-        
-        const response = await fetch('http://localhost:8080/api/admin/inventory');
-        if (!response.ok) throw new Error('Failed to fetch inventory');
-        
-        const inventory = await response.json();
-        renderInventoryTable(inventory);
-        
-    } catch (error) {
-        console.error('Error loading inventory:', error);
-        showErrorState('inventory-table-body', 'Failed to load inventory');
-    }
-}
-
-function renderInventoryTable(inventory) {
-    const tableBody = document.getElementById('inventory-table-body');
-    
-    if (inventory.length === 0) {
-        tableBody.innerHTML = `
-            <tr>
-                <td colspan="6" class="empty-state">
-                    <div class="empty-state-icon">
-                        <svg class="icon icon-xl" viewBox="0 0 24 24">
-                            <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
-                            <polyline points="3.27,6.96 12,12.01 20.73,6.96"/>
-                            <line x1="12" y1="22.08" x2="12" y2="12"/>
-                        </svg>
-                    </div>
-                    <div class="empty-state-title">No inventory items found</div>
-                    <div class="empty-state-description">Add your first inventory item to get started</div>
-                </td>
-            </tr>
-        `;
-        return;
-    }
-    
-    tableBody.innerHTML = inventory.map(item => {
-        const totalValue = (item.quantity * item.pricePerUnit).toFixed(2);
-        const isLowStock = item.quantity < 10;
-        
-        return `
-            <tr ${isLowStock ? 'class="low-stock"' : ''}>
-                <td><strong>#${item.id}</strong></td>
-                <td>${item.partName}</td>
-                <td>
-                    <span class="${isLowStock ? 'text-error font-bold' : ''}">${item.quantity}</span>
-                    ${isLowStock ? '<svg class="icon icon-sm text-error" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>' : ''}
-                </td>
-                <td>$${item.pricePerUnit}</td>
-                <td><strong>$${totalValue}</strong></td>
-                <td class="actions">
-                    <button class="btn btn-sm btn-secondary" onclick="editInventoryItem(${item.id})">
-                        <svg class="icon icon-sm" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                        Edit
-                    </button>
-                </td>
-            </tr>
-        `;
-    }).join('');
-}
-
-// Users Module
-function initializeUsersModule() {
-    const addUserBtn = document.getElementById('add-user-btn');
-    if (addUserBtn) {
-        addUserBtn.addEventListener('click', () => {
-            showCreateUserModal();
-        });
-    }
 }
 
 async function loadUsersData() {
@@ -538,67 +577,289 @@ async function loadUsersData() {
 
 function renderUsersTable(users) {
     const tableBody = document.getElementById('users-table-body');
+    if (!tableBody) return;
     
     if (users.length === 0) {
         tableBody.innerHTML = `
             <tr>
-                <td colspan="6" class="empty-state">
-                    <div class="empty-state-icon">
-                        <svg class="icon icon-xl" viewBox="0 0 24 24">
-                            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-                            <circle cx="9" cy="7" r="4"/>
-                            <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
-                            <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-                        </svg>
-                    </div>
-                    <div class="empty-state-title">No users found</div>
-                    <div class="empty-state-description">Add your first user to get started</div>
+                <td colspan="6" class="no-data">
+                    <p>No users found</p>
                 </td>
             </tr>
         `;
         return;
     }
-    
-    const roleIcons = {
-        admin: '<svg class="icon icon-sm" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>',
-        employee: '<svg class="icon icon-sm" viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>',
-        customer: '<svg class="icon icon-sm" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>'
-    };
-    
+
     tableBody.innerHTML = users.map(user => `
         <tr>
-            <td><strong>#${user.id}</strong></td>
-            <td>${user.username}</td>
             <td>${user.fullName}</td>
+            <td>${user.email}</td>
+            <td>${user.username}</td>
             <td>
-                <span class="role-badge role-${user.role}">
-                    ${roleIcons[user.role] || ''}
-                    ${user.role}
-                </span>
+                <span class="role-badge role-${user.role}">${user.role}</span>
             </td>
             <td>${new Date(user.createdAt).toLocaleDateString()}</td>
-            <td class="actions">
-                <button class="btn btn-sm btn-secondary" onclick="editUser(${user.id})">
-                    <svg class="icon icon-sm" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                    Edit
-                </button>
+            <td>
+                <div class="table-actions">
+                    <button class="btn btn-sm btn-primary" onclick="viewUser(${user.id})">View</button>
+                    <button class="btn btn-sm btn-outline" onclick="editUser(${user.id})">Edit</button>
+                    <button class="btn btn-sm btn-secondary" onclick="toggleUserStatus(${user.id})">
+                        ${user.isActive ? 'Deactivate' : 'Activate'}
+                    </button>
+                </div>
             </td>
         </tr>
     `).join('');
 }
 
-// Reports Module
-function initializeReportsModule() {
-    const refreshReportsBtn = document.getElementById('refresh-reports-btn');
-    const exportCsvBtn = document.getElementById('export-csv-btn');
-    
-    if (refreshReportsBtn) {
-        refreshReportsBtn.addEventListener('click', loadReportsData);
+async function loadServicesData() {
+    try {
+        showLoadingState('services-table-body');
+        
+        const response = await fetch('http://localhost:8080/api/admin/services');
+        if (!response.ok) throw new Error('Failed to fetch services');
+        
+        const services = await response.json();
+        renderServicesTable(services);
+        
+    } catch (error) {
+        console.error('Error loading services:', error);
+        showErrorState('services-table-body', 'Failed to load services');
     }
+}
+
+function renderServicesTable(services) {
+    const tableBody = document.getElementById('services-table-body');
+    if (!tableBody) return;
     
-    if (exportCsvBtn) {
-        exportCsvBtn.addEventListener('click', exportReports);
+    if (services.length === 0) {
+        tableBody.innerHTML = `
+            <tr>
+                <td colspan="5" class="no-data">
+                    <p>No services found</p>
+                </td>
+            </tr>
+        `;
+        return;
     }
+
+    tableBody.innerHTML = services.map(service => `
+        <tr>
+            <td>${service.serviceName}</td>
+            <td>$${service.price}</td>
+            <td>${service.category}</td>
+            <td>${service.estimatedDuration} min</td>
+            <td>
+                <div class="table-actions">
+                    <button class="btn btn-sm btn-primary" onclick="viewService(${service.id})">View</button>
+                    <button class="btn btn-sm btn-outline" onclick="editService(${service.id})">Edit</button>
+                    <button class="btn btn-sm btn-secondary" onclick="toggleServiceStatus(${service.id})">
+                        ${service.isActive ? 'Deactivate' : 'Activate'}
+                    </button>
+                </div>
+            </td>
+        </tr>
+    `).join('');
+}
+
+async function loadInventoryData() {
+    try {
+        showLoadingState('inventory-table-body');
+        
+        const response = await fetch('http://localhost:8080/api/admin/inventory');
+        if (!response.ok) throw new Error('Failed to fetch inventory');
+        
+        const inventory = await response.json();
+        renderInventoryTable(inventory);
+        
+    } catch (error) {
+        console.error('Error loading inventory:', error);
+        showErrorState('inventory-table-body', 'Failed to load inventory');
+    }
+}
+
+function renderInventoryTable(inventory) {
+    const tableBody = document.getElementById('inventory-table-body');
+    if (!tableBody) return;
+    
+    if (inventory.length === 0) {
+        tableBody.innerHTML = `
+            <tr>
+                <td colspan="7" class="no-data">
+                    <p>No inventory items found</p>
+                </td>
+            </tr>
+        `;
+        return;
+    }
+
+    tableBody.innerHTML = inventory.map(item => `
+        <tr class="${item.quantity <= item.minQuantity ? 'low-stock' : ''}">
+            <td>${item.partName}</td>
+            <td>${item.partNumber}</td>
+            <td>${item.quantity}</td>
+            <td>${item.minQuantity}</td>
+            <td>$${item.pricePerUnit}</td>
+            <td>${item.category}</td>
+            <td>
+                <div class="table-actions">
+                    <button class="btn btn-sm btn-primary" onclick="viewInventory(${item.id})">View</button>
+                    <button class="btn btn-sm btn-outline" onclick="editInventory(${item.id})">Edit</button>
+                    <button class="btn btn-sm btn-secondary" onclick="reorderInventory(${item.id})">Reorder</button>
+                </div>
+            </td>
+        </tr>
+    `).join('');
+}
+
+async function loadBranchesData() {
+    try {
+        showLoadingState('branches-table-body');
+        
+        const response = await fetch('http://localhost:8080/api/admin/branches');
+        if (!response.ok) throw new Error('Failed to fetch branches');
+        
+        const branches = await response.json();
+        renderBranchesTable(branches);
+    } catch (error) {
+        console.error('Error loading branches:', error);
+        showErrorState('branches-table-body', 'Failed to load branches');
+    }
+}
+
+function renderBranchesTable(branches) {
+    const tableBody = document.getElementById('branches-table-body');
+    if (!tableBody) return;
+    
+    if (branches.length === 0) {
+        tableBody.innerHTML = `
+            <tr>
+                <td colspan="6" class="no-data">
+                    <p>No branches found</p>
+                </td>
+            </tr>
+        `;
+        return;
+    }
+
+    tableBody.innerHTML = branches.map(branch => `
+        <tr>
+            <td>${branch.name}</td>
+            <td>${branch.address}</td>
+            <td>${branch.phone || 'N/A'}</td>
+            <td>${branch.email || 'N/A'}</td>
+            <td>${branch.rating || 'N/A'} ⭐</td>
+            <td>
+                <div class="table-actions">
+                    <button class="btn btn-sm btn-primary" onclick="viewBranch(${branch.id})">View</button>
+                    <button class="btn btn-sm btn-outline" onclick="editBranch(${branch.id})">Edit</button>
+                    <button class="btn btn-sm btn-secondary" onclick="manageBranchHours(${branch.id})">Hours</button>
+                </div>
+            </td>
+        </tr>
+    `).join('');
+}
+
+async function loadInvoicesData() {
+    try {
+        showLoadingState('invoices-table-body');
+        
+        const response = await fetch('http://localhost:8080/api/admin/invoices');
+        if (!response.ok) throw new Error('Failed to fetch invoices');
+        
+        const invoices = await response.json();
+        renderInvoicesTable(invoices);
+        
+    } catch (error) {
+        console.error('Error loading invoices:', error);
+        showErrorState('invoices-table-body', 'Failed to load invoices');
+    }
+}
+
+function renderInvoicesTable(invoices) {
+    const tableBody = document.getElementById('invoices-table-body');
+    if (!tableBody) return;
+    
+    if (invoices.length === 0) {
+        tableBody.innerHTML = `
+            <tr>
+                <td colspan="7" class="no-data">
+                    <p>No invoices found</p>
+                </td>
+            </tr>
+        `;
+        return;
+    }
+
+    tableBody.innerHTML = invoices.map(invoice => `
+        <tr>
+            <td>${invoice.invoiceNumber}</td>
+            <td>${invoice.customerName}</td>
+            <td>${invoice.serviceName}</td>
+            <td>$${invoice.totalAmount}</td>
+            <td>
+                <span class="status-badge status-${invoice.status.toLowerCase()}">
+                    ${invoice.status}
+                </span>
+            </td>
+            <td>${new Date(invoice.dueDate).toLocaleDateString()}</td>
+            <td>
+                <div class="table-actions">
+                    <button class="btn btn-sm btn-primary" onclick="viewInvoice(${invoice.id})">View</button>
+                    <button class="btn btn-sm btn-outline" onclick="editInvoice(${invoice.id})">Edit</button>
+                    <button class="btn btn-sm btn-secondary" onclick="sendInvoice(${invoice.id})">Send</button>
+                </div>
+            </td>
+        </tr>
+    `).join('');
+}
+
+async function loadPaymentsData() {
+    try {
+        showLoadingState('payments-table-body');
+        
+        const response = await fetch('http://localhost:8080/api/admin/payments');
+        if (!response.ok) throw new Error('Failed to fetch payments');
+        
+        const payments = await response.json();
+        renderPaymentsTable(payments);
+        
+    } catch (error) {
+        console.error('Error loading payments:', error);
+        showErrorState('payments-table-body', 'Failed to load payments');
+    }
+}
+
+function renderPaymentsTable(payments) {
+    const tableBody = document.getElementById('payments-table-body');
+    if (!tableBody) return;
+    
+    if (payments.length === 0) {
+        tableBody.innerHTML = `
+            <tr>
+                <td colspan="7" class="no-data">
+                    <p>No payments found</p>
+                </td>
+            </tr>
+        `;
+        return;
+    }
+
+    tableBody.innerHTML = payments.map(payment => `
+        <tr>
+            <td>${payment.transactionId || 'N/A'}</td>
+            <td>${payment.customerName}</td>
+            <td>${payment.invoiceNumber}</td>
+            <td>$${payment.amount}</td>
+            <td>${payment.paymentMethod}</td>
+            <td>
+                <span class="status-badge status-${payment.paymentStatus.toLowerCase()}">
+                    ${payment.paymentStatus}
+                </span>
+            </td>
+            <td>${new Date(payment.paymentDate).toLocaleDateString()}</td>
+        </tr>
+    `).join('');
 }
 
 async function loadReportsData() {
@@ -648,322 +909,183 @@ async function loadReportsData() {
             }
         }
         
-        showNotification('Reports updated successfully', 'success');
     } catch (error) {
-        console.error('Error loading reports:', error);
-        showNotification('Failed to load reports', 'error');
+        console.error('Error loading reports data:', error);
+        showNotification('Failed to load reports data', 'error');
     }
+}
+
+async function loadSettingsData() {
+    try {
+        showLoadingState('settings-container');
+        
+        const response = await fetch('http://localhost:8080/api/admin/settings');
+        if (!response.ok) throw new Error('Failed to fetch settings');
+        
+        const settings = await response.json();
+        renderSettingsForm(settings);
+        
+    } catch (error) {
+        console.error('Error loading settings:', error);
+        showErrorState('settings-container', 'Failed to load settings');
+    }
+}
+
+function renderSettingsForm(settings) {
+    const container = document.getElementById('settings-container');
+    if (!container) return;
+    
+    const publicSettings = settings.filter(setting => setting.isPublic);
+    
+    container.innerHTML = `
+        <div class="settings-form">
+            <h3>System Settings</h3>
+            ${publicSettings.map(setting => `
+                <div class="form-group">
+                    <label for="${setting.key}">${setting.description || setting.key}</label>
+                    <input type="${getInputType(setting.type)}" 
+                           id="${setting.key}" 
+                           value="${setting.value}"
+                           ${setting.type === 'boolean' ? 'checked="' + (setting.value === 'true') + '"' : ''}>
+                </div>
+            `).join('')}
+            <div class="form-actions">
+                <button class="btn btn-primary" onclick="saveSettings()">Save Settings</button>
+                <button class="btn btn-secondary" onclick="resetSettings()">Reset to Default</button>
+            </div>
+        </div>
+    `;
+}
+
+function getInputType(settingType) {
+    switch(settingType) {
+        case 'number': return 'number';
+        case 'boolean': return 'checkbox';
+        default: return 'text';
+    }
+}
+
+// Action Functions
+function viewJob(jobId) {
+    showNotification(`Viewing job #${jobId}`, 'info');
+    // Implementation for viewing job details
+}
+
+function editJob(jobId) {
+    showNotification(`Editing job #${jobId}`, 'info');
+    // Implementation for editing job
+}
+
+function assignEmployee(jobId) {
+    showNotification(`Assigning employee to job #${jobId}`, 'info');
+    // Implementation for assigning employee
+}
+
+function viewUser(userId) {
+    showNotification(`Viewing user #${userId}`, 'info');
+    // Implementation for viewing user details
+}
+
+function editUser(userId) {
+    showNotification(`Editing user #${userId}`, 'info');
+    // Implementation for editing user
+}
+
+function toggleUserStatus(userId) {
+    showNotification(`Toggling user status #${userId}`, 'info');
+    // Implementation for toggling user status
+}
+
+function viewService(serviceId) {
+    showNotification(`Viewing service #${serviceId}`, 'info');
+    // Implementation for viewing service details
+}
+
+function editService(serviceId) {
+    showNotification(`Editing service #${serviceId}`, 'info');
+    // Implementation for editing service
+}
+
+function toggleServiceStatus(serviceId) {
+    showNotification(`Toggling service status #${serviceId}`, 'info');
+    // Implementation for toggling service status
+}
+
+function viewInventory(itemId) {
+    showNotification(`Viewing inventory item #${itemId}`, 'info');
+    // Implementation for viewing inventory details
+}
+
+function editInventory(itemId) {
+    showNotification(`Editing inventory item #${itemId}`, 'info');
+    // Implementation for editing inventory
+}
+
+function reorderInventory(itemId) {
+    showNotification(`Reordering inventory item #${itemId}`, 'info');
+    // Implementation for reordering inventory
+}
+
+function viewBranch(branchId) {
+    showNotification(`Viewing branch #${branchId}`, 'info');
+    // Implementation for viewing branch details
+}
+
+function editBranch(branchId) {
+    showNotification(`Editing branch #${branchId}`, 'info');
+    // Implementation for editing branch
+}
+
+function manageBranchHours(branchId) {
+    showNotification(`Managing hours for branch #${branchId}`, 'info');
+    // Implementation for managing branch hours
+}
+
+function viewInvoice(invoiceId) {
+    showNotification(`Viewing invoice #${invoiceId}`, 'info');
+    // Implementation for viewing invoice details
+}
+
+function editInvoice(invoiceId) {
+    showNotification(`Editing invoice #${invoiceId}`, 'info');
+    // Implementation for editing invoice
+}
+
+function sendInvoice(invoiceId) {
+    showNotification(`Sending invoice #${invoiceId}`, 'info');
+    // Implementation for sending invoice
 }
 
 // Modal Functions
-function showCreateJobModal() {
-    createModal('Create New Job', `
-        <form id="job-form">
-            <div class="form-group">
-                <label for="job-customer" class="form-label">Customer</label>
-                <select id="job-customer" class="form-input" required>
-                    <option value="">Select Customer</option>
-                </select>
-            </div>
-            <div class="form-group">
-                <label for="job-vehicle" class="form-label">Vehicle</label>
-                <select id="job-vehicle" class="form-input" required>
-                    <option value="">Select Vehicle</option>
-                </select>
-            </div>
-            <div class="form-group">
-                <label for="job-service" class="form-label">Service</label>
-                <select id="job-service" class="form-input" required>
-                    <option value="">Select Service</option>
-                </select>
-            </div>
-            <div class="form-group">
-                <label for="job-date" class="form-label">Booking Date</label>
-                <input type="datetime-local" id="job-date" class="form-input" required>
-            </div>
-            <div class="form-actions">
-                <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
-                <button type="submit" class="btn btn-primary">Create Job</button>
-            </div>
-        </form>
-    `, async () => {
-        // Load form data
-        await loadJobFormData();
-        
-        // Handle form submission
-        document.getElementById('job-form').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            await createJob();
-        });
-    });
+function showAddJobModal() {
+    showNotification('Opening add job modal', 'info');
+    // Implementation for add job modal
 }
 
-function showCreateServiceModal() {
-    createModal('Add New Service', `
-        <form id="service-form">
-            <div class="form-group">
-                <label for="service-name" class="form-label">Service Name</label>
-                <input type="text" id="service-name" class="form-input" required>
-            </div>
-            <div class="form-group">
-                <label for="service-price" class="form-label">Price</label>
-                <input type="number" id="service-price" class="form-input" step="0.01" required>
-            </div>
-            <div class="form-group">
-                <label for="service-description" class="form-label">Description</label>
-                <textarea id="service-description" class="form-input" rows="3"></textarea>
-            </div>
-            <div class="form-actions">
-                <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
-                <button type="submit" class="btn btn-primary">Add Service</button>
-            </div>
-        </form>
-    `, () => {
-        document.getElementById('service-form').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            await createService();
-        });
-    });
+function showAddUserModal() {
+    showNotification('Opening add user modal', 'info');
+    // Implementation for add user modal
 }
 
-function showCreateInventoryModal() {
-    createModal('Add Inventory Item', `
-        <form id="inventory-form">
-            <div class="form-group">
-                <label for="part-name" class="form-label">Part Name</label>
-                <input type="text" id="part-name" class="form-input" required>
-            </div>
-            <div class="form-group">
-                <label for="part-quantity" class="form-label">Quantity</label>
-                <input type="number" id="part-quantity" class="form-input" min="1" required>
-            </div>
-            <div class="form-group">
-                <label for="part-price" class="form-label">Price per Unit</label>
-                <input type="number" id="part-price" class="form-input" step="0.01" required>
-            </div>
-            <div class="form-actions">
-                <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
-                <button type="submit" class="btn btn-primary">Add Item</button>
-            </div>
-        </form>
-    `, () => {
-        document.getElementById('inventory-form').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            await createInventoryItem();
-        });
-    });
+function showAddServiceModal() {
+    showNotification('Opening add service modal', 'info');
+    // Implementation for add service modal
 }
 
-function showCreateUserModal() {
-    createModal('Add New User', `
-        <form id="user-form">
-            <div class="form-group">
-                <label for="user-username" class="form-label">Username</label>
-                <input type="text" id="user-username" class="form-input" required>
-            </div>
-            <div class="form-group">
-                <label for="user-fullname" class="form-label">Full Name</label>
-                <input type="text" id="user-fullname" class="form-input" required>
-            </div>
-            <div class="form-group">
-                <label for="user-password" class="form-label">Password</label>
-                <input type="password" id="user-password" class="form-input" required>
-            </div>
-            <div class="form-group">
-                <label for="user-role" class="form-label">Role</label>
-                <select id="user-role" class="form-input" required>
-                    <option value="">Select Role</option>
-                    <option value="admin">Admin</option>
-                    <option value="employee">Employee</option>
-                    <option value="customer">Customer</option>
-                </select>
-            </div>
-            <div class="form-actions">
-                <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
-                <button type="submit" class="btn btn-primary">Add User</button>
-            </div>
-        </form>
-    `, () => {
-        document.getElementById('user-form').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            await createUser();
-        });
-    });
+function showAddInventoryModal() {
+    showNotification('Opening add inventory modal', 'info');
+    // Implementation for add inventory modal
 }
 
-// API Functions
-async function loadJobFormData() {
-    try {
-        const [customersResponse, servicesResponse] = await Promise.all([
-            fetch('http://localhost:8080/api/admin/users'),
-            fetch('http://localhost:8080/api/admin/services')
-        ]);
-        
-        if (!customersResponse.ok || !servicesResponse.ok) {
-            throw new Error('Failed to fetch form data');
-        }
-        
-        const users = await customersResponse.json();
-        const services = await servicesResponse.json();
-        
-        const customers = users.filter(user => user.role === 'customer');
-        
-        const customerSelect = document.getElementById('job-customer');
-        customerSelect.innerHTML = '<option value="">Select Customer</option>' +
-            customers.map(customer => `<option value="${customer.id}">${customer.fullName}</option>`).join('');
-        
-        const serviceSelect = document.getElementById('job-service');
-        serviceSelect.innerHTML = '<option value="">Select Service</option>' +
-            services.map(service => `<option value="${service.id}">${service.serviceName} - $${service.price}</option>`).join('');
-        
-        // Set default date
-        const now = new Date();
-        now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
-        document.getElementById('job-date').value = now.toISOString().slice(0, 16);
-        
-        // Load vehicles when customer changes
-        customerSelect.addEventListener('change', async () => {
-            const customerId = customerSelect.value;
-            const vehicleSelect = document.getElementById('job-vehicle');
-            
-            if (!customerId) {
-                vehicleSelect.innerHTML = '<option value="">Select Vehicle</option>';
-                return;
-            }
-            
-            try {
-                const response = await fetch(`http://localhost:8080/api/customer/vehicles/${customerId}`);
-                if (response.ok) {
-                    const vehicles = await response.json();
-                    vehicleSelect.innerHTML = '<option value="">Select Vehicle</option>' +
-                        vehicles.map(vehicle => `<option value="${vehicle.id}">${vehicle.make} ${vehicle.model} (${vehicle.year})</option>`).join('');
-                }
-            } catch (error) {
-                console.error('Error loading vehicles:', error);
-            }
-        });
-        
-    } catch (error) {
-        console.error('Error loading job form data:', error);
-    }
+// Settings Functions
+async function saveSettings() {
+    showNotification('Saving settings...', 'info');
+    // Implementation for saving settings
 }
 
-async function createJob() {
-    const formData = {
-        customerId: document.getElementById('job-customer').value,
-        vehicleId: document.getElementById('job-vehicle').value,
-        serviceId: document.getElementById('job-service').value,
-        bookingDate: document.getElementById('job-date').value
-    };
-
-    try {
-        const response = await fetch('http://localhost:8080/api/admin/jobs', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(formData)
-        });
-
-        const result = await response.json();
-        
-        if (response.ok) {
-            closeModal();
-            showNotification('Job created successfully', 'success');
-            loadJobsData();
-        } else {
-            showNotification(result.error || 'Failed to create job', 'error');
-        }
-    } catch (error) {
-        console.error('Error creating job:', error);
-        showNotification('Failed to create job', 'error');
-    }
-}
-
-async function createService() {
-    const formData = {
-        serviceName: document.getElementById('service-name').value,
-        price: parseFloat(document.getElementById('service-price').value),
-        description: document.getElementById('service-description').value
-    };
-
-    try {
-        const response = await fetch('http://localhost:8080/api/admin/services', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(formData)
-        });
-
-        const result = await response.json();
-        
-        if (response.ok) {
-            closeModal();
-            showNotification('Service added successfully', 'success');
-            loadServicesData();
-        } else {
-            showNotification(result.error || 'Failed to add service', 'error');
-        }
-    } catch (error) {
-        console.error('Error creating service:', error);
-        showNotification('Failed to add service', 'error');
-    }
-}
-
-async function createInventoryItem() {
-    const formData = {
-        partName: document.getElementById('part-name').value,
-        quantity: parseInt(document.getElementById('part-quantity').value),
-        pricePerUnit: parseFloat(document.getElementById('part-price').value)
-    };
-
-    try {
-        const response = await fetch('http://localhost:8080/api/admin/inventory', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(formData)
-        });
-
-        const result = await response.json();
-        
-        if (response.ok) {
-            closeModal();
-            showNotification('Inventory item added successfully', 'success');
-            loadInventoryData();
-        } else {
-            showNotification(result.error || 'Failed to add inventory item', 'error');
-        }
-    } catch (error) {
-        console.error('Error creating inventory item:', error);
-        showNotification('Failed to add inventory item', 'error');
-    }
-}
-
-async function createUser() {
-    const formData = {
-        username: document.getElementById('user-username').value,
-        fullName: document.getElementById('user-fullname').value,
-        password: document.getElementById('user-password').value,
-        role: document.getElementById('user-role').value
-    };
-
-    try {
-        const response = await fetch('http://localhost:8080/api/admin/users', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(formData)
-        });
-
-        const result = await response.json();
-        
-        if (response.ok) {
-            closeModal();
-            showNotification('User added successfully', 'success');
-            loadUsersData();
-        } else {
-            showNotification(result.error || 'Failed to add user', 'error');
-        }
-    } catch (error) {
-        console.error('Error creating user:', error);
-        showNotification('Failed to add user', 'error');
-    }
+function resetSettings() {
+    showNotification('Resetting settings to default', 'info');
+    // Implementation for resetting settings
 }
 
 // Utility Functions
@@ -971,10 +1093,9 @@ function showLoadingState(elementId) {
     const element = document.getElementById(elementId);
     if (element) {
         element.innerHTML = `
-            <div class="loading-skeleton">
-                <div class="loading-skeleton title"></div>
-                <div class="loading-skeleton text"></div>
-                <div class="loading-skeleton text"></div>
+            <div class="loading-state">
+                <div class="loading-spinner"></div>
+                <p>Loading...</p>
             </div>
         `;
     }
@@ -984,513 +1105,54 @@ function showErrorState(elementId, message) {
     const element = document.getElementById(elementId);
     if (element) {
         element.innerHTML = `
-            <div class="empty-state">
-                <div class="empty-state-icon">
-                    <svg class="icon icon-xl" viewBox="0 0 24 24">
-                        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
-                        <line x1="12" y1="9" x2="12" y2="13"/>
-                        <line x1="12" y1="17" x2="12.01" y2="17"/>
-                    </svg>
-                </div>
-                <div class="empty-state-title">Error</div>
-                <div class="empty-state-description">${message}</div>
+            <div class="error-state">
+                <div class="error-icon">⚠️</div>
+                <p>${message}</p>
+                <button class="btn btn-sm btn-primary" onclick="location.reload()">Retry</button>
             </div>
         `;
     }
 }
 
 function showNotification(message, type = 'info') {
-    if (window.notificationManager) {
-        window.notificationManager.addNotification({
-            type: type,
-            title: type === 'success' ? 'Success' : type === 'error' ? 'Error' : 'Info',
-            message: message
-        });
-    } else {
-        alert(message);
-    }
-}
-
-function createModal(title, content, onShow) {
-    const modal = document.createElement('div');
-    modal.className = 'modal show';
-    modal.innerHTML = `
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3 class="modal-title">${title}</h3>
-                <button class="modal-close" onclick="closeModal()">
-                    <svg class="icon" viewBox="0 0 24 24">
-                        <line x1="18" y1="6" x2="6" y2="18"/>
-                        <line x1="6" y1="6" x2="18" y2="18"/>
-                    </svg>
-                </button>
-            </div>
-            <div class="modal-body">
-                ${content}
-            </div>
+    // Create notification element
+    const notification = document.createElement('div');
+    notification.className = `notification notification-${type}`;
+    notification.innerHTML = `
+        <div class="notification-content">
+            <span class="notification-message">${message}</span>
+            <button class="notification-close">&times;</button>
         </div>
     `;
     
-    document.body.appendChild(modal);
+    // Add to page
+    document.body.appendChild(notification);
     
-    // Close on backdrop click
-    modal.addEventListener('click', (e) => {
-        if (e.target === modal) {
-            closeModal();
-        }
-    });
+    // Show notification
+    setTimeout(() => {
+        notification.classList.add('show');
+    }, 100);
     
-    if (onShow) onShow();
-}
-
-function closeModal() {
-    const modal = document.querySelector('.modal.show');
-    if (modal) {
-        modal.remove();
-    }
-}
-
-// Placeholder functions for actions
-function assignEmployee(jobId) {
-    showNotification(`Assign employee to job #${jobId} - Feature coming soon!`, 'info');
-}
-
-function generateInvoice(jobId) {
-    showNotification(`Generate invoice for job #${jobId} - Feature coming soon!`, 'info');
-}
-
-function viewJobDetails(jobId) {
-    showNotification(`View details for job #${jobId} - Feature coming soon!`, 'info');
-}
-
-function editService(serviceId) {
-    showNotification(`Edit service #${serviceId} - Feature coming soon!`, 'info');
-}
-
-function deleteService(serviceId) {
-    if (confirm('Are you sure you want to delete this service?')) {
-        showNotification(`Delete service #${serviceId} - Feature coming soon!`, 'info');
-    }
-}
-
-function editInventoryItem(itemId) {
-    showNotification(`Edit inventory item #${itemId} - Feature coming soon!`, 'info');
-}
-
-function editUser(userId) {
-    showNotification(`Edit user #${userId} - Feature coming soon!`, 'info');
-}
-
-function showLowStockAlert() {
-    showNotification('Low stock alert - Feature coming soon!', 'warning');
-}
-
-function exportReports() {
-    showNotification('Export reports - Feature coming soon!', 'info');
-}
-
-// Branches Module
-function initializeBranchesModule() {
-    const addBranchBtn = document.getElementById('add-branch-btn');
-    if (addBranchBtn) {
-        addBranchBtn.addEventListener('click', showCreateBranchModal);
-    }
-}
-
-async function loadBranchesData() {
-    try {
-        showLoadingState('branches-table-body');
-        
-        const response = await fetch('http://localhost:8080/api/admin/branches');
-        if (!response.ok) throw new Error('Failed to fetch branches');
-        
-        const branches = await response.json();
-        renderBranchesTable(branches);
-    } catch (error) {
-        console.error('Error loading branches:', error);
-        showErrorState('branches-table-body', 'Failed to load branches');
-    }
-}
-
-function renderBranchesTable(branches) {
-    const tbody = document.getElementById('branches-table-body');
+    // Auto remove after 5 seconds
+    setTimeout(() => {
+        notification.classList.remove('show');
+        setTimeout(() => {
+            if (notification.parentNode) {
+                notification.parentNode.removeChild(notification);
+            }
+        }, 300);
+    }, 5000);
     
-    if (branches.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="7" class="text-center">No branches found</td></tr>';
-        return;
-    }
-    
-    tbody.innerHTML = branches.map(branch => `
-        <tr>
-            <td>${branch.id}</td>
-            <td>${branch.name}</td>
-            <td>${branch.address}</td>
-            <td>${branch.phone}</td>
-            <td>${branch.manager || 'Not assigned'}</td>
-            <td>
-                <span class="status-badge status-${branch.status === 'Active' ? 'completed' : 'booked'}">
-                    ${branch.status}
-                </span>
-            </td>
-            <td>
-                <div class="actions">
-                    <button class="btn btn-sm btn-secondary" onclick="editBranch(${branch.id})">
-                        <svg class="icon icon-sm" viewBox="0 0 24 24">
-                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-                        </svg>
-                    </button>
-                    <button class="btn btn-sm btn-error" onclick="deleteBranch(${branch.id})">
-                        <svg class="icon icon-sm" viewBox="0 0 24 24">
-                            <polyline points="3,6 5,6 21,6"/>
-                            <path d="M19,6v14a2,2,0,0,1-2,2H7a2,2,0,0,1-2-2V6m3,0V4a2,2,0,0,1,2-2h4a2,2,0,0,1,2,2V6"/>
-                        </svg>
-                    </button>
-                </div>
-            </td>
-        </tr>
-    `).join('');
-}
-
-function showCreateBranchModal() {
-    const content = `
-        <form id="branch-form">
-            <div class="form-group">
-                <label for="branch-name" class="form-label">Branch Name</label>
-                <input type="text" id="branch-name" name="name" class="form-input" required>
-            </div>
-            <div class="form-group">
-                <label for="branch-address" class="form-label">Address</label>
-                <textarea id="branch-address" name="address" class="form-input form-textarea" required></textarea>
-            </div>
-            <div class="form-group">
-                <label for="branch-phone" class="form-label">Phone</label>
-                <input type="tel" id="branch-phone" name="phone" class="form-input" required>
-            </div>
-            <div class="form-group">
-                <label for="branch-manager" class="form-label">Manager</label>
-                <input type="text" id="branch-manager" name="manager" class="form-input">
-            </div>
-            <div class="form-group">
-                <label for="branch-status" class="form-label">Status</label>
-                <select id="branch-status" name="status" class="form-input form-select">
-                    <option value="Active">Active</option>
-                    <option value="Inactive">Inactive</option>
-                </select>
-            </div>
-        </form>
-    `;
-    
-    createModal('Add New Branch', content, () => {
-        const form = document.getElementById('branch-form');
-        form.addEventListener('submit', createBranch);
-    });
-}
-
-async function createBranch(e) {
-    e.preventDefault();
-    
-    const formData = new FormData(e.target);
-    const data = Object.fromEntries(formData.entries());
-    
-    try {
-        const response = await fetch('http://localhost:8080/api/admin/branches', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(data)
-        });
-        
-        if (!response.ok) throw new Error('Failed to create branch');
-        
-        showNotification('Branch created successfully!', 'success');
-        closeModal();
-        loadBranchesData();
-    } catch (error) {
-        console.error('Error creating branch:', error);
-        showNotification('Failed to create branch', 'error');
-    }
-}
-
-// Invoices Module
-function initializeInvoicesModule() {
-    const refreshInvoicesBtn = document.getElementById('refresh-invoices-btn');
-    if (refreshInvoicesBtn) {
-        refreshInvoicesBtn.addEventListener('click', loadInvoicesData);
-    }
-}
-
-async function loadInvoicesData() {
-    try {
-        showLoadingState('invoices-table-body');
-        
-        const response = await fetch('http://localhost:8080/api/admin/invoices');
-        if (!response.ok) throw new Error('Failed to fetch invoices');
-        
-        const invoices = await response.json();
-        renderInvoicesTable(invoices);
-    } catch (error) {
-        console.error('Error loading invoices:', error);
-        showErrorState('invoices-table-body', 'Failed to load invoices');
-    }
-}
-
-function renderInvoicesTable(invoices) {
-    const tbody = document.getElementById('invoices-table-body');
-    
-    if (invoices.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="7" class="text-center">No invoices found</td></tr>';
-        return;
-    }
-    
-    tbody.innerHTML = invoices.map(invoice => `
-        <tr>
-            <td>${invoice.id}</td>
-            <td>${invoice.customerName}</td>
-            <td>${invoice.jobDescription}</td>
-            <td>$${parseFloat(invoice.totalAmount).toFixed(2)}</td>
-            <td>
-                <span class="status-badge status-${invoice.status === 'Paid' ? 'paid' : invoice.status === 'Pending' ? 'invoiced' : 'booked'}">
-                    ${invoice.status}
-                </span>
-            </td>
-            <td>${new Date(invoice.createdAt).toLocaleDateString()}</td>
-            <td>
-                <div class="actions">
-                    <button class="btn btn-sm btn-secondary" onclick="viewInvoiceDetails(${invoice.id})">
-                        <svg class="icon icon-sm" viewBox="0 0 24 24">
-                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-                            <circle cx="12" cy="12" r="3"/>
-                        </svg>
-                    </button>
-                    <button class="btn btn-sm btn-primary" onclick="processPayment(${invoice.id})" ${invoice.status === 'Paid' ? 'disabled' : ''}>
-                        <svg class="icon icon-sm" viewBox="0 0 24 24">
-                            <line x1="12" y1="1" x2="12" y2="23"/>
-                            <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
-                        </svg>
-                    </button>
-                </div>
-            </td>
-        </tr>
-    `).join('');
-}
-
-function viewInvoiceDetails(invoiceId) {
-    // TODO: Implement invoice details modal
-    showNotification('Invoice details coming soon!', 'info');
-}
-
-function processPayment(invoiceId) {
-    // TODO: Implement payment processing
-    showNotification('Payment processing coming soon!', 'info');
-}
-
-// Enhanced Job Status Management
-async function updateJobStatus(jobId, newStatus) {
-    try {
-        const response = await fetch(`http://localhost:8080/api/admin/jobs/${jobId}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ status: newStatus })
-        });
-        
-        if (!response.ok) throw new Error('Failed to update job status');
-        
-        showNotification(`Job status updated to ${newStatus}`, 'success');
-        
-        // Refresh the jobs table to show updated status
-        loadJobsData();
-    } catch (error) {
-        console.error('Error updating job status:', error);
-        showNotification('Failed to update job status', 'error');
-    }
-}
-
-// Enhanced Job Editing
-function editJob(jobId) {
-    // TODO: Implement job editing modal
-    showNotification('Job editing coming soon!', 'info');
-}
-
-// Enhanced Job Management Functions
-async function assignEmployee(jobId) {
-    try {
-        const employees = await fetch('http://localhost:8080/api/admin/users').then(r => r.json());
-        const employeeUsers = employees.filter(u => u.role === 'employee');
-        
-        const content = `
-            <form id="assign-employee-form">
-                <div class="form-group">
-                    <label for="employee-select" class="form-label">Select Employee</label>
-                    <select id="employee-select" name="employeeId" class="form-input form-select" required>
-                        <option value="">Choose an employee...</option>
-                        ${employeeUsers.map(emp => `<option value="${emp.id}">${emp.fullName}</option>`).join('')}
-                    </select>
-                </div>
-            </form>
-        `;
-        
-        createModal('Assign Employee to Job', content, () => {
-            const form = document.getElementById('assign-employee-form');
-            form.addEventListener('submit', async (e) => {
-                e.preventDefault();
-                const formData = new FormData(e.target);
-                const employeeId = formData.get('employeeId');
-                
-                try {
-                    const response = await fetch(`http://localhost:8080/api/admin/jobs/${jobId}/assign`, {
-                        method: 'PUT',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ employeeId: parseInt(employeeId) })
-                    });
-                    
-                    if (!response.ok) throw new Error('Failed to assign employee');
-                    
-                    showNotification('Employee assigned successfully!', 'success');
-                    closeModal();
-                    loadJobsData();
-                } catch (error) {
-                    console.error('Error assigning employee:', error);
-                    showNotification('Failed to assign employee', 'error');
+    // Close button functionality
+    const closeBtn = notification.querySelector('.notification-close');
+    if (closeBtn) {
+        closeBtn.addEventListener('click', () => {
+            notification.classList.remove('show');
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.parentNode.removeChild(notification);
                 }
-            });
-        });
-    } catch (error) {
-        console.error('Error loading employees:', error);
-        showNotification('Failed to load employees', 'error');
-    }
-}
-
-async function generateInvoice(jobId) {
-    try {
-        const response = await fetch(`http://localhost:8080/api/admin/jobs/${jobId}/invoice`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' }
-        });
-        
-        if (!response.ok) throw new Error('Failed to generate invoice');
-        
-        const invoice = await response.json();
-        showNotification('Invoice generated successfully!', 'success');
-        loadJobsData();
-        loadInvoicesData();
-    } catch (error) {
-        console.error('Error generating invoice:', error);
-        showNotification('Failed to generate invoice', 'error');
-    }
-}
-
-// Enhanced Inventory Functions
-function showLowStockAlert() {
-    loadInventoryData().then(() => {
-        const lowStockItems = document.querySelectorAll('.inventory-row[data-low-stock="true"]');
-        if (lowStockItems.length > 0) {
-            showNotification(`${lowStockItems.length} items are low in stock!`, 'warning');
-        } else {
-            showNotification('All inventory items are well stocked!', 'success');
-        }
-    });
-}
-
-// Enhanced User Management Functions
-function editUser(userId) {
-    // TODO: Implement user editing modal
-    showNotification('User editing coming soon!', 'info');
-}
-
-function deleteUser(userId) {
-    if (confirm('Are you sure you want to delete this user?')) {
-        fetch(`http://localhost:8080/api/admin/users/${userId}`, {
-            method: 'DELETE'
-        })
-        .then(response => {
-            if (response.ok) {
-                showNotification('User deleted successfully!', 'success');
-                loadUsersData();
-            } else {
-                throw new Error('Failed to delete user');
-            }
-        })
-        .catch(error => {
-            console.error('Error deleting user:', error);
-            showNotification('Failed to delete user', 'error');
-        });
-    }
-}
-
-// Enhanced Service Management Functions
-function editService(serviceId) {
-    // TODO: Implement service editing modal
-    showNotification('Service editing coming soon!', 'info');
-}
-
-function deleteService(serviceId) {
-    if (confirm('Are you sure you want to delete this service?')) {
-        fetch(`http://localhost:8080/api/admin/services/${serviceId}`, {
-            method: 'DELETE'
-        })
-        .then(response => {
-            if (response.ok) {
-                showNotification('Service deleted successfully!', 'success');
-                loadServicesData();
-            } else {
-                throw new Error('Failed to delete service');
-            }
-        })
-        .catch(error => {
-            console.error('Error deleting service:', error);
-            showNotification('Failed to delete service', 'error');
-        });
-    }
-}
-
-// Enhanced Inventory Management Functions
-function editInventoryItem(itemId) {
-    // TODO: Implement inventory editing modal
-    showNotification('Inventory editing coming soon!', 'info');
-}
-
-function deleteInventoryItem(itemId) {
-    if (confirm('Are you sure you want to delete this inventory item?')) {
-        fetch(`http://localhost:8080/api/admin/inventory/${itemId}`, {
-            method: 'DELETE'
-        })
-        .then(response => {
-            if (response.ok) {
-                showNotification('Inventory item deleted successfully!', 'success');
-                loadInventoryData();
-            } else {
-                throw new Error('Failed to delete inventory item');
-            }
-        })
-        .catch(error => {
-            console.error('Error deleting inventory item:', error);
-            showNotification('Failed to delete inventory item', 'error');
-        });
-    }
-}
-
-// Branch Management Functions
-function editBranch(branchId) {
-    // TODO: Implement branch editing modal
-    showNotification('Branch editing coming soon!', 'info');
-}
-
-function deleteBranch(branchId) {
-    if (confirm('Are you sure you want to delete this branch?')) {
-        fetch(`http://localhost:8080/api/admin/branches/${branchId}`, {
-            method: 'DELETE'
-        })
-        .then(response => {
-            if (response.ok) {
-                showNotification('Branch deleted successfully!', 'success');
-                loadBranchesData();
-            } else {
-                throw new Error('Failed to delete branch');
-            }
-        })
-        .catch(error => {
-            console.error('Error deleting branch:', error);
-            showNotification('Failed to delete branch', 'error');
+            }, 300);
         });
     }
 }

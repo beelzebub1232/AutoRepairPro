@@ -117,7 +117,7 @@ public class SimpleHttpServer {
                 statusCode = responseJson.contains("error") ? 401 : 200;
             } else if (path.startsWith("/api/admin/")) {
                 AdminHandler handler = new AdminHandler();
-                responseJson = handler.handle(method, path, body);
+                responseJson = handler.handleRequest(path, method, body);
                 statusCode = responseJson.contains("error") ? 500 : 200;
             } else if (path.startsWith("/api/employee/")) {
                 EmployeeHandler handler = new EmployeeHandler();
@@ -125,7 +125,7 @@ public class SimpleHttpServer {
                 statusCode = responseJson.contains("error") ? 500 : 200;
             } else if (path.startsWith("/api/customer/")) {
                 CustomerHandler handler = new CustomerHandler();
-                responseJson = handler.handle(method, path, body);
+                responseJson = handler.handleRequest(path, method, body);
                 statusCode = responseJson.contains("error") ? 500 : 200;
             }
 
