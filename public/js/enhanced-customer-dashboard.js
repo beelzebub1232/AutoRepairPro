@@ -314,13 +314,17 @@ function createMapInterface() {
                     </svg>
                     Select a Branch Location
                 </h3>
-                <button id="detect-location" class="btn btn-sm btn-primary">
-                    <svg class="icon icon-sm" viewBox="0 0 24 24">
-                        <polygon points="3,11 22,2 13,21 11,13 3,11"/>
-                    </svg>
-                    Use My Location
-                </button>
+                <div class="map-header-actions">
+                    <button id="detect-location" class="btn btn-sm btn-primary">
+                        <svg class="icon icon-sm" viewBox="0 0 24 24">
+                            <polygon points="3,11 22,2 13,21 11,13 3,11"/>
+                        </svg>
+                        Use My Location
+                    </button>
+                </div>
             </div>
+            <div id="leaflet-map" style="height: 400px; width: 100%; margin-top: 20px; border-radius: 12px; overflow: hidden;"></div>
+            <div class="section-divider"></div>
             <div class="map-view">
                 <div class="branches-list">
                     ${branches.map(branch => `
@@ -386,7 +390,6 @@ function createMapInterface() {
                     </div>
                 </div>
             </div>
-            <div id="leaflet-map" style="height: 400px; width: 100%; margin-top: 20px; border-radius: 12px; overflow: hidden;"></div>
         </div>
     `;
 }
@@ -735,8 +738,8 @@ function calculateDistance(lat1, lng1, lat2, lng2) {
 }
 
 function showQuickSelectNearest(nearestBranch) {
-    const mapHeader = document.querySelector('.map-header');
-    if (mapHeader && !document.getElementById('quick-select-nearest')) {
+    const mapHeaderActions = document.querySelector('.map-header-actions');
+    if (mapHeaderActions && !document.getElementById('quick-select-nearest')) {
         const quickSelectBtn = document.createElement('button');
         quickSelectBtn.id = 'quick-select-nearest';
         quickSelectBtn.className = 'btn btn-sm btn-success quick-select-btn';
@@ -751,7 +754,7 @@ function showQuickSelectNearest(nearestBranch) {
             selectBranch(nearestBranch.id);
             quickSelectBtn.remove();
         });
-        mapHeader.appendChild(quickSelectBtn);
+        mapHeaderActions.appendChild(quickSelectBtn);
     }
 }
 
