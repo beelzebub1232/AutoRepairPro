@@ -30,7 +30,9 @@ function initializeDashboard(userName) {
     initializeJobsModule();
     initializeServicesModule();
     initializeInventoryModule();
+    initializeBranchesModule();
     initializeUsersModule();
+    initializeInvoicesModule();
     initializeReportsModule();
     
     // Load initial data
@@ -77,8 +79,14 @@ function loadTabData(tab) {
         case 'inventory':
             loadInventoryData();
             break;
+        case 'branches':
+            loadBranchesData();
+            break;
         case 'users':
             loadUsersData();
+            break;
+        case 'invoices':
+            loadInvoicesData();
             break;
         case 'reports':
             loadReportsData();
@@ -595,37 +603,48 @@ function initializeReportsModule() {
 
 async function loadReportsData() {
     try {
-        const [jobsResponse, revenueResponse] = await Promise.all([
-            fetch('http://localhost:8080/api/admin/jobs'),
-            fetch('http://localhost:8080/api/admin/reports/revenue')
-        ]);
+        console.log('Loading reports data...');
         
-        if (!jobsResponse.ok || !revenueResponse.ok) {
-            throw new Error('Failed to fetch reports data');
-        }
-        
-        const jobs = await jobsResponse.json();
-        const revenue = await revenueResponse.json();
-        
-        // Generate revenue chart
-        const revenueChart = document.getElementById('revenue-chart');
-        if (revenueChart) {
-            revenueChart.innerHTML = createBarChart(revenue.map(r => ({
-                label: r.month,
-                value: parseFloat(r.totalRevenue || 0)
-            })), 'Revenue');
-        }
-        
-        // Generate parts usage chart
-        const partsChart = document.getElementById('parts-usage-chart');
-        if (partsChart) {
-            const partUsageResponse = await fetch('http://localhost:8080/api/admin/reports/part-usage');
-            if (partUsageResponse.ok) {
-                const partUsage = await partUsageResponse.json();
-                partsChart.innerHTML = createBarChart(partUsage.slice(0, 5).map(p => ({
-                    label: p.partName,
-                    value: p.totalUsed
-                })), 'Parts Usage');
+        // Initialize advanced reporting if available
+        if (window.advancedReporting) {
+            console.log('Using advanced reporting system');
+            await window.advancedReporting.initializeCharts();
+        } else {
+            console.warn('Advanced reporting not available, using fallback');
+            
+            // Fallback to simple charts
+            const [jobsResponse, revenueResponse] = await Promise.all([
+                fetch('http://localhost:8080/api/admin/jobs'),
+                fetch('http://localhost:8080/api/admin/reports/revenue')
+            ]);
+            
+            if (!jobsResponse.ok || !revenueResponse.ok) {
+                throw new Error('Failed to fetch reports data');
+            }
+            
+            const jobs = await jobsResponse.json();
+            const revenue = await revenueResponse.json();
+            
+            // Generate revenue chart
+            const revenueChart = document.getElementById('revenue-chart');
+            if (revenueChart) {
+                revenueChart.innerHTML = createBarChart(revenue.map(r => ({
+                    label: r.month,
+                    value: parseFloat(r.totalRevenue || 0)
+                })), 'Revenue');
+            }
+            
+            // Generate parts usage chart
+            const partsChart = document.getElementById('parts-usage-chart');
+            if (partsChart) {
+                const partUsageResponse = await fetch('http://localhost:8080/api/admin/reports/part-usage');
+                if (partUsageResponse.ok) {
+                    const partUsage = await partUsageResponse.json();
+                    partsChart.innerHTML = createBarChart(partUsage.slice(0, 5).map(p => ({
+                        label: p.partName,
+                        value: p.totalUsed
+                    })), 'Parts Usage');
+                }
             }
         }
         
@@ -1068,4 +1087,410 @@ function showLowStockAlert() {
 
 function exportReports() {
     showNotification('Export reports - Feature coming soon!', 'info');
+}
+
+// Branches Module
+function initializeBranchesModule() {
+    const addBranchBtn = document.getElementById('add-branch-btn');
+    if (addBranchBtn) {
+        addBranchBtn.addEventListener('click', showCreateBranchModal);
+    }
+}
+
+async function loadBranchesData() {
+    try {
+        showLoadingState('branches-table-body');
+        
+        const response = await fetch('http://localhost:8080/api/admin/branches');
+        if (!response.ok) throw new Error('Failed to fetch branches');
+        
+        const branches = await response.json();
+        renderBranchesTable(branches);
+    } catch (error) {
+        console.error('Error loading branches:', error);
+        showErrorState('branches-table-body', 'Failed to load branches');
+    }
+}
+
+function renderBranchesTable(branches) {
+    const tbody = document.getElementById('branches-table-body');
+    
+    if (branches.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" class="text-center">No branches found</td></tr>';
+        return;
+    }
+    
+    tbody.innerHTML = branches.map(branch => `
+        <tr>
+            <td>${branch.id}</td>
+            <td>${branch.name}</td>
+            <td>${branch.address}</td>
+            <td>${branch.phone}</td>
+            <td>${branch.manager || 'Not assigned'}</td>
+            <td>
+                <span class="status-badge status-${branch.status === 'Active' ? 'completed' : 'booked'}">
+                    ${branch.status}
+                </span>
+            </td>
+            <td>
+                <div class="actions">
+                    <button class="btn btn-sm btn-secondary" onclick="editBranch(${branch.id})">
+                        <svg class="icon icon-sm" viewBox="0 0 24 24">
+                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                        </svg>
+                    </button>
+                    <button class="btn btn-sm btn-error" onclick="deleteBranch(${branch.id})">
+                        <svg class="icon icon-sm" viewBox="0 0 24 24">
+                            <polyline points="3,6 5,6 21,6"/>
+                            <path d="M19,6v14a2,2,0,0,1-2,2H7a2,2,0,0,1-2-2V6m3,0V4a2,2,0,0,1,2-2h4a2,2,0,0,1,2,2V6"/>
+                        </svg>
+                    </button>
+                </div>
+            </td>
+        </tr>
+    `).join('');
+}
+
+function showCreateBranchModal() {
+    const content = `
+        <form id="branch-form">
+            <div class="form-group">
+                <label for="branch-name" class="form-label">Branch Name</label>
+                <input type="text" id="branch-name" name="name" class="form-input" required>
+            </div>
+            <div class="form-group">
+                <label for="branch-address" class="form-label">Address</label>
+                <textarea id="branch-address" name="address" class="form-input form-textarea" required></textarea>
+            </div>
+            <div class="form-group">
+                <label for="branch-phone" class="form-label">Phone</label>
+                <input type="tel" id="branch-phone" name="phone" class="form-input" required>
+            </div>
+            <div class="form-group">
+                <label for="branch-manager" class="form-label">Manager</label>
+                <input type="text" id="branch-manager" name="manager" class="form-input">
+            </div>
+            <div class="form-group">
+                <label for="branch-status" class="form-label">Status</label>
+                <select id="branch-status" name="status" class="form-input form-select">
+                    <option value="Active">Active</option>
+                    <option value="Inactive">Inactive</option>
+                </select>
+            </div>
+        </form>
+    `;
+    
+    createModal('Add New Branch', content, () => {
+        const form = document.getElementById('branch-form');
+        form.addEventListener('submit', createBranch);
+    });
+}
+
+async function createBranch(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(e.target);
+    const data = Object.fromEntries(formData.entries());
+    
+    try {
+        const response = await fetch('http://localhost:8080/api/admin/branches', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+        
+        if (!response.ok) throw new Error('Failed to create branch');
+        
+        showNotification('Branch created successfully!', 'success');
+        closeModal();
+        loadBranchesData();
+    } catch (error) {
+        console.error('Error creating branch:', error);
+        showNotification('Failed to create branch', 'error');
+    }
+}
+
+// Invoices Module
+function initializeInvoicesModule() {
+    const refreshInvoicesBtn = document.getElementById('refresh-invoices-btn');
+    if (refreshInvoicesBtn) {
+        refreshInvoicesBtn.addEventListener('click', loadInvoicesData);
+    }
+}
+
+async function loadInvoicesData() {
+    try {
+        showLoadingState('invoices-table-body');
+        
+        const response = await fetch('http://localhost:8080/api/admin/invoices');
+        if (!response.ok) throw new Error('Failed to fetch invoices');
+        
+        const invoices = await response.json();
+        renderInvoicesTable(invoices);
+    } catch (error) {
+        console.error('Error loading invoices:', error);
+        showErrorState('invoices-table-body', 'Failed to load invoices');
+    }
+}
+
+function renderInvoicesTable(invoices) {
+    const tbody = document.getElementById('invoices-table-body');
+    
+    if (invoices.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" class="text-center">No invoices found</td></tr>';
+        return;
+    }
+    
+    tbody.innerHTML = invoices.map(invoice => `
+        <tr>
+            <td>${invoice.id}</td>
+            <td>${invoice.customerName}</td>
+            <td>${invoice.jobDescription}</td>
+            <td>$${parseFloat(invoice.totalAmount).toFixed(2)}</td>
+            <td>
+                <span class="status-badge status-${invoice.status === 'Paid' ? 'paid' : invoice.status === 'Pending' ? 'invoiced' : 'booked'}">
+                    ${invoice.status}
+                </span>
+            </td>
+            <td>${new Date(invoice.createdAt).toLocaleDateString()}</td>
+            <td>
+                <div class="actions">
+                    <button class="btn btn-sm btn-secondary" onclick="viewInvoiceDetails(${invoice.id})">
+                        <svg class="icon icon-sm" viewBox="0 0 24 24">
+                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                            <circle cx="12" cy="12" r="3"/>
+                        </svg>
+                    </button>
+                    <button class="btn btn-sm btn-primary" onclick="processPayment(${invoice.id})" ${invoice.status === 'Paid' ? 'disabled' : ''}>
+                        <svg class="icon icon-sm" viewBox="0 0 24 24">
+                            <line x1="12" y1="1" x2="12" y2="23"/>
+                            <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+                        </svg>
+                    </button>
+                </div>
+            </td>
+        </tr>
+    `).join('');
+}
+
+function viewInvoiceDetails(invoiceId) {
+    // TODO: Implement invoice details modal
+    showNotification('Invoice details coming soon!', 'info');
+}
+
+function processPayment(invoiceId) {
+    // TODO: Implement payment processing
+    showNotification('Payment processing coming soon!', 'info');
+}
+
+// Enhanced Job Status Management
+async function updateJobStatus(jobId, newStatus) {
+    try {
+        const response = await fetch(`http://localhost:8080/api/admin/jobs/${jobId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: newStatus })
+        });
+        
+        if (!response.ok) throw new Error('Failed to update job status');
+        
+        showNotification(`Job status updated to ${newStatus}`, 'success');
+        
+        // Refresh the jobs table to show updated status
+        loadJobsData();
+    } catch (error) {
+        console.error('Error updating job status:', error);
+        showNotification('Failed to update job status', 'error');
+    }
+}
+
+// Enhanced Job Editing
+function editJob(jobId) {
+    // TODO: Implement job editing modal
+    showNotification('Job editing coming soon!', 'info');
+}
+
+// Enhanced Job Management Functions
+async function assignEmployee(jobId) {
+    try {
+        const employees = await fetch('http://localhost:8080/api/admin/users').then(r => r.json());
+        const employeeUsers = employees.filter(u => u.role === 'employee');
+        
+        const content = `
+            <form id="assign-employee-form">
+                <div class="form-group">
+                    <label for="employee-select" class="form-label">Select Employee</label>
+                    <select id="employee-select" name="employeeId" class="form-input form-select" required>
+                        <option value="">Choose an employee...</option>
+                        ${employeeUsers.map(emp => `<option value="${emp.id}">${emp.fullName}</option>`).join('')}
+                    </select>
+                </div>
+            </form>
+        `;
+        
+        createModal('Assign Employee to Job', content, () => {
+            const form = document.getElementById('assign-employee-form');
+            form.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const formData = new FormData(e.target);
+                const employeeId = formData.get('employeeId');
+                
+                try {
+                    const response = await fetch(`http://localhost:8080/api/admin/jobs/${jobId}/assign`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ employeeId: parseInt(employeeId) })
+                    });
+                    
+                    if (!response.ok) throw new Error('Failed to assign employee');
+                    
+                    showNotification('Employee assigned successfully!', 'success');
+                    closeModal();
+                    loadJobsData();
+                } catch (error) {
+                    console.error('Error assigning employee:', error);
+                    showNotification('Failed to assign employee', 'error');
+                }
+            });
+        });
+    } catch (error) {
+        console.error('Error loading employees:', error);
+        showNotification('Failed to load employees', 'error');
+    }
+}
+
+async function generateInvoice(jobId) {
+    try {
+        const response = await fetch(`http://localhost:8080/api/admin/jobs/${jobId}/invoice`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        });
+        
+        if (!response.ok) throw new Error('Failed to generate invoice');
+        
+        const invoice = await response.json();
+        showNotification('Invoice generated successfully!', 'success');
+        loadJobsData();
+        loadInvoicesData();
+    } catch (error) {
+        console.error('Error generating invoice:', error);
+        showNotification('Failed to generate invoice', 'error');
+    }
+}
+
+// Enhanced Inventory Functions
+function showLowStockAlert() {
+    loadInventoryData().then(() => {
+        const lowStockItems = document.querySelectorAll('.inventory-row[data-low-stock="true"]');
+        if (lowStockItems.length > 0) {
+            showNotification(`${lowStockItems.length} items are low in stock!`, 'warning');
+        } else {
+            showNotification('All inventory items are well stocked!', 'success');
+        }
+    });
+}
+
+// Enhanced User Management Functions
+function editUser(userId) {
+    // TODO: Implement user editing modal
+    showNotification('User editing coming soon!', 'info');
+}
+
+function deleteUser(userId) {
+    if (confirm('Are you sure you want to delete this user?')) {
+        fetch(`http://localhost:8080/api/admin/users/${userId}`, {
+            method: 'DELETE'
+        })
+        .then(response => {
+            if (response.ok) {
+                showNotification('User deleted successfully!', 'success');
+                loadUsersData();
+            } else {
+                throw new Error('Failed to delete user');
+            }
+        })
+        .catch(error => {
+            console.error('Error deleting user:', error);
+            showNotification('Failed to delete user', 'error');
+        });
+    }
+}
+
+// Enhanced Service Management Functions
+function editService(serviceId) {
+    // TODO: Implement service editing modal
+    showNotification('Service editing coming soon!', 'info');
+}
+
+function deleteService(serviceId) {
+    if (confirm('Are you sure you want to delete this service?')) {
+        fetch(`http://localhost:8080/api/admin/services/${serviceId}`, {
+            method: 'DELETE'
+        })
+        .then(response => {
+            if (response.ok) {
+                showNotification('Service deleted successfully!', 'success');
+                loadServicesData();
+            } else {
+                throw new Error('Failed to delete service');
+            }
+        })
+        .catch(error => {
+            console.error('Error deleting service:', error);
+            showNotification('Failed to delete service', 'error');
+        });
+    }
+}
+
+// Enhanced Inventory Management Functions
+function editInventoryItem(itemId) {
+    // TODO: Implement inventory editing modal
+    showNotification('Inventory editing coming soon!', 'info');
+}
+
+function deleteInventoryItem(itemId) {
+    if (confirm('Are you sure you want to delete this inventory item?')) {
+        fetch(`http://localhost:8080/api/admin/inventory/${itemId}`, {
+            method: 'DELETE'
+        })
+        .then(response => {
+            if (response.ok) {
+                showNotification('Inventory item deleted successfully!', 'success');
+                loadInventoryData();
+            } else {
+                throw new Error('Failed to delete inventory item');
+            }
+        })
+        .catch(error => {
+            console.error('Error deleting inventory item:', error);
+            showNotification('Failed to delete inventory item', 'error');
+        });
+    }
+}
+
+// Branch Management Functions
+function editBranch(branchId) {
+    // TODO: Implement branch editing modal
+    showNotification('Branch editing coming soon!', 'info');
+}
+
+function deleteBranch(branchId) {
+    if (confirm('Are you sure you want to delete this branch?')) {
+        fetch(`http://localhost:8080/api/admin/branches/${branchId}`, {
+            method: 'DELETE'
+        })
+        .then(response => {
+            if (response.ok) {
+                showNotification('Branch deleted successfully!', 'success');
+                loadBranchesData();
+            } else {
+                throw new Error('Failed to delete branch');
+            }
+        })
+        .catch(error => {
+            console.error('Error deleting branch:', error);
+            showNotification('Failed to delete branch', 'error');
+        });
+    }
 }

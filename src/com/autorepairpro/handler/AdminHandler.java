@@ -1580,12 +1580,12 @@ public class AdminHandler {
     // Reporting Methods
     private String getRevenueReport() {
         String sql = "SELECT " +
-                    "DATE_FORMAT(actual_completion_date, '%Y-%m') as month, " +
+                    "DATE_FORMAT(booking_date, '%Y-%m') as month, " +
                     "COUNT(*) as jobs_completed, " +
                     "SUM(total_cost) as total_revenue " +
                     "FROM jobs " +
-                    "WHERE status = 'Paid' AND actual_completion_date IS NOT NULL " +
-                    "GROUP BY DATE_FORMAT(actual_completion_date, '%Y-%m') " +
+                    "WHERE total_cost IS NOT NULL AND total_cost > 0 " +
+                    "GROUP BY DATE_FORMAT(booking_date, '%Y-%m') " +
                     "ORDER BY month DESC " +
                     "LIMIT 12";
         
@@ -1620,10 +1620,11 @@ public class AdminHandler {
     private String getPartUsageReport() {
         String sql = "SELECT " +
                     "i.part_name, " +
-                    "SUM(ji.quantity_used) as total_used, " +
-                    "COUNT(DISTINCT ji.job_id) as jobs_count " +
-                    "FROM job_inventory ji " +
-                    "JOIN inventory i ON ji.inventory_id = i.id " +
+                    "COALESCE(SUM(ji.quantity_used), 0) as total_used, " +
+                    "COALESCE(COUNT(DISTINCT ji.job_id), 0) as jobs_count " +
+                    "FROM inventory i " +
+                    "LEFT JOIN job_inventory ji ON i.id = ji.inventory_id " +
+                    "WHERE i.is_active = 1 " +
                     "GROUP BY i.id, i.part_name " +
                     "ORDER BY total_used DESC " +
                     "LIMIT 20";
