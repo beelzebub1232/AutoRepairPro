@@ -1,4 +1,4 @@
-// Enhanced Customer Dashboard - Complete Implementation with Database Integration
+// Enhanced Customer Dashboard - Complete Implementation with Fixed Map
 document.addEventListener('DOMContentLoaded', () => {
     const userRole = sessionStorage.getItem('userRole');
     const userName = sessionStorage.getItem('userName');
@@ -28,70 +28,64 @@ function initializeDashboard(userName, userId) {
     initializeVehicleModule();
     initializeJobsModule();
     initializePaymentModule();
-    initializeMapIntegration();
     
     // Load initial data
     loadCustomerData();
+    loadOverviewData();
 }
 
 // Navigation System
 function initializeNavigation() {
     const navLinks = document.querySelectorAll('.nav-link');
-    const navButtons = document.querySelectorAll('.nav-button');
     const tabContents = document.querySelectorAll('.tab-content');
+    const navButtons = document.querySelectorAll('.nav-button');
 
-    // Handle sidebar navigation
     navLinks.forEach(link => {
         link.addEventListener('click', (e) => {
             e.preventDefault();
             const targetTab = link.getAttribute('data-tab');
-            switchToTab(targetTab, navLinks, tabContents);
+            switchToTab(targetTab);
         });
     });
 
-    // Handle navigation buttons (View All, Manage, etc.)
     navButtons.forEach(button => {
         button.addEventListener('click', (e) => {
             e.preventDefault();
             const targetTab = button.getAttribute('data-tab');
-            switchToTab(targetTab, navLinks, tabContents);
+            if (targetTab) {
+                switchToTab(targetTab);
+            }
         });
     });
-
-    // Quick book button
-    const quickBookBtn = document.getElementById('quick-book-btn');
-    if (quickBookBtn) {
-        quickBookBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            switchToTab('book-appointment', navLinks, tabContents);
-        });
-    }
 }
 
-function switchToTab(targetTab, navLinks, tabContents) {
-    // Remove active class from all nav links and contents
+function switchToTab(targetTab) {
+    const navLinks = document.querySelectorAll('.nav-link');
+    const tabContents = document.querySelectorAll('.tab-content');
+    
+    // Remove active class from all nav links and tab contents
     navLinks.forEach(l => l.classList.remove('active'));
     tabContents.forEach(content => content.classList.remove('active'));
     
-    // Add active class to target nav link and content
+    // Add active class to target nav link and tab content
     const targetNavLink = document.querySelector(`[data-tab="${targetTab}"]`);
+    const targetTabContent = document.getElementById(`${targetTab}-tab`);
+    
     if (targetNavLink) {
         targetNavLink.classList.add('active');
     }
-    
-    const targetContent = document.getElementById(`${targetTab}-tab`);
-    if (targetContent) {
-        targetContent.classList.add('active');
+    if (targetTabContent) {
+        targetTabContent.classList.add('active');
     }
     
-    // Load data for the active tab
+    // Load tab data
     loadTabData(targetTab);
 }
 
 function loadTabData(tab) {
     switch(tab) {
         case 'overview':
-            loadCustomerData();
+            loadOverviewData();
             break;
         case 'book-appointment':
             loadBookingData();
@@ -119,16 +113,144 @@ function initializeLogout() {
     }
 }
 
-// Map Integration with Enhanced Location Detection
-function initializeMapIntegration() {
-    const mapContainer = document.getElementById('branch-map-container');
-    if (mapContainer) {
-        mapContainer.innerHTML = createMapInterface();
-        attachMapEventListeners();
-        initializeLeafletMap();
+// Overview Data Loading
+async function loadOverviewData() {
+    const userId = sessionStorage.getItem('userId');
+    
+    try {
+        const response = await fetch(`http://localhost:8080/api/customer/jobs/${userId}`);
+        if (!response.ok) throw new Error('Failed to fetch customer data');
+        
+        const jobs = await response.json();
+        updateCustomerMetrics(jobs);
+        updateRecentJobs(jobs);
+        
+        // Load vehicles for summary
+        const vehiclesResponse = await fetch(`http://localhost:8080/api/customer/vehicles/${userId}`);
+        if (vehiclesResponse.ok) {
+            const vehicles = await vehiclesResponse.json();
+            updateVehiclesSummary(vehicles);
+        }
+    } catch (error) {
+        console.error('Error loading overview data:', error);
+        showNotification('Failed to load dashboard data', 'error');
     }
 }
 
+function updateCustomerMetrics(jobs) {
+    const metricsGrid = document.getElementById('customer-metrics-grid');
+    if (!metricsGrid) return;
+    
+    const totalJobs = jobs.length;
+    const activeJobs = jobs.filter(job => ['Booked', 'In Progress'].includes(job.status)).length;
+    const completedJobs = jobs.filter(job => ['Completed', 'Invoiced', 'Paid'].includes(job.status)).length;
+    const totalSpent = jobs
+        .filter(job => job.totalCost && job.status === 'Paid')
+        .reduce((sum, job) => sum + parseFloat(job.totalCost), 0);
+
+    const metrics = [
+        {
+            title: 'Total Jobs',
+            value: totalJobs,
+            icon: `<svg class="icon" viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>`,
+            class: 'jobs'
+        },
+        {
+            title: 'Active Jobs',
+            value: activeJobs,
+            icon: `<svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12,6 12,12 16,14"/></svg>`,
+            class: 'active'
+        },
+        {
+            title: 'Completed Jobs',
+            value: completedJobs,
+            icon: `<svg class="icon" viewBox="0 0 24 24"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="9"/></svg>`,
+            class: 'completed'
+        },
+        {
+            title: 'Total Spent',
+            value: `$${totalSpent.toFixed(2)}`,
+            icon: `<svg class="icon" viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>`,
+            class: 'spent'
+        }
+    ];
+
+    metricsGrid.innerHTML = metrics.map((metric, index) => `
+        <div class="metric-card ${metric.class}" style="animation-delay: ${index * 0.1}s;">
+            <div class="metric-header">
+                <div class="metric-icon">${metric.icon}</div>
+            </div>
+            <div class="metric-value">${metric.value}</div>
+            <div class="metric-label">${metric.title}</div>
+        </div>
+    `).join('');
+}
+
+function updateRecentJobs(jobs) {
+    const recentJobsList = document.getElementById('recent-jobs-list');
+    if (!recentJobsList) return;
+    
+    const recentJobs = jobs.slice(0, 3);
+    
+    if (recentJobs.length === 0) {
+        recentJobsList.innerHTML = `
+            <div class="no-data">
+                <p>No recent jobs found</p>
+                <button class="btn btn-primary btn-sm nav-button" data-tab="book-appointment">Book Your First Service</button>
+            </div>
+        `;
+        return;
+    }
+
+    recentJobsList.innerHTML = recentJobs.map((job, index) => `
+        <div class="job-summary-item" style="animation-delay: ${index * 0.1}s;">
+            <div class="job-summary-header">
+                <span class="job-id">#${job.jobId}</span>
+                <span class="status-badge status-${job.status.toLowerCase().replace(' ', '-')}">${job.status}</span>
+            </div>
+            <div class="job-summary-details">
+                <div class="job-vehicle">${job.vehicle}</div>
+                <div class="job-service">${job.service}</div>
+                <div class="job-date">${new Date(job.bookingDate).toLocaleDateString()}</div>
+            </div>
+        </div>
+    `).join('');
+}
+
+function updateVehiclesSummary(vehicles) {
+    const vehiclesSummary = document.getElementById('vehicles-summary');
+    if (!vehiclesSummary) return;
+    
+    if (vehicles.length === 0) {
+        vehiclesSummary.innerHTML = `
+            <div class="no-data">
+                <p>No vehicles registered</p>
+                <button class="btn btn-primary btn-sm" onclick="showVehicleModal()">Add Your First Vehicle</button>
+            </div>
+        `;
+        return;
+    }
+
+    vehiclesSummary.innerHTML = vehicles.slice(0, 2).map((vehicle, index) => `
+        <div class="vehicle-summary-item" style="animation-delay: ${index * 0.1}s;">
+            <div class="vehicle-summary-icon">
+                <svg class="icon" viewBox="0 0 24 24">
+                    <path d="M7 17m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0"/>
+                    <path d="M17 17m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0"/>
+                    <path d="M5 17h-2v-6l2-5h9l4 5h1a2 2 0 0 1 2 2v4h-2"/>
+                    <path d="M9 17v-6h8"/>
+                    <path d="M2 6h15"/>
+                </svg>
+            </div>
+            <div class="vehicle-summary-details">
+                <div class="vehicle-name">${vehicle.make} ${vehicle.model}</div>
+                <div class="vehicle-year">${vehicle.year}</div>
+            </div>
+        </div>
+    `).join('');
+}
+
+// Map Integration with Proper Leaflet Implementation
 let map = null;
 let userLocation = null;
 let branchMarkers = [];
@@ -169,6 +291,18 @@ const branches = [
     }
 ];
 
+function initializeMapIntegration() {
+    const mapContainer = document.getElementById('branch-map-container');
+    if (mapContainer) {
+        mapContainer.innerHTML = createMapInterface();
+        // Initialize map after DOM is ready
+        setTimeout(() => {
+            initializeLeafletMap();
+            attachMapEventListeners();
+        }, 100);
+    }
+}
+
 function createMapInterface() {
     return `
         <div class="map-container">
@@ -189,7 +323,55 @@ function createMapInterface() {
             </div>
             <div class="map-view">
                 <div class="branches-list">
-                    ${renderBranchesList()}
+                    ${branches.map(branch => `
+                        <div class="branch-card" data-branch-id="${branch.id}">
+                            <div class="branch-header">
+                                <h4>${branch.name}</h4>
+                                <div class="branch-rating">
+                                    <svg class="icon icon-sm" viewBox="0 0 24 24">
+                                        <polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/>
+                                    </svg>
+                                    ${branch.rating}
+                                </div>
+                            </div>
+                            <div class="branch-details">
+                                <p class="branch-address">
+                                    <svg class="icon icon-sm" viewBox="0 0 24 24">
+                                        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+                                        <circle cx="12" cy="10" r="3"/>
+                                    </svg>
+                                    ${branch.address}
+                                </p>
+                                <p class="branch-phone">
+                                    <svg class="icon icon-sm" viewBox="0 0 24 24">
+                                        <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
+                                    </svg>
+                                    ${branch.phone}
+                                </p>
+                                <p class="branch-hours">
+                                    <svg class="icon icon-sm" viewBox="0 0 24 24">
+                                        <circle cx="12" cy="12" r="10"/>
+                                        <polyline points="12,6 12,12 16,14"/>
+                                    </svg>
+                                    ${branch.hours}
+                                </p>
+                                <div class="branch-services">
+                                    <strong>Services:</strong>
+                                    <div class="services-tags">
+                                        ${branch.services.map(service => `<span class="service-tag">${service}</span>`).join('')}
+                                    </div>
+                                </div>
+                                <div class="branch-distance" id="distance-${branch.id}" style="display: none;"></div>
+                            </div>
+                            <button class="btn btn-primary select-branch-btn" data-branch-id="${branch.id}">
+                                <svg class="icon icon-sm" viewBox="0 0 24 24">
+                                    <path d="M9 12l2 2 4-4"/>
+                                    <circle cx="12" cy="12" r="9"/>
+                                </svg>
+                                Select This Branch
+                            </button>
+                        </div>
+                    `).join('')}
                 </div>
                 <div class="selected-branch-info" id="selected-branch-info">
                     <div class="empty-state">
@@ -200,90 +382,119 @@ function createMapInterface() {
                             </svg>
                         </div>
                         <div class="empty-state-title">Select a branch</div>
-                        <div class="empty-state-description">Choose a location to see details</div>
+                        <div class="empty-state-description">Choose a location to see details and view on map</div>
                     </div>
                 </div>
             </div>
-            <div id="map" style="height: 400px; border-radius: var(--radius-xl); margin-top: var(--space-6);"></div>
+            <div id="leaflet-map" style="height: 400px; width: 100%; margin-top: 20px; border-radius: 12px; overflow: hidden;"></div>
         </div>
     `;
 }
 
-function renderBranchesList() {
-    return branches.map(branch => `
-        <div class="branch-card" data-branch-id="${branch.id}">
-            <div class="branch-header">
-                <h4>${branch.name}</h4>
-                <div class="branch-rating">
-                    <svg class="icon icon-sm" viewBox="0 0 24 24">
-                        <polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/>
-                    </svg>
-                    ${branch.rating}
-                </div>
-            </div>
-            <div class="branch-details">
-                <p class="branch-address">
-                    <svg class="icon icon-sm" viewBox="0 0 24 24">
-                        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
-                        <circle cx="12" cy="10" r="3"/>
-                    </svg>
-                    ${branch.address}
-                </p>
-                <p class="branch-phone">
-                    <svg class="icon icon-sm" viewBox="0 0 24 24">
-                        <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
-                    </svg>
-                    ${branch.phone}
-                </p>
-                <p class="branch-hours">
-                    <svg class="icon icon-sm" viewBox="0 0 24 24">
-                        <circle cx="12" cy="12" r="10"/>
-                        <polyline points="12,6 12,12 16,14"/>
-                    </svg>
-                    ${branch.hours}
-                </p>
-                <div class="branch-services">
-                    <strong>Services:</strong>
-                    <div class="services-tags">
-                        ${branch.services.map(service => `<span class="service-tag">${service}</span>`).join('')}
-                    </div>
-                </div>
-                <div class="branch-distance" id="distance-${branch.id}" style="display: none;"></div>
-            </div>
-            <button class="btn btn-primary select-branch-btn" data-branch-id="${branch.id}">
-                <svg class="icon icon-sm" viewBox="0 0 24 24">
-                    <path d="M9 12l2 2 4-4"/>
-                    <circle cx="12" cy="12" r="9"/>
-                </svg>
-                Select This Branch
-            </button>
-        </div>
-    `).join('');
+function initializeLeafletMap() {
+    const mapElement = document.getElementById('leaflet-map');
+    if (!mapElement) return;
+
+    try {
+        // Initialize map with proper options
+        map = L.map('leaflet-map', {
+            center: [40.7128, -74.0060], // Default to NYC
+            zoom: 12,
+            zoomControl: true,
+            attributionControl: false, // Remove attribution
+            scrollWheelZoom: true,
+            doubleClickZoom: true,
+            boxZoom: true,
+            keyboard: true,
+            dragging: true,
+            touchZoom: true
+        });
+
+        // Add tile layer with proper error handling
+        const tileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            minZoom: 3,
+            attribution: '', // Remove attribution
+            errorTileUrl: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==',
+            detectRetina: true,
+            updateWhenIdle: false,
+            keepBuffer: 2,
+            updateWhenZooming: false
+        });
+
+        tileLayer.addTo(map);
+
+        // Add branch markers
+        addBranchMarkers();
+
+        // Force map to resize properly
+        setTimeout(() => {
+            map.invalidateSize();
+        }, 100);
+
+        // Handle map events
+        map.on('load', () => {
+            console.log('Map loaded successfully');
+        });
+
+        map.on('error', (e) => {
+            console.error('Map error:', e);
+        });
+
+    } catch (error) {
+        console.error('Error initializing map:', error);
+        showNotification('Failed to load map', 'error');
+    }
 }
 
-function initializeLeafletMap() {
-    // Initialize map centered on NYC
-    map = L.map('map').setView([40.7128, -74.0060], 12);
+function addBranchMarkers() {
+    if (!map) return;
 
-    // Add tile layer without attribution
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '' // Remove attribution
-    }).addTo(map);
+    // Clear existing markers
+    branchMarkers.forEach(marker => map.removeLayer(marker));
+    branchMarkers = [];
 
-    // Add branch markers
     branches.forEach(branch => {
         const marker = L.marker([branch.lat, branch.lng])
-            .addTo(map)
             .bindPopup(`
-                <div style="text-align: center;">
-                    <h4 style="margin: 0 0 8px 0;">${branch.name}</h4>
-                    <p style="margin: 0 0 8px 0; font-size: 12px;">${branch.address}</p>
-                    <button onclick="selectBranchFromMap(${branch.id})" style="background: #2563eb; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer;">Select Branch</button>
+                <div style="min-width: 200px;">
+                    <h4 style="margin: 0 0 8px 0; color: #1f2937;">${branch.name}</h4>
+                    <p style="margin: 0 0 4px 0; font-size: 12px; color: #6b7280;">${branch.address}</p>
+                    <p style="margin: 0 0 8px 0; font-size: 12px; color: #6b7280;">${branch.phone}</p>
+                    <button onclick="selectBranchFromMap(${branch.id})" 
+                            style="background: #2563eb; color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 12px;">
+                        Select This Branch
+                    </button>
                 </div>
-            `);
-        
-        branchMarkers.push({ id: branch.id, marker });
+            `)
+            .addTo(map);
+
+        branchMarkers.push(marker);
+
+        // Add click event to marker
+        marker.on('click', () => {
+            highlightBranchCard(branch.id);
+        });
     });
+}
+
+function selectBranchFromMap(branchId) {
+    selectBranch(branchId);
+    map.closePopup();
+}
+
+function highlightBranchCard(branchId) {
+    // Remove highlight from all cards
+    document.querySelectorAll('.branch-card').forEach(card => {
+        card.classList.remove('highlighted');
+    });
+
+    // Highlight the selected card
+    const card = document.querySelector(`[data-branch-id="${branchId}"]`);
+    if (card) {
+        card.classList.add('highlighted');
+        card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
 }
 
 function attachMapEventListeners() {
@@ -302,6 +513,107 @@ function attachMapEventListeners() {
     }
 }
 
+function selectBranch(branchId) {
+    // Update UI to show selection
+    document.querySelectorAll('.branch-card').forEach(card => {
+        card.classList.remove('selected');
+    });
+    
+    const selectedCard = document.querySelector(`[data-branch-id="${branchId}"]`);
+    if (selectedCard) {
+        selectedCard.classList.add('selected');
+    }
+
+    // Update selected branch info
+    updateSelectedBranchInfo(branchId);
+    
+    // Update booking form
+    const branchNameElement = document.getElementById('selected-branch-name');
+    if (branchNameElement) {
+        const branch = branches.find(b => b.id === branchId);
+        if (branch) {
+            branchNameElement.textContent = branch.name;
+            branchNameElement.style.color = 'var(--success-600)';
+        }
+    }
+
+    // Center map on selected branch
+    if (map) {
+        const branch = branches.find(b => b.id === branchId);
+        if (branch) {
+            map.setView([branch.lat, branch.lng], 15);
+            
+            // Open popup for selected branch
+            const marker = branchMarkers.find(m => 
+                m.getLatLng().lat === branch.lat && m.getLatLng().lng === branch.lng
+            );
+            if (marker) {
+                marker.openPopup();
+            }
+        }
+    }
+
+    showNotification(`Selected ${branches.find(b => b.id === branchId)?.name}`, 'success');
+}
+
+function updateSelectedBranchInfo(branchId) {
+    const branch = branches.find(b => b.id === branchId);
+    const infoContainer = document.getElementById('selected-branch-info');
+    
+    if (infoContainer && branch) {
+        infoContainer.innerHTML = `
+            <div class="selected-branch-details">
+                <h4>
+                    <svg class="icon" viewBox="0 0 24 24">
+                        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+                        <circle cx="12" cy="10" r="3"/>
+                    </svg>
+                    ${branch.name}
+                </h4>
+                <div class="branch-info-grid">
+                    <div class="info-item">
+                        <strong>Address:</strong>
+                        <span>${branch.address}</span>
+                    </div>
+                    <div class="info-item">
+                        <strong>Phone:</strong>
+                        <span>${branch.phone}</span>
+                    </div>
+                    <div class="info-item">
+                        <strong>Hours:</strong>
+                        <span>${branch.hours}</span>
+                    </div>
+                    <div class="info-item">
+                        <strong>Rating:</strong>
+                        <span class="status-success">${branch.rating} ⭐</span>
+                    </div>
+                </div>
+                <div class="available-services">
+                    <strong>Available Services:</strong>
+                    <div class="services-list">
+                        ${branch.services.map(service => `<span class="service-badge">${service}</span>`).join('')}
+                    </div>
+                </div>
+                <div class="branch-actions">
+                    <button class="btn btn-primary" onclick="selectBranch(${branch.id})">
+                        <svg class="icon icon-sm" viewBox="0 0 24 24">
+                            <path d="M9 12l2 2 4-4"/>
+                            <circle cx="12" cy="12" r="9"/>
+                        </svg>
+                        Confirm Selection
+                    </button>
+                    <button class="btn btn-secondary" onclick="getDirections(${branch.lat}, ${branch.lng})">
+                        <svg class="icon icon-sm" viewBox="0 0 24 24">
+                            <polygon points="3,11 22,2 13,21 11,13 3,11"/>
+                        </svg>
+                        Get Directions
+                    </button>
+                </div>
+            </div>
+        `;
+    }
+}
+
 function detectUserLocation() {
     const detectBtn = document.getElementById('detect-location');
     
@@ -310,7 +622,6 @@ function detectUserLocation() {
         return;
     }
 
-    // Update button to loading state
     detectBtn.innerHTML = `
         <svg class="icon icon-sm animate-spin" viewBox="0 0 24 24">
             <path d="M21 12a9 9 0 11-6.219-8.56"/>
@@ -325,8 +636,7 @@ function detectUserLocation() {
                 lat: position.coords.latitude,
                 lng: position.coords.longitude
             };
-            
-            // Update button to success state
+
             detectBtn.innerHTML = `
                 <svg class="icon icon-sm" viewBox="0 0 24 24">
                     <path d="M9 12l2 2 4-4"/>
@@ -336,30 +646,49 @@ function detectUserLocation() {
             `;
             detectBtn.classList.remove('btn-primary');
             detectBtn.classList.add('btn-success');
-            detectBtn.disabled = false;
-            
-            // Calculate distances and update UI
-            updateBranchDistances();
-            
+
+            // Calculate distances and sort branches
+            const branchesWithDistance = branches.map(branch => ({
+                ...branch,
+                distance: calculateDistance(userLocation.lat, userLocation.lng, branch.lat, branch.lng)
+            })).sort((a, b) => a.distance - b.distance);
+
+            // Update distance displays
+            branchesWithDistance.forEach(branch => {
+                const distanceElement = document.getElementById(`distance-${branch.id}`);
+                if (distanceElement) {
+                    distanceElement.innerHTML = `
+                        <svg class="icon icon-sm" viewBox="0 0 24 24">
+                            <polygon points="3,11 22,2 13,21 11,13 3,11"/>
+                        </svg>
+                        ${branch.distance.toFixed(1)} km away
+                    `;
+                    distanceElement.style.display = 'flex';
+                }
+            });
+
             // Add user location marker to map
             if (map) {
-                L.marker([userLocation.lat, userLocation.lng])
-                    .addTo(map)
-                    .bindPopup('Your Location')
-                    .openPopup();
-                
-                // Fit map to show user location and all branches
-                const allPoints = [
-                    [userLocation.lat, userLocation.lng],
-                    ...branches.map(b => [b.lat, b.lng])
-                ];
-                map.fitBounds(allPoints, { padding: [20, 20] });
+                const userMarker = L.marker([userLocation.lat, userLocation.lng], {
+                    icon: L.divIcon({
+                        className: 'user-location-marker',
+                        html: '<div style="background: #ef4444; width: 12px; height: 12px; border-radius: 50%; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3);"></div>',
+                        iconSize: [16, 16],
+                        iconAnchor: [8, 8]
+                    })
+                }).addTo(map);
+
+                userMarker.bindPopup('Your Location').openPopup();
+                map.setView([userLocation.lat, userLocation.lng], 13);
             }
-            
-            showNotification('Location detected successfully! Branches sorted by distance.', 'success');
+
+            // Show quick select for nearest branch
+            const nearestBranch = branchesWithDistance[0];
+            showQuickSelectNearest(nearestBranch);
+
+            showNotification('Location detected successfully', 'success');
         },
         (error) => {
-            // Update button to error state
             detectBtn.innerHTML = `
                 <svg class="icon icon-sm" viewBox="0 0 24 24">
                     <line x1="18" y1="6" x2="6" y2="18"/>
@@ -389,7 +718,7 @@ function detectUserLocation() {
         {
             enableHighAccuracy: true,
             timeout: 10000,
-            maximumAge: 300000 // 5 minutes
+            maximumAge: 300000
         }
     );
 }
@@ -402,213 +731,27 @@ function calculateDistance(lat1, lng1, lat2, lng2) {
               Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
               Math.sin(dLng/2) * Math.sin(dLng/2);
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-    return R * c; // Distance in kilometers
+    return R * c;
 }
 
-function updateBranchDistances() {
-    if (!userLocation) return;
-    
-    // Calculate distances for all branches
-    const branchesWithDistance = branches.map(branch => ({
-        ...branch,
-        distance: calculateDistance(userLocation.lat, userLocation.lng, branch.lat, branch.lng)
-    }));
-    
-    // Sort by distance
-    branchesWithDistance.sort((a, b) => a.distance - b.distance);
-    
-    // Update distance display
-    branchesWithDistance.forEach(branch => {
-        const distanceElement = document.getElementById(`distance-${branch.id}`);
-        if (distanceElement) {
-            distanceElement.innerHTML = `
-                <svg class="icon icon-sm" viewBox="0 0 24 24">
-                    <path d="M9 11H1l6-6v4.5c11 0 20 7.5 20 15-.9-6.5-8-10.5-18-13.5z"/>
-                </svg>
-                ${branch.distance.toFixed(1)}km away
-            `;
-            distanceElement.style.display = 'block';
-        }
-    });
-    
-    // Re-render branches list in sorted order
-    const branchesList = document.querySelector('.branches-list');
-    if (branchesList) {
-        branchesList.innerHTML = branchesWithDistance.map(branch => `
-            <div class="branch-card ${branch.distance <= branchesWithDistance[0].distance + 0.1 ? 'nearest-branch' : ''}" data-branch-id="${branch.id}">
-                <div class="branch-header">
-                    <h4>${branch.name}</h4>
-                    <div class="branch-rating">
-                        <svg class="icon icon-sm" viewBox="0 0 24 24">
-                            <polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/>
-                        </svg>
-                        ${branch.rating}
-                    </div>
-                </div>
-                <div class="branch-details">
-                    <p class="branch-address">
-                        <svg class="icon icon-sm" viewBox="0 0 24 24">
-                            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
-                            <circle cx="12" cy="10" r="3"/>
-                        </svg>
-                        ${branch.address}
-                    </p>
-                    <p class="branch-phone">
-                        <svg class="icon icon-sm" viewBox="0 0 24 24">
-                            <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
-                        </svg>
-                        ${branch.phone}
-                    </p>
-                    <p class="branch-hours">
-                        <svg class="icon icon-sm" viewBox="0 0 24 24">
-                            <circle cx="12" cy="12" r="10"/>
-                            <polyline points="12,6 12,12 16,14"/>
-                        </svg>
-                        ${branch.hours}
-                    </p>
-                    <div class="branch-services">
-                        <strong>Services:</strong>
-                        <div class="services-tags">
-                            ${branch.services.map(service => `<span class="service-tag">${service}</span>`).join('')}
-                        </div>
-                    </div>
-                    <div class="branch-distance" style="color: var(--success-600); font-weight: 600;">
-                        <svg class="icon icon-sm" viewBox="0 0 24 24">
-                            <path d="M9 11H1l6-6v4.5c11 0 20 7.5 20 15-.9-6.5-8-10.5-18-13.5z"/>
-                        </svg>
-                        ${branch.distance.toFixed(1)}km away
-                    </div>
-                </div>
-                <button class="btn btn-primary select-branch-btn" data-branch-id="${branch.id}">
-                    <svg class="icon icon-sm" viewBox="0 0 24 24">
-                        <path d="M9 12l2 2 4-4"/>
-                        <circle cx="12" cy="12" r="9"/>
-                    </svg>
-                    Select This Branch
-                </button>
-                ${branch.distance <= branchesWithDistance[0].distance + 0.1 ? `
-                    <button class="btn btn-success btn-sm quick-select-btn" data-branch-id="${branch.id}" style="margin-top: var(--space-2);">
-                        <svg class="icon icon-sm" viewBox="0 0 24 24">
-                            <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
-                        </svg>
-                        Quick Select Nearest
-                    </button>
-                ` : ''}
-            </div>
-        `).join('');
-        
-        // Re-attach event listeners
-        attachMapEventListeners();
-        
-        // Add quick select functionality
-        document.querySelectorAll('.quick-select-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const branchId = parseInt(e.target.getAttribute('data-branch-id'));
-                selectBranch(branchId);
-                showNotification('Nearest branch selected automatically!', 'success');
-            });
-        });
-    }
-    
-    // Auto-select nearest branch
-    if (branchesWithDistance.length > 0) {
-        selectBranch(branchesWithDistance[0].id);
-    }
-}
-
-function selectBranch(branchId) {
-    // Update UI to show selection
-    document.querySelectorAll('.branch-card').forEach(card => {
-        card.classList.remove('selected');
-    });
-    
-    const selectedCard = document.querySelector(`[data-branch-id="${branchId}"]`);
-    if (selectedCard) {
-        selectedCard.classList.add('selected');
-    }
-
-    // Update selected branch info
-    updateSelectedBranchInfo(branchId);
-    
-    // Update booking form
-    const branchNameElement = document.getElementById('selected-branch-name');
-    if (branchNameElement) {
-        const branch = branches.find(b => b.id === branchId);
-        if (branch) {
-            branchNameElement.textContent = branch.name;
-            branchNameElement.style.color = 'var(--success-600)';
-        }
-    }
-    
-    // Center map on selected branch
-    if (map) {
-        const branch = branches.find(b => b.id === branchId);
-        if (branch) {
-            map.setView([branch.lat, branch.lng], 15);
-        }
-    }
-}
-
-function selectBranchFromMap(branchId) {
-    selectBranch(branchId);
-    showNotification('Branch selected from map!', 'success');
-}
-
-function updateSelectedBranchInfo(branchId) {
-    const branch = branches.find(b => b.id === branchId);
-    const infoContainer = document.getElementById('selected-branch-info');
-    
-    if (infoContainer && branch) {
-        const distance = userLocation ? 
-            calculateDistance(userLocation.lat, userLocation.lng, branch.lat, branch.lng) : null;
-        
-        infoContainer.innerHTML = `
-            <div class="selected-branch-details">
-                <h4>
-                    <svg class="icon" viewBox="0 0 24 24">
-                        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
-                        <circle cx="12" cy="10" r="3"/>
-                    </svg>
-                    ${branch.name}
-                </h4>
-                <div class="branch-info-grid">
-                    <div class="info-item">
-                        <strong>Address:</strong>
-                        <span>${branch.address}</span>
-                    </div>
-                    <div class="info-item">
-                        <strong>Phone:</strong>
-                        <span>${branch.phone}</span>
-                    </div>
-                    <div class="info-item">
-                        <strong>Hours:</strong>
-                        <span>${branch.hours}</span>
-                    </div>
-                    <div class="info-item">
-                        <strong>Rating:</strong>
-                        <span>${branch.rating}/5.0 ⭐</span>
-                    </div>
-                    ${distance ? `
-                        <div class="info-item">
-                            <strong>Distance:</strong>
-                            <span class="status-success">${distance.toFixed(1)}km away</span>
-                        </div>
-                    ` : ''}
-                    <div class="info-item">
-                        <strong>Status:</strong>
-                        <span class="status-success">Selected ✓</span>
-                    </div>
-                </div>
-                <div class="branch-actions">
-                    <button class="btn btn-secondary btn-sm" onclick="getDirections(${branch.lat}, ${branch.lng})">
-                        <svg class="icon icon-sm" viewBox="0 0 24 24">
-                            <path d="M9 11H1l6-6v4.5c11 0 20 7.5 20 15-.9-6.5-8-10.5-18-13.5z"/>
-                        </svg>
-                        Get Directions
-                    </button>
-                </div>
-            </div>
+function showQuickSelectNearest(nearestBranch) {
+    const mapHeader = document.querySelector('.map-header');
+    if (mapHeader && !document.getElementById('quick-select-nearest')) {
+        const quickSelectBtn = document.createElement('button');
+        quickSelectBtn.id = 'quick-select-nearest';
+        quickSelectBtn.className = 'btn btn-sm btn-success quick-select-btn';
+        quickSelectBtn.innerHTML = `
+            <svg class="icon icon-sm" viewBox="0 0 24 24">
+                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+                <circle cx="12" cy="10" r="3"/>
+            </svg>
+            Select Nearest (${nearestBranch.distance.toFixed(1)}km)
         `;
+        quickSelectBtn.addEventListener('click', () => {
+            selectBranch(nearestBranch.id);
+            quickSelectBtn.remove();
+        });
+        mapHeader.appendChild(quickSelectBtn);
     }
 }
 
@@ -622,6 +765,7 @@ function initializeBookingModule() {
     const bookingForm = document.getElementById('booking-form');
     const serviceSelect = document.getElementById('booking-service');
     const addVehicleBtn = document.getElementById('add-vehicle-btn');
+    const quickBookBtn = document.getElementById('quick-book-btn');
 
     if (bookingForm) {
         bookingForm.addEventListener('submit', async (e) => {
@@ -636,6 +780,10 @@ function initializeBookingModule() {
 
     if (addVehicleBtn) {
         addVehicleBtn.addEventListener('click', () => showVehicleModal());
+    }
+
+    if (quickBookBtn) {
+        quickBookBtn.addEventListener('click', () => switchToTab('book-appointment'));
     }
 
     // Set minimum date to today
@@ -653,6 +801,11 @@ async function loadBookingData() {
         loadCustomerVehicles(),
         loadAvailableServices()
     ]);
+    
+    // Initialize map when booking tab is loaded
+    if (!map) {
+        initializeMapIntegration();
+    }
 }
 
 async function loadCustomerVehicles() {
@@ -758,13 +911,6 @@ async function bookAppointment() {
         
         if (response.ok) {
             showNotification('Appointment booked successfully!', 'success');
-            
-            // Notify chatbot about booking
-            if (window.enhancedChatbot) {
-                const serviceName = document.getElementById('booking-service').options[document.getElementById('booking-service').selectedIndex].textContent.split(' - $')[0];
-                window.enhancedChatbot.notifyBooking(serviceName);
-            }
-            
             document.getElementById('booking-form').reset();
             document.getElementById('service-details').style.display = 'none';
             document.getElementById('selected-branch-name').textContent = 'Please select a branch above';
@@ -774,7 +920,13 @@ async function bookAppointment() {
                 card.classList.remove('selected');
             });
             
-            loadCustomerData(); // Refresh stats
+            // Refresh overview data
+            loadOverviewData();
+            
+            // Notify chatbot
+            if (window.enhancedChatbot) {
+                window.enhancedChatbot.notifyBooking(document.getElementById('booking-service').options[document.getElementById('booking-service').selectedIndex].text);
+            }
         } else {
             showNotification(result.error || 'Failed to book appointment', 'error');
         }
@@ -844,7 +996,7 @@ async function addVehicle() {
             showNotification('Vehicle added successfully!', 'success');
             loadMyVehicles();
             loadCustomerVehicles(); // Refresh booking dropdown
-            loadCustomerData(); // Refresh overview stats
+            loadOverviewData(); // Refresh overview
         } else {
             showNotification(result.error || 'Failed to add vehicle', 'error');
         }
@@ -924,7 +1076,7 @@ function populateVehiclesGrid(vehicles) {
                 </div>
             </div>
             <div class="vehicle-actions">
-                <button class="btn btn-primary btn-sm" onclick="bookForVehicle(${vehicle.id})">
+                <button class="btn btn-sm btn-primary" onclick="bookForVehicle(${vehicle.id})">
                     <svg class="icon icon-sm" viewBox="0 0 24 24">
                         <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
                         <line x1="16" y1="2" x2="16" y2="6"/>
@@ -940,10 +1092,7 @@ function populateVehiclesGrid(vehicles) {
 
 function bookForVehicle(vehicleId) {
     // Switch to booking tab and pre-select vehicle
-    const navLinks = document.querySelectorAll('.nav-link');
-    const tabContents = document.querySelectorAll('.tab-content');
-    switchToTab('book-appointment', navLinks, tabContents);
-    
+    switchToTab('book-appointment');
     setTimeout(() => {
         const vehicleSelect = document.getElementById('booking-vehicle');
         if (vehicleSelect) {
@@ -1000,7 +1149,7 @@ function populateJobsTable(jobs) {
     }
 
     tableBody.innerHTML = jobs.map((job, index) => `
-        <tr class="job-row" data-status="${job.status.toLowerCase().replace(' ', '-')}" style="animation-delay: ${index * 0.1}s;">
+        <tr class="job-row" data-status="${job.status.toLowerCase().replace(' ', '-')}" style="animation-delay: ${index * 0.05}s;">
             <td><strong>#${job.jobId}</strong></td>
             <td>${job.vehicle}</td>
             <td>${job.service}</td>
@@ -1097,19 +1246,17 @@ function populateJobDetailsModal(job) {
     const paymentSection = document.getElementById('payment-section');
     if (job.status === 'Invoiced') {
         paymentSection.innerHTML = `
-            <div class="payment-info">
-                <div class="payment-amount-display">
-                    <span class="amount-label">Amount Due</span>
-                    <span class="amount-value">$${job.totalCost}</span>
-                </div>
-                <button class="btn btn-success" onclick="showPaymentModal(${job.jobId})">
-                    <svg class="icon icon-sm" viewBox="0 0 24 24">
-                        <rect x="1" y="4" width="22" height="16" rx="2" ry="2"/>
-                        <line x1="1" y1="10" x2="23" y2="10"/>
-                    </svg>
-                    Pay Now
-                </button>
+            <div class="payment-amount-display">
+                <span class="amount-label">Amount Due</span>
+                <span class="amount-value">$${job.totalCost}</span>
             </div>
+            <button class="btn btn-success btn-full" onclick="showPaymentModal(${job.jobId})">
+                <svg class="icon icon-sm" viewBox="0 0 24 24">
+                    <rect x="1" y="4" width="22" height="16" rx="2" ry="2"/>
+                    <line x1="1" y1="10" x2="23" y2="10"/>
+                </svg>
+                Pay Now
+            </button>
         `;
     } else if (job.status === 'Paid') {
         paymentSection.innerHTML = `
@@ -1121,8 +1268,8 @@ function populateJobDetailsModal(job) {
                 Payment Completed
             </div>
             <div class="payment-details">
-                <div>Amount Paid: $${job.totalCost}</div>
-                <div>Payment Date: ${job.completionDate ? new Date(job.completionDate).toLocaleDateString() : 'N/A'}</div>
+                <p>Amount Paid: <strong>$${job.totalCost}</strong></p>
+                <p>Payment Date: ${job.completionDate ? new Date(job.completionDate).toLocaleDateString() : 'N/A'}</p>
             </div>
         `;
     } else {
@@ -1190,16 +1337,15 @@ async function processPayment() {
         if (response.ok) {
             hideModal(document.getElementById('payment-modal'));
             showNotification('Payment processed successfully!', 'success');
+            loadMyJobs(); // Refresh jobs table
+            loadServiceHistory(); // Refresh history
+            loadOverviewData(); // Refresh overview
             
-            // Notify chatbot about payment
+            // Notify chatbot
             if (window.enhancedChatbot) {
                 const amount = document.getElementById('payment-amount').textContent;
                 window.enhancedChatbot.notifyPayment(amount);
             }
-            
-            loadMyJobs(); // Refresh jobs table
-            loadServiceHistory(); // Refresh history
-            loadCustomerData(); // Refresh stats
         } else {
             showNotification(result.error || 'Payment failed', 'error');
         }
@@ -1256,7 +1402,7 @@ function populateServiceHistoryTable(jobs) {
     }
 
     tableBody.innerHTML = jobs.map((job, index) => `
-        <tr class="history-row status-${job.status.toLowerCase().replace(' ', '-')}" style="animation-delay: ${index * 0.1}s;">
+        <tr class="history-row status-${job.status.toLowerCase().replace(' ', '-')}" style="animation-delay: ${index * 0.05}s;">
             <td>${new Date(job.bookingDate).toLocaleDateString()}</td>
             <td>${job.vehicle}</td>
             <td>${job.service}</td>
@@ -1286,148 +1432,25 @@ async function loadCustomerData() {
     const userId = sessionStorage.getItem('userId');
     
     try {
-        const [jobsResponse, vehiclesResponse] = await Promise.all([
-            fetch(`http://localhost:8080/api/customer/jobs/${userId}`),
-            fetch(`http://localhost:8080/api/customer/vehicles/${userId}`)
-        ]);
+        const response = await fetch(`http://localhost:8080/api/customer/jobs/${userId}`);
+        if (!response.ok) throw new Error('Failed to fetch customer data');
         
-        if (!jobsResponse.ok || !vehiclesResponse.ok) {
-            throw new Error('Failed to fetch customer data');
-        }
-        
-        const jobs = await jobsResponse.json();
-        const vehicles = await vehiclesResponse.json();
-        
-        updateCustomerStats(jobs, vehicles);
-        updateRecentJobsList(jobs);
-        updateVehiclesSummary(vehicles);
+        const jobs = await response.json();
+        updateCustomerStats(jobs);
     } catch (error) {
         console.error('Error loading customer data:', error);
     }
 }
 
-function updateCustomerStats(jobs, vehicles) {
-    const totalJobs = jobs.length;
-    const activeJobs = jobs.filter(job => ['Booked', 'In Progress'].includes(job.status)).length;
+function updateCustomerStats(jobs) {
+    const pendingJobs = jobs.filter(job => ['Booked', 'In Progress'].includes(job.status)).length;
     const completedJobs = jobs.filter(job => ['Completed', 'Invoiced', 'Paid'].includes(job.status)).length;
-    const totalSpent = jobs
-        .filter(job => job.totalCost && job.status === 'Paid')
-        .reduce((sum, job) => sum + parseFloat(job.totalCost), 0);
 
-    const metricsGrid = document.getElementById('customer-metrics-grid');
-    if (metricsGrid) {
-        metricsGrid.innerHTML = `
-            <div class="metric-card jobs">
-                <div class="metric-header">
-                    <div class="metric-icon">
-                        <svg class="icon" viewBox="0 0 24 24">
-                            <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
-                        </svg>
-                    </div>
-                </div>
-                <div class="metric-value">${totalJobs}</div>
-                <div class="metric-label">Total Jobs</div>
-            </div>
-            <div class="metric-card active">
-                <div class="metric-header">
-                    <div class="metric-icon">
-                        <svg class="icon" viewBox="0 0 24 24">
-                            <circle cx="12" cy="12" r="10"/>
-                            <path d="M12 6v6l4 2"/>
-                        </svg>
-                    </div>
-                </div>
-                <div class="metric-value">${activeJobs}</div>
-                <div class="metric-label">Active Jobs</div>
-            </div>
-            <div class="metric-card completed">
-                <div class="metric-header">
-                    <div class="metric-icon">
-                        <svg class="icon" viewBox="0 0 24 24">
-                            <path d="M9 12l2 2 4-4"/>
-                            <circle cx="12" cy="12" r="9"/>
-                        </svg>
-                    </div>
-                </div>
-                <div class="metric-value">${completedJobs}</div>
-                <div class="metric-label">Completed Jobs</div>
-            </div>
-            <div class="metric-card spent">
-                <div class="metric-header">
-                    <div class="metric-icon">
-                        <svg class="icon" viewBox="0 0 24 24">
-                            <line x1="12" y1="1" x2="12" y2="23"/>
-                            <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
-                        </svg>
-                    </div>
-                </div>
-                <div class="metric-value">$${totalSpent.toFixed(2)}</div>
-                <div class="metric-label">Total Spent</div>
-            </div>
-        `;
-    }
-}
-
-function updateRecentJobsList(jobs) {
-    const recentJobsList = document.getElementById('recent-jobs-list');
-    if (!recentJobsList) return;
+    const pendingElement = document.getElementById('pending-jobs');
+    const completedElement = document.getElementById('completed-jobs');
     
-    const recentJobs = jobs.slice(0, 3);
-    
-    if (recentJobs.length === 0) {
-        recentJobsList.innerHTML = `
-            <div class="empty-state">
-                <div class="empty-state-description">No recent jobs found</div>
-            </div>
-        `;
-        return;
-    }
-    
-    recentJobsList.innerHTML = recentJobs.map((job, index) => `
-        <div class="job-summary-item" style="animation-delay: ${index * 0.1}s;">
-            <div class="job-summary-header">
-                <span class="job-id">#${job.jobId}</span>
-                <span class="status-badge status-${job.status.toLowerCase().replace(' ', '-')}">${job.status}</span>
-            </div>
-            <div class="job-summary-details">
-                <div class="job-vehicle">${job.vehicle}</div>
-                <div class="job-service">${job.service}</div>
-                <div class="job-date">${new Date(job.bookingDate).toLocaleDateString()}</div>
-            </div>
-        </div>
-    `).join('');
-}
-
-function updateVehiclesSummary(vehicles) {
-    const vehiclesSummary = document.getElementById('vehicles-summary');
-    if (!vehiclesSummary) return;
-    
-    if (vehicles.length === 0) {
-        vehiclesSummary.innerHTML = `
-            <div class="empty-state">
-                <div class="empty-state-description">No vehicles registered</div>
-            </div>
-        `;
-        return;
-    }
-    
-    vehiclesSummary.innerHTML = vehicles.slice(0, 3).map((vehicle, index) => `
-        <div class="vehicle-summary-item" style="animation-delay: ${index * 0.1}s;">
-            <div class="vehicle-summary-icon">
-                <svg class="icon" viewBox="0 0 24 24">
-                    <path d="M7 17m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0"/>
-                    <path d="M17 17m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0"/>
-                    <path d="M5 17h-2v-6l2-5h9l4 5h1a2 2 0 0 1 2 2v4h-2"/>
-                    <path d="M9 17v-6h8"/>
-                    <path d="M2 6h15"/>
-                </svg>
-            </div>
-            <div class="vehicle-summary-details">
-                <div class="vehicle-name">${vehicle.make} ${vehicle.model}</div>
-                <div class="vehicle-year">${vehicle.year}</div>
-            </div>
-        </div>
-    `).join('');
+    if (pendingElement) pendingElement.textContent = pendingJobs;
+    if (completedElement) completedElement.textContent = completedJobs;
 }
 
 // Utility Functions
@@ -1437,7 +1460,7 @@ function showModal(modal) {
         modal.classList.add('show');
         document.body.style.overflow = 'hidden';
         
-        // Add animation class to modal content
+        // Add animation
         const modalContent = modal.querySelector('.modal-content');
         if (modalContent) {
             modalContent.classList.add('animate-slide-up');
@@ -1450,12 +1473,6 @@ function hideModal(modal) {
         modal.style.display = 'none';
         modal.classList.remove('show');
         document.body.style.overflow = 'auto';
-        
-        // Remove animation class
-        const modalContent = modal.querySelector('.modal-content');
-        if (modalContent) {
-            modalContent.classList.remove('animate-slide-up');
-        }
     }
 }
 
@@ -1467,26 +1484,8 @@ function showNotification(message, type = 'info') {
             message: message
         });
     } else {
-        // Fallback notification
-        const notification = document.createElement('div');
-        notification.className = `notification-toast ${type}`;
-        notification.style.cssText = `
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            background: white;
-            padding: 16px;
-            border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-            z-index: 10000;
-            max-width: 300px;
-        `;
-        notification.textContent = message;
-        document.body.appendChild(notification);
-        
-        setTimeout(() => {
-            notification.remove();
-        }, 3000);
+        // Fallback for when notification manager isn't available
+        console.log(`${type.toUpperCase()}: ${message}`);
     }
 }
 
@@ -1508,10 +1507,3 @@ function hideProcessingMessage(overlay) {
         overlay.parentNode.removeChild(overlay);
     }
 }
-
-// Make functions globally available
-window.selectBranchFromMap = selectBranchFromMap;
-window.getDirections = getDirections;
-window.bookForVehicle = bookForVehicle;
-window.showJobDetails = showJobDetails;
-window.showPaymentModal = showPaymentModal;
