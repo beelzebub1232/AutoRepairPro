@@ -1,8 +1,10 @@
 // Admin Dashboard - Complete Implementation
 document.addEventListener('DOMContentLoaded', () => {
-    const userRole = sessionStorage.getItem('userRole');
-    const userName = sessionStorage.getItem('userName');
-    const userId = sessionStorage.getItem('userId');
+    // Check if user is already logged in via URL parameters
+    const urlParams = new URLSearchParams(window.location.search);
+    const userRole = urlParams.get('role');
+    const userName = urlParams.get('name');
+    const userId = urlParams.get('id');
     
     // Auth check
     if (!userRole || userRole !== 'admin') {
@@ -86,7 +88,6 @@ function initializeLogout() {
     const logoutButton = document.getElementById('logout-button');
     if (logoutButton) {
         logoutButton.addEventListener('click', () => {
-            sessionStorage.clear();
             window.location.href = '/index.html';
         });
     }
