@@ -496,38 +496,42 @@ body {
     background: var(--primary-50);
 }
 
-/* Sidebar Navigation - Smooth focus states */
+/* FIXED: Sidebar Navigation - Remove focus outline */
 .nav-link {
     transition: all var(--transition-fast);
-    border: 2px solid transparent !important;
+    border: none !important;
+    outline: none !important;
 }
 
 .nav-link:focus {
     outline: none !important;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1) !important;
-    border: 2px solid var(--primary-300) !important;
+    box-shadow: none !important;
+    border: none !important;
 }
 
 .nav-link:active {
-    border: 2px solid transparent !important;
+    border: none !important;
     box-shadow: none !important;
+    outline: none !important;
 }
 
-/* Navigation buttons - smooth focus states */
+/* Navigation buttons - remove focus outline */
 .nav-button {
     transition: all var(--transition-fast);
-    border: 2px solid transparent !important;
+    border: none !important;
+    outline: none !important;
 }
 
 .nav-button:focus {
     outline: none !important;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1) !important;
-    border: 2px solid var(--primary-300) !important;
+    box-shadow: none !important;
+    border: none !important;
 }
 
 .nav-button:active {
-    border: 2px solid transparent !important;
+    border: none !important;
     box-shadow: none !important;
+    outline: none !important;
 }
 
 /* Animations */

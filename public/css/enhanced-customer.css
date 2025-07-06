@@ -250,6 +250,55 @@
     gap: var(--space-3);
 }
 
+/* IMPROVED: Location Detection Button - Better Positioning and Styling */
+#detect-location {
+    min-width: 140px;
+    max-width: 160px;
+    height: 36px;
+    padding: var(--space-2) var(--space-3);
+    font-size: var(--text-sm);
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2);
+    transition: all var(--transition-fast);
+    border-radius: var(--radius-lg);
+    position: relative;
+}
+
+#detect-location .icon {
+    flex-shrink: 0;
+    width: 14px;
+    height: 14px;
+}
+
+/* Different states for location button */
+#detect-location.btn-primary {
+    background: linear-gradient(135deg, var(--primary-600), var(--primary-700));
+    color: white;
+}
+
+#detect-location.btn-success {
+    background: linear-gradient(135deg, var(--success-600), var(--success-700));
+    color: white;
+    opacity: 0.9;
+}
+
+#detect-location.btn-danger {
+    background: linear-gradient(135deg, var(--error-600), var(--error-700));
+    color: white;
+    opacity: 0.9;
+}
+
+#detect-location:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-md);
+    opacity: 1;
+}
+
 /* Fixed Map View Layout */
 .map-view {
     display: grid;
@@ -425,10 +474,21 @@
     gap: var(--space-1);
 }
 
+/* IMPROVED: Select Branch Button - Better Sizing and Positioning */
 .select-branch-btn {
     width: 100%;
+    height: 36px;
     margin-top: var(--space-4);
+    padding: var(--space-2) var(--space-3);
+    font-size: var(--text-sm);
+    font-weight: 500;
     transition: all var(--transition-normal);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2);
+    white-space: nowrap;
+    border-radius: var(--radius-lg);
 }
 
 .select-branch-btn:hover {
@@ -436,9 +496,44 @@
     box-shadow: var(--shadow-lg);
 }
 
+.select-branch-btn .icon {
+    flex-shrink: 0;
+    width: 14px;
+    height: 14px;
+}
+
+/* IMPROVED: Quick Select Button for Nearest Branch - Better Styling */
 .quick-select-btn {
     width: 100%;
+    height: 36px;
+    padding: var(--space-2) var(--space-3);
+    font-size: var(--text-sm);
+    font-weight: 600;
     animation: bounceIn 0.6s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2);
+    white-space: nowrap;
+    transition: all var(--transition-normal);
+    border-radius: var(--radius-lg);
+    background: linear-gradient(135deg, var(--success-600), var(--success-700));
+    color: white;
+    border: none;
+    box-shadow: var(--shadow-md);
+    margin-top: var(--space-3);
+}
+
+.quick-select-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+    background: linear-gradient(135deg, var(--success-700), var(--success-800));
+}
+
+.quick-select-btn .icon {
+    flex-shrink: 0;
+    width: 14px;
+    height: 14px;
 }
 
 /* Enhanced Selected Branch Info - Fixed Layout */
@@ -511,6 +606,13 @@
 
 .branch-actions .btn {
     transition: all var(--transition-normal);
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2);
+    font-size: var(--text-sm);
+    font-weight: 500;
 }
 
 .branch-actions .btn:hover {
@@ -1164,6 +1266,38 @@
     
     .metric-card {
         animation-delay: 0s;
+    }
+    
+    /* Mobile button adjustments */
+    #detect-location {
+        min-width: 120px;
+        max-width: 140px;
+        height: 32px;
+        font-size: var(--text-xs);
+        padding: var(--space-1) var(--space-2);
+    }
+    
+    .select-branch-btn,
+    .quick-select-btn {
+        height: 32px;
+        font-size: var(--text-xs);
+        padding: var(--space-1) var(--space-2);
+    }
+    
+    .branch-actions .btn {
+        height: 32px;
+        font-size: var(--text-xs);
+    }
+    
+    .map-header {
+        flex-direction: column;
+        gap: var(--space-4);
+        align-items: stretch;
+    }
+    
+    #detect-location {
+        align-self: flex-end;
+        width: auto;
     }
 }
 
