@@ -76,6 +76,20 @@
     height: 300px !important;
 }
 
+.chart-placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: #6b7280;
+    font-style: italic;
+    background: #f9fafb;
+    border-radius: 8px;
+    border: 2px dashed #d1d5db;
+    padding: 2rem;
+    text-align: center;
+}
+
 /* Card Actions */
 .card-actions {
     display: flex;

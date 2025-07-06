@@ -426,17 +426,17 @@ function getIconSVG(iconName) {
 
 function generateSimpleCharts(jobs) {
     // Generate revenue chart
-    const revenueChart = document.getElementById('revenue-chart');
+    const revenueChart = document.getElementById('overview-revenue-chart');
     if (revenueChart) {
         const revenueData = calculateRevenueData(jobs);
-        revenueChart.innerHTML = createBarChart(revenueData, 'Revenue');
+        createRevenueChart(revenueChart, revenueData);
     }
 
-    // Generate job status chart
-    const statusChart = document.getElementById('status-chart');
-    if (statusChart) {
-        const statusData = calculateStatusData(jobs);
-        statusChart.innerHTML = createPieChart(statusData, 'Job Status');
+    // Generate service distribution chart
+    const serviceChart = document.getElementById('overview-service-chart');
+    if (serviceChart) {
+        const serviceData = calculateServiceData(jobs);
+        createServiceChart(serviceChart, serviceData);
     }
 }
 
@@ -466,6 +466,97 @@ function calculateStatusData(jobs) {
         label: status,
         value: count
     }));
+}
+
+function calculateServiceData(jobs) {
+    const serviceCount = {};
+    jobs.forEach(job => {
+        serviceCount[job.service] = (serviceCount[job.service] || 0) + 1;
+    });
+
+    return Object.entries(serviceCount).map(([service, count]) => ({
+        label: service,
+        value: count
+    }));
+}
+
+function createRevenueChart(container, data) {
+    // Clear container
+    container.innerHTML = '<canvas id="revenue-chart-canvas"></canvas>';
+    
+    const ctx = document.getElementById('revenue-chart-canvas');
+    if (!ctx) return;
+
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: data.map(d => d.label),
+            datasets: [{
+                label: 'Revenue',
+                data: data.map(d => d.value),
+                borderColor: '#3b82f6',
+                backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                tension: 0.4,
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                title: {
+                    display: true,
+                    text: 'Revenue Trend'
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function(value) {
+                            return '$' + value.toLocaleString();
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
+function createServiceChart(container, data) {
+    // Clear container
+    container.innerHTML = '<canvas id="service-chart-canvas"></canvas>';
+    
+    const ctx = document.getElementById('service-chart-canvas');
+    if (!ctx) return;
+
+    const colors = ['#3b82f6', '#ef4444', '#f59e0b', '#22c55e', '#8b5cf6', '#06b6d4', '#84cc16', '#f97316'];
+
+    new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: data.map(d => d.label),
+            datasets: [{
+                data: data.map(d => d.value),
+                backgroundColor: colors.slice(0, data.length),
+                borderWidth: 2,
+                borderColor: '#ffffff'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                title: {
+                    display: true,
+                    text: 'Service Distribution'
+                },
+                legend: {
+                    position: 'bottom'
+                }
+            }
+        }
+    });
 }
 
 function createBarChart(data, title) {
@@ -887,24 +978,87 @@ async function loadReportsData() {
             const revenue = await revenueResponse.json();
             
             // Generate revenue chart
-            const revenueChart = document.getElementById('revenue-chart');
+            const revenueChart = document.getElementById('revenue-chart-canvas');
             if (revenueChart) {
-                revenueChart.innerHTML = createBarChart(revenue.map(r => ({
-                    label: r.month,
-                    value: parseFloat(r.totalRevenue || 0)
-                })), 'Revenue');
+                if (revenue && revenue.length > 0) {
+                    new Chart(revenueChart, {
+                        type: 'line',
+                        data: {
+                            labels: revenue.map(r => r.month),
+                            datasets: [{
+                                label: 'Revenue',
+                                data: revenue.map(r => parseFloat(r.totalRevenue || 0)),
+                                borderColor: '#3b82f6',
+                                backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                                tension: 0.4,
+                                fill: true
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                title: {
+                                    display: true,
+                                    text: 'Revenue Trend'
+                                }
+                            },
+                            scales: {
+                                y: {
+                                    beginAtZero: true,
+                                    ticks: {
+                                        callback: function(value) {
+                                            return '$' + value.toLocaleString();
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    });
+                } else {
+                    revenueChart.innerHTML = '<div class="chart-placeholder">No revenue data available</div>';
+                }
             }
             
-            // Generate parts usage chart
-            const partsChart = document.getElementById('parts-usage-chart');
-            if (partsChart) {
+            // Generate service distribution chart
+            const serviceChart = document.getElementById('parts-usage-chart-canvas');
+            if (serviceChart) {
                 const partUsageResponse = await fetch('http://localhost:8080/api/admin/reports/part-usage');
                 if (partUsageResponse.ok) {
                     const partUsage = await partUsageResponse.json();
-                    partsChart.innerHTML = createBarChart(partUsage.slice(0, 5).map(p => ({
-                        label: p.partName,
-                        value: p.totalUsed
-                    })), 'Parts Usage');
+                    if (partUsage && partUsage.length > 0) {
+                        const colors = ['#3b82f6', '#ef4444', '#f59e0b', '#22c55e', '#8b5cf6', '#06b6d4', '#84cc16', '#f97316'];
+                        
+                        new Chart(serviceChart, {
+                            type: 'doughnut',
+                            data: {
+                                labels: partUsage.slice(0, 8).map(p => p.partName),
+                                datasets: [{
+                                    data: partUsage.slice(0, 8).map(p => p.totalUsed),
+                                    backgroundColor: colors.slice(0, Math.min(8, partUsage.length)),
+                                    borderWidth: 2,
+                                    borderColor: '#ffffff'
+                                }]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                plugins: {
+                                    title: {
+                                        display: true,
+                                        text: 'Service Distribution'
+                                    },
+                                    legend: {
+                                        position: 'bottom'
+                                    }
+                                }
+                            }
+                        });
+                    } else {
+                        serviceChart.innerHTML = '<div class="chart-placeholder">No service data available</div>';
+                    }
+                } else {
+                    serviceChart.innerHTML = '<div class="chart-placeholder">Failed to load service data</div>';
                 }
             }
         }
@@ -967,93 +1121,262 @@ function getInputType(settingType) {
 
 // Action Functions
 function viewJob(jobId) {
-    showNotification(`Viewing job #${jobId}`, 'info');
-    // Implementation for viewing job details
+    // Fetch job details and show modal
+    fetch(`http://localhost:8080/api/admin/jobs/${jobId}`)
+        .then(response => response.json())
+        .then(job => {
+            createJobDetailsModal(job);
+        })
+        .catch(error => {
+            console.error('Error fetching job details:', error);
+            showNotification('Failed to load job details', 'error');
+        });
 }
 
 function editJob(jobId) {
-    showNotification(`Editing job #${jobId}`, 'info');
-    // Implementation for editing job
+    // Fetch job details and show edit modal
+    fetch(`http://localhost:8080/api/admin/jobs/${jobId}`)
+        .then(response => response.json())
+        .then(job => {
+            createJobEditModal(job);
+        })
+        .catch(error => {
+            console.error('Error fetching job details:', error);
+            showNotification('Failed to load job details', 'error');
+        });
 }
 
 function assignEmployee(jobId) {
-    showNotification(`Assigning employee to job #${jobId}`, 'info');
-    // Implementation for assigning employee
+    // Fetch available employees and show assignment modal
+    fetch('http://localhost:8080/api/admin/users')
+        .then(response => response.json())
+        .then(users => {
+            const employees = users.filter(user => user.role === 'employee');
+            createEmployeeAssignmentModal(jobId, employees);
+        })
+        .catch(error => {
+            console.error('Error fetching employees:', error);
+            showNotification('Failed to load employees', 'error');
+        });
 }
 
 function viewUser(userId) {
-    showNotification(`Viewing user #${userId}`, 'info');
-    // Implementation for viewing user details
+    // Fetch user details and show modal
+    fetch(`http://localhost:8080/api/admin/users/${userId}`)
+        .then(response => response.json())
+        .then(user => {
+            createUserDetailsModal(user);
+        })
+        .catch(error => {
+            console.error('Error fetching user details:', error);
+            showNotification('Failed to load user details', 'error');
+        });
 }
 
 function editUser(userId) {
-    showNotification(`Editing user #${userId}`, 'info');
-    // Implementation for editing user
+    // Fetch user details and show edit modal
+    fetch(`http://localhost:8080/api/admin/users/${userId}`)
+        .then(response => response.json())
+        .then(user => {
+            createUserEditModal(user);
+        })
+        .catch(error => {
+            console.error('Error fetching user details:', error);
+            showNotification('Failed to load user details', 'error');
+        });
 }
 
 function toggleUserStatus(userId) {
-    showNotification(`Toggling user status #${userId}`, 'info');
-    // Implementation for toggling user status
+    if (confirm('Are you sure you want to toggle this user\'s status?')) {
+        fetch(`http://localhost:8080/api/admin/users/${userId}/toggle-status`, {
+            method: 'PUT'
+        })
+        .then(response => response.json())
+        .then(result => {
+            if (result.success) {
+                showNotification('User status updated successfully', 'success');
+                loadUsersData(); // Refresh the table
+            } else {
+                showNotification('Failed to update user status', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error updating user status:', error);
+            showNotification('Failed to update user status', 'error');
+        });
+    }
 }
 
 function viewService(serviceId) {
-    showNotification(`Viewing service #${serviceId}`, 'info');
-    // Implementation for viewing service details
+    // Fetch service details and show modal
+    fetch(`http://localhost:8080/api/admin/services/${serviceId}`)
+        .then(response => response.json())
+        .then(service => {
+            createServiceDetailsModal(service);
+        })
+        .catch(error => {
+            console.error('Error fetching service details:', error);
+            showNotification('Failed to load service details', 'error');
+        });
 }
 
 function editService(serviceId) {
-    showNotification(`Editing service #${serviceId}`, 'info');
-    // Implementation for editing service
+    // Fetch service details and show edit modal
+    fetch(`http://localhost:8080/api/admin/services/${serviceId}`)
+        .then(response => response.json())
+        .then(service => {
+            createServiceEditModal(service);
+        })
+        .catch(error => {
+            console.error('Error fetching service details:', error);
+            showNotification('Failed to load service details', 'error');
+        });
 }
 
 function toggleServiceStatus(serviceId) {
-    showNotification(`Toggling service status #${serviceId}`, 'info');
-    // Implementation for toggling service status
+    if (confirm('Are you sure you want to toggle this service\'s status?')) {
+        fetch(`http://localhost:8080/api/admin/services/${serviceId}/toggle-status`, {
+            method: 'PUT'
+        })
+        .then(response => response.json())
+        .then(result => {
+            if (result.success) {
+                showNotification('Service status updated successfully', 'success');
+                loadServicesData(); // Refresh the table
+            } else {
+                showNotification('Failed to update service status', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error updating service status:', error);
+            showNotification('Failed to update service status', 'error');
+        });
+    }
 }
 
 function viewInventory(itemId) {
-    showNotification(`Viewing inventory item #${itemId}`, 'info');
-    // Implementation for viewing inventory details
+    // Fetch inventory details and show modal
+    fetch(`http://localhost:8080/api/admin/inventory/${itemId}`)
+        .then(response => response.json())
+        .then(item => {
+            createInventoryDetailsModal(item);
+        })
+        .catch(error => {
+            console.error('Error fetching inventory details:', error);
+            showNotification('Failed to load inventory details', 'error');
+        });
 }
 
 function editInventory(itemId) {
-    showNotification(`Editing inventory item #${itemId}`, 'info');
-    // Implementation for editing inventory
+    // Fetch inventory details and show edit modal
+    fetch(`http://localhost:8080/api/admin/inventory/${itemId}`)
+        .then(response => response.json())
+        .then(item => {
+            createInventoryEditModal(item);
+        })
+        .catch(error => {
+            console.error('Error fetching inventory details:', error);
+            showNotification('Failed to load inventory details', 'error');
+        });
 }
 
 function reorderInventory(itemId) {
-    showNotification(`Reordering inventory item #${itemId}`, 'info');
-    // Implementation for reordering inventory
+    // Fetch inventory details and show reorder modal
+    fetch(`http://localhost:8080/api/admin/inventory/${itemId}`)
+        .then(response => response.json())
+        .then(item => {
+            createInventoryReorderModal(item);
+        })
+        .catch(error => {
+            console.error('Error fetching inventory details:', error);
+            showNotification('Failed to load inventory details', 'error');
+        });
 }
 
 function viewBranch(branchId) {
-    showNotification(`Viewing branch #${branchId}`, 'info');
-    // Implementation for viewing branch details
+    // Fetch branch details and show modal
+    fetch(`http://localhost:8080/api/admin/branches/${branchId}`)
+        .then(response => response.json())
+        .then(branch => {
+            createBranchDetailsModal(branch);
+        })
+        .catch(error => {
+            console.error('Error fetching branch details:', error);
+            showNotification('Failed to load branch details', 'error');
+        });
 }
 
 function editBranch(branchId) {
-    showNotification(`Editing branch #${branchId}`, 'info');
-    // Implementation for editing branch
+    // Fetch branch details and show edit modal
+    fetch(`http://localhost:8080/api/admin/branches/${branchId}`)
+        .then(response => response.json())
+        .then(branch => {
+            createBranchEditModal(branch);
+        })
+        .catch(error => {
+            console.error('Error fetching branch details:', error);
+            showNotification('Failed to load branch details', 'error');
+        });
 }
 
 function manageBranchHours(branchId) {
-    showNotification(`Managing hours for branch #${branchId}`, 'info');
-    // Implementation for managing branch hours
+    // Fetch branch details and show hours management modal
+    fetch(`http://localhost:8080/api/admin/branches/${branchId}`)
+        .then(response => response.json())
+        .then(branch => {
+            createBranchHoursModal(branch);
+        })
+        .catch(error => {
+            console.error('Error fetching branch details:', error);
+            showNotification('Failed to load branch details', 'error');
+        });
 }
 
 function viewInvoice(invoiceId) {
-    showNotification(`Viewing invoice #${invoiceId}`, 'info');
-    // Implementation for viewing invoice details
+    // Fetch invoice details and show modal
+    fetch(`http://localhost:8080/api/admin/invoices/${invoiceId}`)
+        .then(response => response.json())
+        .then(invoice => {
+            createInvoiceDetailsModal(invoice);
+        })
+        .catch(error => {
+            console.error('Error fetching invoice details:', error);
+            showNotification('Failed to load invoice details', 'error');
+        });
 }
 
 function editInvoice(invoiceId) {
-    showNotification(`Editing invoice #${invoiceId}`, 'info');
-    // Implementation for editing invoice
+    // Fetch invoice details and show edit modal
+    fetch(`http://localhost:8080/api/admin/invoices/${invoiceId}`)
+        .then(response => response.json())
+        .then(invoice => {
+            createInvoiceEditModal(invoice);
+        })
+        .catch(error => {
+            console.error('Error fetching invoice details:', error);
+            showNotification('Failed to load invoice details', 'error');
+        });
 }
 
 function sendInvoice(invoiceId) {
-    showNotification(`Sending invoice #${invoiceId}`, 'info');
-    // Implementation for sending invoice
+    if (confirm('Are you sure you want to send this invoice?')) {
+        fetch(`http://localhost:8080/api/admin/invoices/${invoiceId}/send`, {
+            method: 'POST'
+        })
+        .then(response => response.json())
+        .then(result => {
+            if (result.success) {
+                showNotification('Invoice sent successfully', 'success');
+                loadInvoicesData(); // Refresh the table
+            } else {
+                showNotification('Failed to send invoice', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error sending invoice:', error);
+            showNotification('Failed to send invoice', 'error');
+        });
+    }
 }
 
 // Modal Functions
@@ -1115,6 +1438,15 @@ function showErrorState(elementId, message) {
 }
 
 function showNotification(message, type = 'info') {
+    // Get or create notification container
+    let container = document.getElementById('notification-container');
+    if (!container) {
+        container = document.createElement('div');
+        container.className = 'notification-container';
+        container.id = 'notification-container';
+        document.body.appendChild(container);
+    }
+    
     // Create notification element
     const notification = document.createElement('div');
     notification.className = `notification notification-${type}`;
@@ -1125,8 +1457,8 @@ function showNotification(message, type = 'info') {
         </div>
     `;
     
-    // Add to page
-    document.body.appendChild(notification);
+    // Add to container
+    container.appendChild(notification);
     
     // Show notification
     setTimeout(() => {
@@ -1155,4 +1487,1294 @@ function showNotification(message, type = 'info') {
             }, 300);
         });
     }
+}
+
+// Modal Creation Functions
+function createJobDetailsModal(job) {
+    const modal = document.createElement('div');
+    modal.className = 'modal show';
+    modal.innerHTML = `
+        <div class="modal-content large-modal">
+            <div class="modal-header">
+                <h3 class="modal-title">Job Details - #${job.jobId}</h3>
+                <button class="modal-close" onclick="closeModal()">
+                    <svg class="icon" viewBox="0 0 24 24">
+                        <line x1="18" y1="6" x2="6" y2="18"/>
+                        <line x1="6" y1="6" x2="18" y2="18"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="job-details-grid">
+                    <div class="details-section">
+                        <h4>
+                            <svg class="icon" viewBox="0 0 24 24">
+                                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                                <circle cx="12" cy="7" r="4"/>
+                            </svg>
+                            Customer Information
+                        </h4>
+                        <div class="detail-item">
+                            <label>Customer Name:</label>
+                            <span>${job.customerName || 'N/A'}</span>
+                        </div>
+                        <div class="detail-item">
+                            <label>Contact:</label>
+                            <span>${job.customerPhone || 'N/A'}</span>
+                        </div>
+                        <div class="detail-item">
+                            <label>Email:</label>
+                            <span>${job.customerEmail || 'N/A'}</span>
+                        </div>
+                    </div>
+                    <div class="details-section">
+                        <h4>
+                            <svg class="icon" viewBox="0 0 24 24">
+                                <rect x="1" y="3" width="15" height="13"/>
+                                <polygon points="16,8 20,8 23,11 23,16 16,16"/>
+                                <circle cx="5.5" cy="18.5" r="2.5"/>
+                                <circle cx="18.5" cy="18.5" r="2.5"/>
+                            </svg>
+                            Vehicle Information
+                        </h4>
+                        <div class="detail-item">
+                            <label>Vehicle:</label>
+                            <span>${job.vehicle || 'N/A'}</span>
+                        </div>
+                        <div class="detail-item">
+                            <label>Year:</label>
+                            <span>${job.vehicleYear || 'N/A'}</span>
+                        </div>
+                        <div class="detail-item">
+                            <label>VIN:</label>
+                            <span>${job.vin || 'N/A'}</span>
+                        </div>
+                    </div>
+                    <div class="details-section">
+                        <h4>
+                            <svg class="icon" viewBox="0 0 24 24">
+                                <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
+                            </svg>
+                            Service Information
+                        </h4>
+                        <div class="detail-item">
+                            <label>Service:</label>
+                            <span>${job.service || 'N/A'}</span>
+                        </div>
+                        <div class="detail-item">
+                            <label>Status:</label>
+                            <span class="status-badge status-${job.status?.toLowerCase().replace(' ', '-')}">${job.status || 'N/A'}</span>
+                        </div>
+                        <div class="detail-item">
+                            <label>Assigned Employee:</label>
+                            <span>${job.assignedEmployee || 'Unassigned'}</span>
+                        </div>
+                    </div>
+                    <div class="details-section">
+                        <h4>
+                            <svg class="icon" viewBox="0 0 24 24">
+                                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                                <line x1="16" y1="2" x2="16" y2="6"/>
+                                <line x1="8" y1="2" x2="8" y2="6"/>
+                                <line x1="3" y1="10" x2="21" y2="10"/>
+                            </svg>
+                            Schedule & Cost
+                        </h4>
+                        <div class="detail-item">
+                            <label>Booking Date:</label>
+                            <span>${job.bookingDate ? new Date(job.bookingDate).toLocaleString() : 'N/A'}</span>
+                        </div>
+                        <div class="detail-item">
+                            <label>Completion Date:</label>
+                            <span>${job.completionDate ? new Date(job.completionDate).toLocaleString() : 'Not completed'}</span>
+                        </div>
+                        <div class="detail-item">
+                            <label>Total Cost:</label>
+                            <span>${job.totalCost ? '$' + job.totalCost : 'Not calculated'}</span>
+                        </div>
+                    </div>
+                </div>
+                ${job.notes ? `
+                    <div class="details-section">
+                        <h4>
+                            <svg class="icon" viewBox="0 0 24 24">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                                <polyline points="14,2 14,8 20,8"/>
+                                <line x1="16" y1="13" x2="8" y2="13"/>
+                                <line x1="16" y1="17" x2="8" y2="17"/>
+                            </svg>
+                            Notes
+                        </h4>
+                        <p>${job.notes}</p>
+                    </div>
+                ` : ''}
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal()">Close</button>
+                <button class="btn btn-primary" onclick="editJob(${job.jobId})">Edit Job</button>
+                ${!job.assignedEmployee ? `<button class="btn btn-success" onclick="assignEmployee(${job.jobId})">Assign Employee</button>` : ''}
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    // Close on backdrop click
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            closeModal();
+        }
+    });
+}
+
+function createJobEditModal(job) {
+    const modal = document.createElement('div');
+    modal.className = 'modal show';
+    modal.innerHTML = `
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">Edit Job - #${job.jobId}</h3>
+                <button class="modal-close" onclick="closeModal()">
+                    <svg class="icon" viewBox="0 0 24 24">
+                        <line x1="18" y1="6" x2="6" y2="18"/>
+                        <line x1="6" y1="6" x2="18" y2="18"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="job-edit-form">
+                    <div class="form-group">
+                        <label for="edit-job-status" class="form-label">Status</label>
+                        <select id="edit-job-status" class="form-input" required>
+                            <option value="Booked" ${job.status === 'Booked' ? 'selected' : ''}>Booked</option>
+                            <option value="In Progress" ${job.status === 'In Progress' ? 'selected' : ''}>In Progress</option>
+                            <option value="Completed" ${job.status === 'Completed' ? 'selected' : ''}>Completed</option>
+                            <option value="Invoiced" ${job.status === 'Invoiced' ? 'selected' : ''}>Invoiced</option>
+                            <option value="Paid" ${job.status === 'Paid' ? 'selected' : ''}>Paid</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-job-service" class="form-label">Service</label>
+                        <input type="text" id="edit-job-service" class="form-input" value="${job.service || ''}" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-job-notes" class="form-label">Notes</label>
+                        <textarea id="edit-job-notes" class="form-input" rows="3">${job.notes || ''}</textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-job-cost" class="form-label">Total Cost</label>
+                        <input type="number" id="edit-job-cost" class="form-input" step="0.01" value="${job.totalCost || ''}" placeholder="Enter total cost">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+                <button class="btn btn-primary" onclick="submitJobEdit(${job.jobId})">Save Changes</button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    // Close on backdrop click
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            closeModal();
+        }
+    });
+}
+
+function createEmployeeAssignmentModal(jobId, employees) {
+    const modal = document.createElement('div');
+    modal.className = 'modal show';
+    modal.innerHTML = `
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">Assign Employee to Job #${jobId}</h3>
+                <button class="modal-close" onclick="closeModal()">
+                    <svg class="icon" viewBox="0 0 24 24">
+                        <line x1="18" y1="6" x2="6" y2="18"/>
+                        <line x1="6" y1="6" x2="18" y2="18"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="employee-assignment-form">
+                    <div class="form-group">
+                        <label for="assign-employee" class="form-label">Select Employee</label>
+                        <select id="assign-employee" class="form-input" required>
+                            <option value="">Choose an employee...</option>
+                            ${employees.map(emp => `
+                                <option value="${emp.id}">${emp.fullName} (${emp.username})</option>
+                            `).join('')}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="assignment-notes" class="form-label">Assignment Notes</label>
+                        <textarea id="assignment-notes" class="form-input" rows="3" placeholder="Any special instructions for the employee..."></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+                <button class="btn btn-primary" onclick="submitEmployeeAssignment(${jobId})">Assign Employee</button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    // Close on backdrop click
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            closeModal();
+        }
+    });
+}
+
+function createUserDetailsModal(user) {
+    const modal = document.createElement('div');
+    modal.className = 'modal show';
+    modal.innerHTML = `
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">User Details - ${user.fullName}</h3>
+                <button class="modal-close" onclick="closeModal()">
+                    <svg class="icon" viewBox="0 0 24 24">
+                        <line x1="18" y1="6" x2="6" y2="18"/>
+                        <line x1="6" y1="6" x2="18" y2="18"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="user-details-grid">
+                    <div class="details-section">
+                        <h4>Personal Information</h4>
+                        <div class="detail-item">
+                            <label>Full Name:</label>
+                            <span>${user.fullName}</span>
+                        </div>
+                        <div class="detail-item">
+                            <label>Username:</label>
+                            <span>${user.username}</span>
+                        </div>
+                        <div class="detail-item">
+                            <label>Email:</label>
+                            <span>${user.email || 'N/A'}</span>
+                        </div>
+                        <div class="detail-item">
+                            <label>Phone:</label>
+                            <span>${user.phone || 'N/A'}</span>
+                        </div>
+                    </div>
+                    <div class="details-section">
+                        <h4>Account Information</h4>
+                        <div class="detail-item">
+                            <label>Role:</label>
+                            <span class="role-badge role-${user.role}">${user.role}</span>
+                        </div>
+                        <div class="detail-item">
+                            <label>Status:</label>
+                            <span class="status-badge ${user.isActive ? 'status-active' : 'status-inactive'}">${user.isActive ? 'Active' : 'Inactive'}</span>
+                        </div>
+                        <div class="detail-item">
+                            <label>Created:</label>
+                            <span>${user.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'N/A'}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal()">Close</button>
+                <button class="btn btn-primary" onclick="editUser(${user.id})">Edit User</button>
+                <button class="btn btn-warning" onclick="toggleUserStatus(${user.id})">${user.isActive ? 'Deactivate' : 'Activate'}</button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    // Close on backdrop click
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            closeModal();
+        }
+    });
+}
+
+function createUserEditModal(user) {
+    const modal = document.createElement('div');
+    modal.className = 'modal show';
+    modal.innerHTML = `
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">Edit User - ${user.fullName}</h3>
+                <button class="modal-close" onclick="closeModal()">
+                    <svg class="icon" viewBox="0 0 24 24">
+                        <line x1="18" y1="6" x2="6" y2="18"/>
+                        <line x1="6" y1="6" x2="18" y2="18"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="user-edit-form">
+                    <div class="form-group">
+                        <label for="edit-user-fullname" class="form-label">Full Name</label>
+                        <input type="text" id="edit-user-fullname" class="form-input" value="${user.fullName}" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-user-email" class="form-label">Email</label>
+                        <input type="email" id="edit-user-email" class="form-input" value="${user.email || ''}">
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-user-phone" class="form-label">Phone</label>
+                        <input type="tel" id="edit-user-phone" class="form-input" value="${user.phone || ''}">
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-user-role" class="form-label">Role</label>
+                        <select id="edit-user-role" class="form-input" required>
+                            <option value="admin" ${user.role === 'admin' ? 'selected' : ''}>Admin</option>
+                            <option value="employee" ${user.role === 'employee' ? 'selected' : ''}>Employee</option>
+                            <option value="customer" ${user.role === 'customer' ? 'selected' : ''}>Customer</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-user-password" class="form-label">New Password (leave blank to keep current)</label>
+                        <input type="password" id="edit-user-password" class="form-input" placeholder="Enter new password">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+                <button class="btn btn-primary" onclick="submitUserEdit(${user.id})">Save Changes</button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    // Close on backdrop click
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            closeModal();
+        }
+    });
+}
+
+function createServiceDetailsModal(service) {
+    const modal = document.createElement('div');
+    modal.className = 'modal show';
+    modal.innerHTML = `
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">Service Details - ${service.serviceName}</h3>
+                <button class="modal-close" onclick="closeModal()">
+                    <svg class="icon" viewBox="0 0 24 24">
+                        <line x1="18" y1="6" x2="6" y2="18"/>
+                        <line x1="6" y1="6" x2="18" y2="18"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="service-details-grid">
+                    <div class="details-section">
+                        <h4>Service Information</h4>
+                        <div class="detail-item">
+                            <label>Service Name:</label>
+                            <span>${service.serviceName}</span>
+                        </div>
+                        <div class="detail-item">
+                            <label>Price:</label>
+                            <span>$${service.price}</span>
+                        </div>
+                        <div class="detail-item">
+                            <label>Category:</label>
+                            <span>${service.category || 'N/A'}</span>
+                        </div>
+                        <div class="detail-item">
+                            <label>Estimated Duration:</label>
+                            <span>${service.estimatedDuration} minutes</span>
+                        </div>
+                        <div class="detail-item">
+                            <label>Status:</label>
+                            <span class="status-badge ${service.isActive ? 'status-active' : 'status-inactive'}">${service.isActive ? 'Active' : 'Inactive'}</span>
+                        </div>
+                    </div>
+                    ${service.description ? `
+                        <div class="details-section">
+                            <h4>Description</h4>
+                            <p>${service.description}</p>
+                        </div>
+                    ` : ''}
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal()">Close</button>
+                <button class="btn btn-primary" onclick="editService(${service.id})">Edit Service</button>
+                <button class="btn btn-warning" onclick="toggleServiceStatus(${service.id})">${service.isActive ? 'Deactivate' : 'Activate'}</button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    // Close on backdrop click
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            closeModal();
+        }
+    });
+}
+
+function createServiceEditModal(service) {
+    const modal = document.createElement('div');
+    modal.className = 'modal show';
+    modal.innerHTML = `
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">Edit Service - ${service.serviceName}</h3>
+                <button class="modal-close" onclick="closeModal()">
+                    <svg class="icon" viewBox="0 0 24 24">
+                        <line x1="18" y1="6" x2="6" y2="18"/>
+                        <line x1="6" y1="6" x2="18" y2="18"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="service-edit-form">
+                    <div class="form-group">
+                        <label for="edit-service-name" class="form-label">Service Name</label>
+                        <input type="text" id="edit-service-name" class="form-input" value="${service.serviceName}" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-service-price" class="form-label">Price</label>
+                        <input type="number" id="edit-service-price" class="form-input" step="0.01" value="${service.price}" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-service-category" class="form-label">Category</label>
+                        <input type="text" id="edit-service-category" class="form-input" value="${service.category || ''}" placeholder="e.g., Engine, Brakes, Electrical">
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-service-duration" class="form-label">Estimated Duration (minutes)</label>
+                        <input type="number" id="edit-service-duration" class="form-input" value="${service.estimatedDuration}" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-service-description" class="form-label">Description</label>
+                        <textarea id="edit-service-description" class="form-input" rows="3">${service.description || ''}</textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+                <button class="btn btn-primary" onclick="submitServiceEdit(${service.id})">Save Changes</button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    // Close on backdrop click
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            closeModal();
+        }
+    });
+}
+
+function createInventoryDetailsModal(item) {
+    const modal = document.createElement('div');
+    modal.className = 'modal show';
+    modal.innerHTML = `
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">Inventory Details - ${item.partName}</h3>
+                <button class="modal-close" onclick="closeModal()">
+                    <svg class="icon" viewBox="0 0 24 24">
+                        <line x1="18" y1="6" x2="6" y2="18"/>
+                        <line x1="6" y1="6" x2="18" y2="18"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="inventory-details-grid">
+                    <div class="details-section">
+                        <h4>Part Information</h4>
+                        <div class="detail-item">
+                            <label>Part Name:</label>
+                            <span>${item.partName}</span>
+                        </div>
+                        <div class="detail-item">
+                            <label>Part Number:</label>
+                            <span>${item.partNumber || 'N/A'}</span>
+                        </div>
+                        <div class="detail-item">
+                            <label>Category:</label>
+                            <span>${item.category || 'N/A'}</span>
+                        </div>
+                        <div class="detail-item">
+                            <label>Supplier:</label>
+                            <span>${item.supplier || 'N/A'}</span>
+                        </div>
+                    </div>
+                    <div class="details-section">
+                        <h4>Stock Information</h4>
+                        <div class="detail-item">
+                            <label>Current Stock:</label>
+                            <span class="${item.quantity <= item.minQuantity ? 'text-warning' : 'text-success'}">${item.quantity} units</span>
+                        </div>
+                        <div class="detail-item">
+                            <label>Minimum Stock:</label>
+                            <span>${item.minQuantity} units</span>
+                        </div>
+                        <div class="detail-item">
+                            <label>Price per Unit:</label>
+                            <span>$${item.pricePerUnit}</span>
+                        </div>
+                        <div class="detail-item">
+                            <label>Total Value:</label>
+                            <span>$${(item.quantity * item.pricePerUnit).toFixed(2)}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal()">Close</button>
+                <button class="btn btn-primary" onclick="editInventory(${item.id})">Edit Item</button>
+                <button class="btn btn-warning" onclick="reorderInventory(${item.id})">Reorder</button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    // Close on backdrop click
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            closeModal();
+        }
+    });
+}
+
+function createInventoryEditModal(item) {
+    const modal = document.createElement('div');
+    modal.className = 'modal show';
+    modal.innerHTML = `
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">Edit Inventory - ${item.partName}</h3>
+                <button class="modal-close" onclick="closeModal()">
+                    <svg class="icon" viewBox="0 0 24 24">
+                        <line x1="18" y1="6" x2="6" y2="18"/>
+                        <line x1="6" y1="6" x2="18" y2="18"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="inventory-edit-form">
+                    <div class="form-group">
+                        <label for="edit-part-name" class="form-label">Part Name</label>
+                        <input type="text" id="edit-part-name" class="form-input" value="${item.partName}" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-part-number" class="form-label">Part Number</label>
+                        <input type="text" id="edit-part-number" class="form-input" value="${item.partNumber || ''}">
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-part-category" class="form-label">Category</label>
+                        <input type="text" id="edit-part-category" class="form-input" value="${item.category || ''}">
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-part-supplier" class="form-label">Supplier</label>
+                        <input type="text" id="edit-part-supplier" class="form-input" value="${item.supplier || ''}">
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-part-quantity" class="form-label">Current Quantity</label>
+                        <input type="number" id="edit-part-quantity" class="form-input" value="${item.quantity}" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-part-min-quantity" class="form-label">Minimum Quantity</label>
+                        <input type="number" id="edit-part-min-quantity" class="form-input" value="${item.minQuantity}" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-part-price" class="form-label">Price per Unit</label>
+                        <input type="number" id="edit-part-price" class="form-input" step="0.01" value="${item.pricePerUnit}" required>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+                <button class="btn btn-primary" onclick="submitInventoryEdit(${item.id})">Save Changes</button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    // Close on backdrop click
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            closeModal();
+        }
+    });
+}
+
+function createInventoryReorderModal(item) {
+    const modal = document.createElement('div');
+    modal.className = 'modal show';
+    modal.innerHTML = `
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">Reorder Inventory - ${item.partName}</h3>
+                <button class="modal-close" onclick="closeModal()">
+                    <svg class="icon" viewBox="0 0 24 24">
+                        <line x1="18" y1="6" x2="6" y2="18"/>
+                        <line x1="6" y1="6" x2="18" y2="18"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="reorder-info">
+                    <p><strong>Current Stock:</strong> ${item.quantity} units</p>
+                    <p><strong>Minimum Stock:</strong> ${item.minQuantity} units</p>
+                    <p><strong>Recommended Order:</strong> ${Math.max(10, item.minQuantity * 2)} units</p>
+                </div>
+                <form id="reorder-form">
+                    <div class="form-group">
+                        <label for="reorder-quantity" class="form-label">Order Quantity</label>
+                        <input type="number" id="reorder-quantity" class="form-input" value="${Math.max(10, item.minQuantity * 2)}" min="1" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="reorder-notes" class="form-label">Order Notes</label>
+                        <textarea id="reorder-notes" class="form-input" rows="3" placeholder="Any special instructions for the order..."></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+                <button class="btn btn-primary" onclick="submitReorder(${item.id})">Place Order</button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    // Close on backdrop click
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            closeModal();
+        }
+    });
+}
+
+// Additional modal functions for branches, invoices, etc.
+function createBranchDetailsModal(branch) {
+    // Implementation for branch details modal
+    showNotification('Branch details modal - Implementation coming soon', 'info');
+}
+
+function createBranchEditModal(branch) {
+    // Implementation for branch edit modal
+    showNotification('Branch edit modal - Implementation coming soon', 'info');
+}
+
+function createBranchHoursModal(branch) {
+    // Implementation for branch hours modal
+    showNotification('Branch hours modal - Implementation coming soon', 'info');
+}
+
+function createInvoiceDetailsModal(invoice) {
+    // Implementation for invoice details modal
+    showNotification('Invoice details modal - Implementation coming soon', 'info');
+}
+
+function createInvoiceEditModal(invoice) {
+    // Implementation for invoice edit modal
+    showNotification('Invoice edit modal - Implementation coming soon', 'info');
+}
+
+// Form Submission Functions
+function submitJobEdit(jobId) {
+    const formData = {
+        status: document.getElementById('edit-job-status').value,
+        service: document.getElementById('edit-job-service').value,
+        notes: document.getElementById('edit-job-notes').value,
+        totalCost: document.getElementById('edit-job-cost').value || null
+    };
+
+    fetch(`http://localhost:8080/api/admin/jobs/${jobId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData)
+    })
+    .then(response => response.json())
+    .then(result => {
+        if (result.success) {
+            showNotification('Job updated successfully', 'success');
+            closeModal();
+            loadJobsData(); // Refresh the table
+        } else {
+            showNotification(result.error || 'Failed to update job', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error updating job:', error);
+        showNotification('Failed to update job', 'error');
+    });
+}
+
+function submitEmployeeAssignment(jobId) {
+    const formData = {
+        employeeId: document.getElementById('assign-employee').value,
+        notes: document.getElementById('assignment-notes').value
+    };
+
+    if (!formData.employeeId) {
+        showNotification('Please select an employee', 'error');
+        return;
+    }
+
+    fetch(`http://localhost:8080/api/admin/jobs/${jobId}/assign`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData)
+    })
+    .then(response => response.json())
+    .then(result => {
+        if (result.success) {
+            showNotification('Employee assigned successfully', 'success');
+            closeModal();
+            loadJobsData(); // Refresh the table
+        } else {
+            showNotification(result.error || 'Failed to assign employee', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error assigning employee:', error);
+        showNotification('Failed to assign employee', 'error');
+    });
+}
+
+function submitUserEdit(userId) {
+    const formData = {
+        fullName: document.getElementById('edit-user-fullname').value,
+        email: document.getElementById('edit-user-email').value,
+        phone: document.getElementById('edit-user-phone').value,
+        role: document.getElementById('edit-user-role').value,
+        password: document.getElementById('edit-user-password').value || null
+    };
+
+    fetch(`http://localhost:8080/api/admin/users/${userId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData)
+    })
+    .then(response => response.json())
+    .then(result => {
+        if (result.success) {
+            showNotification('User updated successfully', 'success');
+            closeModal();
+            loadUsersData(); // Refresh the table
+        } else {
+            showNotification(result.error || 'Failed to update user', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error updating user:', error);
+        showNotification('Failed to update user', 'error');
+    });
+}
+
+function submitServiceEdit(serviceId) {
+    const formData = {
+        serviceName: document.getElementById('edit-service-name').value,
+        price: parseFloat(document.getElementById('edit-service-price').value),
+        category: document.getElementById('edit-service-category').value,
+        estimatedDuration: parseInt(document.getElementById('edit-service-duration').value),
+        description: document.getElementById('edit-service-description').value
+    };
+
+    fetch(`http://localhost:8080/api/admin/services/${serviceId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData)
+    })
+    .then(response => response.json())
+    .then(result => {
+        if (result.success) {
+            showNotification('Service updated successfully', 'success');
+            closeModal();
+            loadServicesData(); // Refresh the table
+        } else {
+            showNotification(result.error || 'Failed to update service', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error updating service:', error);
+        showNotification('Failed to update service', 'error');
+    });
+}
+
+function submitInventoryEdit(itemId) {
+    const formData = {
+        partName: document.getElementById('edit-part-name').value,
+        partNumber: document.getElementById('edit-part-number').value,
+        category: document.getElementById('edit-part-category').value,
+        supplier: document.getElementById('edit-part-supplier').value,
+        quantity: parseInt(document.getElementById('edit-part-quantity').value),
+        minQuantity: parseInt(document.getElementById('edit-part-min-quantity').value),
+        pricePerUnit: parseFloat(document.getElementById('edit-part-price').value)
+    };
+
+    fetch(`http://localhost:8080/api/admin/inventory/${itemId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData)
+    })
+    .then(response => response.json())
+    .then(result => {
+        if (result.success) {
+            showNotification('Inventory item updated successfully', 'success');
+            closeModal();
+            loadInventoryData(); // Refresh the table
+        } else {
+            showNotification(result.error || 'Failed to update inventory item', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error updating inventory item:', error);
+        showNotification('Failed to update inventory item', 'error');
+    });
+}
+
+function submitReorder(itemId) {
+    const formData = {
+        quantity: parseInt(document.getElementById('reorder-quantity').value),
+        notes: document.getElementById('reorder-notes').value
+    };
+
+    fetch(`http://localhost:8080/api/admin/inventory/${itemId}/reorder`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData)
+    })
+    .then(response => response.json())
+    .then(result => {
+        if (result.success) {
+            showNotification('Reorder request submitted successfully', 'success');
+            closeModal();
+            loadInventoryData(); // Refresh the table
+        } else {
+            showNotification(result.error || 'Failed to submit reorder request', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error submitting reorder request:', error);
+        showNotification('Failed to submit reorder request', 'error');
+    });
+}
+
+// Quick Action Modal Functions
+function showAddJobModal() {
+    const modal = document.createElement('div');
+    modal.className = 'modal show';
+    modal.innerHTML = `
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">Add New Job</h3>
+                <button class="modal-close" onclick="closeModal()">
+                    <svg class="icon" viewBox="0 0 24 24">
+                        <line x1="18" y1="6" x2="6" y2="18"/>
+                        <line x1="6" y1="6" x2="18" y2="18"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="add-job-form">
+                    <div class="form-group">
+                        <label for="new-job-customer" class="form-label">Customer</label>
+                        <select id="new-job-customer" class="form-input" required>
+                            <option value="">Select Customer</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="new-job-vehicle" class="form-label">Vehicle</label>
+                        <select id="new-job-vehicle" class="form-input" required>
+                            <option value="">Select Vehicle</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="new-job-service" class="form-label">Service</label>
+                        <select id="new-job-service" class="form-input" required>
+                            <option value="">Select Service</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="new-job-date" class="form-label">Booking Date</label>
+                        <input type="datetime-local" id="new-job-date" class="form-input" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="new-job-notes" class="form-label">Notes</label>
+                        <textarea id="new-job-notes" class="form-input" rows="3" placeholder="Any special instructions..."></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+                <button class="btn btn-primary" onclick="submitAddJob()">Create Job</button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    // Load form data
+    loadAddJobFormData();
+    
+    // Close on backdrop click
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            closeModal();
+        }
+    });
+}
+
+function showAddUserModal() {
+    const modal = document.createElement('div');
+    modal.className = 'modal show';
+    modal.innerHTML = `
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">Add New User</h3>
+                <button class="modal-close" onclick="closeModal()">
+                    <svg class="icon" viewBox="0 0 24 24">
+                        <line x1="18" y1="6" x2="6" y2="18"/>
+                        <line x1="6" y1="6" x2="18" y2="18"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="add-user-form">
+                    <div class="form-group">
+                        <label for="new-user-username" class="form-label">Username</label>
+                        <input type="text" id="new-user-username" class="form-input" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="new-user-fullname" class="form-label">Full Name</label>
+                        <input type="text" id="new-user-fullname" class="form-input" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="new-user-email" class="form-label">Email</label>
+                        <input type="email" id="new-user-email" class="form-input">
+                    </div>
+                    <div class="form-group">
+                        <label for="new-user-phone" class="form-label">Phone</label>
+                        <input type="tel" id="new-user-phone" class="form-input">
+                    </div>
+                    <div class="form-group">
+                        <label for="new-user-password" class="form-label">Password</label>
+                        <input type="password" id="new-user-password" class="form-input" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="new-user-role" class="form-label">Role</label>
+                        <select id="new-user-role" class="form-input" required>
+                            <option value="">Select Role</option>
+                            <option value="admin">Admin</option>
+                            <option value="employee">Employee</option>
+                            <option value="customer">Customer</option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+                <button class="btn btn-primary" onclick="submitAddUser()">Create User</button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    // Close on backdrop click
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            closeModal();
+        }
+    });
+}
+
+function showAddServiceModal() {
+    const modal = document.createElement('div');
+    modal.className = 'modal show';
+    modal.innerHTML = `
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">Add New Service</h3>
+                <button class="modal-close" onclick="closeModal()">
+                    <svg class="icon" viewBox="0 0 24 24">
+                        <line x1="18" y1="6" x2="6" y2="18"/>
+                        <line x1="6" y1="6" x2="18" y2="18"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="add-service-form">
+                    <div class="form-group">
+                        <label for="new-service-name" class="form-label">Service Name</label>
+                        <input type="text" id="new-service-name" class="form-input" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="new-service-price" class="form-label">Price</label>
+                        <input type="number" id="new-service-price" class="form-input" step="0.01" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="new-service-category" class="form-label">Category</label>
+                        <input type="text" id="new-service-category" class="form-input" placeholder="e.g., Engine, Brakes, Electrical">
+                    </div>
+                    <div class="form-group">
+                        <label for="new-service-duration" class="form-label">Estimated Duration (minutes)</label>
+                        <input type="number" id="new-service-duration" class="form-input" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="new-service-description" class="form-label">Description</label>
+                        <textarea id="new-service-description" class="form-input" rows="3"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+                <button class="btn btn-primary" onclick="submitAddService()">Create Service</button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    // Close on backdrop click
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            closeModal();
+        }
+    });
+}
+
+function showAddInventoryModal() {
+    const modal = document.createElement('div');
+    modal.className = 'modal show';
+    modal.innerHTML = `
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">Add Inventory Item</h3>
+                <button class="modal-close" onclick="closeModal()">
+                    <svg class="icon" viewBox="0 0 24 24">
+                        <line x1="18" y1="6" x2="6" y2="18"/>
+                        <line x1="6" y1="6" x2="18" y2="18"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="add-inventory-form">
+                    <div class="form-group">
+                        <label for="new-part-name" class="form-label">Part Name</label>
+                        <input type="text" id="new-part-name" class="form-input" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="new-part-number" class="form-label">Part Number</label>
+                        <input type="text" id="new-part-number" class="form-input">
+                    </div>
+                    <div class="form-group">
+                        <label for="new-part-category" class="form-label">Category</label>
+                        <input type="text" id="new-part-category" class="form-input">
+                    </div>
+                    <div class="form-group">
+                        <label for="new-part-supplier" class="form-label">Supplier</label>
+                        <input type="text" id="new-part-supplier" class="form-input">
+                    </div>
+                    <div class="form-group">
+                        <label for="new-part-quantity" class="form-label">Initial Quantity</label>
+                        <input type="number" id="new-part-quantity" class="form-input" value="0" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="new-part-min-quantity" class="form-label">Minimum Quantity</label>
+                        <input type="number" id="new-part-min-quantity" class="form-input" value="5" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="new-part-price" class="form-label">Price per Unit</label>
+                        <input type="number" id="new-part-price" class="form-input" step="0.01" required>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+                <button class="btn btn-primary" onclick="submitAddInventory()">Add Item</button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    // Close on backdrop click
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            closeModal();
+        }
+    });
+}
+
+// Helper functions for loading form data
+async function loadAddJobFormData() {
+    try {
+        // Load customers
+        const customersResponse = await fetch('http://localhost:8080/api/admin/users');
+        const customers = await customersResponse.json();
+        const customerSelect = document.getElementById('new-job-customer');
+        customerSelect.innerHTML = '<option value="">Select Customer</option>';
+        customers.filter(c => c.role === 'customer').forEach(customer => {
+            customerSelect.innerHTML += `<option value="${customer.id}">${customer.fullName}</option>`;
+        });
+
+        // Load services
+        const servicesResponse = await fetch('http://localhost:8080/api/admin/services');
+        const services = await servicesResponse.json();
+        const serviceSelect = document.getElementById('new-job-service');
+        serviceSelect.innerHTML = '<option value="">Select Service</option>';
+        services.forEach(service => {
+            serviceSelect.innerHTML += `<option value="${service.id}">${service.serviceName} - $${service.price}</option>`;
+        });
+
+        // Set default date
+        const now = new Date();
+        now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+        document.getElementById('new-job-date').value = now.toISOString().slice(0, 16);
+    } catch (error) {
+        console.error('Error loading form data:', error);
+        showNotification('Failed to load form data', 'error');
+    }
+}
+
+// Submit functions for quick actions
+function submitAddJob() {
+    const formData = {
+        customerId: document.getElementById('new-job-customer').value,
+        serviceId: document.getElementById('new-job-service').value,
+        bookingDate: document.getElementById('new-job-date').value,
+        notes: document.getElementById('new-job-notes').value
+    };
+
+    if (!formData.customerId || !formData.serviceId) {
+        showNotification('Please fill in all required fields', 'error');
+        return;
+    }
+
+    fetch('http://localhost:8080/api/admin/jobs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData)
+    })
+    .then(response => response.json())
+    .then(result => {
+        if (result.success) {
+            showNotification('Job created successfully', 'success');
+            closeModal();
+            loadJobsData();
+        } else {
+            showNotification(result.error || 'Failed to create job', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error creating job:', error);
+        showNotification('Failed to create job', 'error');
+    });
+}
+
+function submitAddUser() {
+    const formData = {
+        username: document.getElementById('new-user-username').value,
+        fullName: document.getElementById('new-user-fullname').value,
+        email: document.getElementById('new-user-email').value,
+        phone: document.getElementById('new-user-phone').value,
+        password: document.getElementById('new-user-password').value,
+        role: document.getElementById('new-user-role').value
+    };
+
+    fetch('http://localhost:8080/api/admin/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData)
+    })
+    .then(response => response.json())
+    .then(result => {
+        if (result.success) {
+            showNotification('User created successfully', 'success');
+            closeModal();
+            loadUsersData();
+        } else {
+            showNotification(result.error || 'Failed to create user', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error creating user:', error);
+        showNotification('Failed to create user', 'error');
+    });
+}
+
+function submitAddService() {
+    const formData = {
+        serviceName: document.getElementById('new-service-name').value,
+        price: parseFloat(document.getElementById('new-service-price').value),
+        category: document.getElementById('new-service-category').value,
+        estimatedDuration: parseInt(document.getElementById('new-service-duration').value),
+        description: document.getElementById('new-service-description').value
+    };
+
+    fetch('http://localhost:8080/api/admin/services', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData)
+    })
+    .then(response => response.json())
+    .then(result => {
+        if (result.success) {
+            showNotification('Service created successfully', 'success');
+            closeModal();
+            loadServicesData();
+        } else {
+            showNotification(result.error || 'Failed to create service', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error creating service:', error);
+        showNotification('Failed to create service', 'error');
+    });
+}
+
+function submitAddInventory() {
+    const formData = {
+        partName: document.getElementById('new-part-name').value,
+        partNumber: document.getElementById('new-part-number').value,
+        category: document.getElementById('new-part-category').value,
+        supplier: document.getElementById('new-part-supplier').value,
+        quantity: parseInt(document.getElementById('new-part-quantity').value),
+        minQuantity: parseInt(document.getElementById('new-part-min-quantity').value),
+        pricePerUnit: parseFloat(document.getElementById('new-part-price').value)
+    };
+
+    fetch('http://localhost:8080/api/admin/inventory', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData)
+    })
+    .then(response => response.json())
+    .then(result => {
+        if (result.success) {
+            showNotification('Inventory item added successfully', 'success');
+            closeModal();
+            loadInventoryData();
+        } else {
+            showNotification(result.error || 'Failed to add inventory item', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error adding inventory item:', error);
+        showNotification('Failed to add inventory item', 'error');
+    });
 }

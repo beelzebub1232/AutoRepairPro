@@ -63,13 +63,13 @@ public class AdminHandler {
             String revenueSql = "SELECT COALESCE(SUM(total_amount), 0) as totalRevenue FROM invoices WHERE status = 'Paid'";
             
             // Total customers
-            String customersSql = "SELECT COUNT(*) as totalCustomers FROM users WHERE role = 'customer' AND is_active = true";
+            String customersSql = "SELECT COUNT(*) as totalCustomers FROM users WHERE role = 'customer'";
             
             // Total employees
-            String employeesSql = "SELECT COUNT(*) as totalEmployees FROM users WHERE role = 'employee' AND is_active = true";
+            String employeesSql = "SELECT COUNT(*) as totalEmployees FROM users WHERE role = 'employee'";
             
             // Low stock items
-            String lowStockSql = "SELECT COUNT(*) as lowStockItems FROM inventory WHERE quantity <= min_quantity AND is_active = true";
+            String lowStockSql = "SELECT COUNT(*) as lowStockItems FROM inventory WHERE quantity <= min_quantity";
             
             StringBuilder jsonBuilder = new StringBuilder();
             jsonBuilder.append("{");
@@ -196,7 +196,7 @@ public class AdminHandler {
     private String handleUsers(String method, String requestBody) {
         try (Connection conn = DatabaseConnector.getConnection()) {
             if ("GET".equals(method)) {
-                String sql = "SELECT id, username, full_name, email, phone, role, created_at, is_active " +
+                String sql = "SELECT id, username, full_name, email, phone, role, created_at " +
                            "FROM users ORDER BY created_at DESC";
                 
                 List<Map<String, Object>> users = new ArrayList<>();
@@ -212,7 +212,7 @@ public class AdminHandler {
                         user.put("phone", rs.getString("phone"));
                         user.put("role", rs.getString("role"));
                         user.put("createdAt", rs.getTimestamp("created_at").toString());
-                        user.put("isActive", rs.getBoolean("is_active"));
+                        user.put("isActive", true); // Default to true since we don't have is_active column
                         users.add(user);
                     }
                 }
@@ -229,8 +229,8 @@ public class AdminHandler {
     private String handleServices(String method, String requestBody) {
         try (Connection conn = DatabaseConnector.getConnection()) {
             if ("GET".equals(method)) {
-                String sql = "SELECT id, service_name, price, description, estimated_duration, category, is_active " +
-                           "FROM services WHERE is_active = true ORDER BY service_name";
+                String sql = "SELECT id, service_name, price, description, estimated_duration, category " +
+                           "FROM services ORDER BY service_name";
                 
                 List<Map<String, Object>> services = new ArrayList<>();
                 try (PreparedStatement pstmt = conn.prepareStatement(sql);
@@ -244,7 +244,7 @@ public class AdminHandler {
                         service.put("description", rs.getString("description"));
                         service.put("estimatedDuration", rs.getInt("estimated_duration"));
                         service.put("category", rs.getString("category"));
-                        service.put("isActive", rs.getBoolean("is_active"));
+                        service.put("isActive", true); // Default to true since we don't have is_active column
                         services.add(service);
                     }
                 }
@@ -262,8 +262,8 @@ public class AdminHandler {
         try (Connection conn = DatabaseConnector.getConnection()) {
             if ("GET".equals(method)) {
                 String sql = "SELECT id, part_name, part_number, quantity, min_quantity, price_per_unit, " +
-                           "category, supplier, location, is_active " +
-                           "FROM inventory WHERE is_active = true ORDER BY part_name";
+                           "category, supplier, location " +
+                           "FROM inventory ORDER BY part_name";
                 
                 List<Map<String, Object>> inventory = new ArrayList<>();
                 try (PreparedStatement pstmt = conn.prepareStatement(sql);
@@ -280,7 +280,7 @@ public class AdminHandler {
                         item.put("category", rs.getString("category"));
                         item.put("supplier", rs.getString("supplier"));
                         item.put("location", rs.getString("location"));
-                        item.put("isActive", rs.getBoolean("is_active"));
+                        item.put("isActive", true); // Default to true since we don't have is_active column
                         item.put("lowStock", rs.getInt("quantity") <= rs.getInt("min_quantity"));
                         inventory.add(item);
                     }
@@ -299,14 +299,12 @@ public class AdminHandler {
         try (Connection conn = DatabaseConnector.getConnection()) {
             if ("GET".equals(method)) {
                 String sql = "SELECT b.id, b.name, b.address, b.phone, b.email, b.latitude, b.longitude, b.rating, " +
-                           "b.is_active, " +
                            "GROUP_CONCAT(DISTINCT bh.day_of_week, ': ', " +
                            "CASE WHEN bh.is_closed THEN 'Closed' " +
                            "ELSE CONCAT(TIME_FORMAT(bh.open_time, '%H:%i'), '-', TIME_FORMAT(bh.close_time, '%H:%i')) " +
                            "END ORDER BY FIELD(bh.day_of_week, 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday')) as hours " +
                            "FROM branches b " +
                            "LEFT JOIN business_hours bh ON b.id = bh.branch_id " +
-                           "WHERE b.is_active = true " +
                            "GROUP BY b.id " +
                            "ORDER BY b.name";
                 
@@ -324,7 +322,7 @@ public class AdminHandler {
                         branch.put("latitude", rs.getBigDecimal("latitude"));
                         branch.put("longitude", rs.getBigDecimal("longitude"));
                         branch.put("rating", rs.getBigDecimal("rating"));
-                        branch.put("isActive", rs.getBoolean("is_active"));
+                        branch.put("isActive", true); // Default to true since we don't have is_active column
                         branch.put("hours", rs.getString("hours"));
                         branches.add(branch);
                     }
@@ -475,7 +473,6 @@ public class AdminHandler {
         String sql = "SELECT i.part_name, COALESCE(SUM(ji.quantity_used), 0) as totalUsed " +
                     "FROM inventory i " +
                     "LEFT JOIN job_inventory ji ON i.id = ji.inventory_id " +
-                    "WHERE i.is_active = true " +
                     "GROUP BY i.id, i.part_name " +
                     "ORDER BY totalUsed DESC " +
                     "LIMIT 10";
@@ -502,7 +499,7 @@ public class AdminHandler {
                     "FROM users u " +
                     "LEFT JOIN jobs j ON u.id = j.assigned_employee_id AND j.status = 'Completed' " +
                     "LEFT JOIN performance_metrics pm ON u.id = pm.employee_id AND pm.metric_type = 'customer_rating' " +
-                    "WHERE u.role = 'employee' AND u.is_active = true " +
+                    "WHERE u.role = 'employee' " +
                     "GROUP BY u.id, u.full_name " +
                     "ORDER BY jobsCompleted DESC";
         
@@ -584,7 +581,7 @@ public class AdminHandler {
                            "pm.period_start, pm.period_end " +
                            "FROM performance_metrics pm " +
                            "JOIN users u ON pm.employee_id = u.id " +
-                           "WHERE u.role = 'employee' AND u.is_active = true " +
+                           "WHERE u.role = 'employee' " +
                            "ORDER BY pm.period_start DESC, u.full_name";
                 
                 List<Map<String, Object>> metrics = new ArrayList<>();
