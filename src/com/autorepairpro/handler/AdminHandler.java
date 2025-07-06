@@ -1580,12 +1580,12 @@ public class AdminHandler {
     // Reporting Methods
     private String getRevenueReport() {
         String sql = "SELECT " +
-                    "DATE_FORMAT(completion_date, '%Y-%m') as month, " +
+                    "DATE_FORMAT(actual_completion_date, '%Y-%m') as month, " +
                     "COUNT(*) as jobs_completed, " +
                     "SUM(total_cost) as total_revenue " +
                     "FROM jobs " +
-                    "WHERE status = 'Paid' AND completion_date IS NOT NULL " +
-                    "GROUP BY DATE_FORMAT(completion_date, '%Y-%m') " +
+                    "WHERE status = 'Paid' AND actual_completion_date IS NOT NULL " +
+                    "GROUP BY DATE_FORMAT(actual_completion_date, '%Y-%m') " +
                     "ORDER BY month DESC " +
                     "LIMIT 12";
         
