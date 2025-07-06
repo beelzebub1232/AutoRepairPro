@@ -5,30 +5,45 @@ import java.sql.DriverManager;
 import java.sql.SQLException;
 
 public class DatabaseConnector {
-    // --- IMPORTANT ---
-    // Update these values with your actual MySQL database credentials.
-    private static final String DB_URL = "jdbc:mysql://localhost:3306/autorepairpro_db";
-    private static final String DB_USER = "root"; // Replace with your MySQL username
-    private static final String DB_PASSWORD = ""; // Replace with your MySQL password
+    // Database configuration with fallback to environment variables
+    private static final String DB_URL = System.getenv("DB_URL") != null ? 
+        System.getenv("DB_URL") : "jdbc:mysql://localhost:3306/autorepairpro_db";
+    private static final String DB_USER = System.getenv("DB_USER") != null ? 
+        System.getenv("DB_USER") : "root";
+    private static final String DB_PASSWORD = System.getenv("DB_PASSWORD") != null ? 
+        System.getenv("DB_PASSWORD") : "";
 
-    private static Connection connection = null;
-
-    // Private constructor to prevent instantiation.
+    // Private constructor to prevent instantiation
     private DatabaseConnector() {}
 
-    public static Connection getConnection() {
+    public static Connection getConnection() throws SQLException {
         try {
-            // Load the MySQL JDBC driver.
+            // Load the MySQL JDBC driver
             Class.forName("com.mysql.cj.jdbc.Driver");
             
-            if (connection == null || connection.isClosed()) {
-                connection = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
-            }
-        } catch (SQLException | ClassNotFoundException e) {
-            System.err.println("Database connection failed!");
+            // Create a new connection for each request (thread-safe)
+            Connection connection = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
+            
+            // Set connection properties for better performance and security
+            connection.setAutoCommit(true);
+            connection.setTransactionIsolation(Connection.TRANSACTION_READ_COMMITTED);
+            
+            return connection;
+        } catch (ClassNotFoundException e) {
+            System.err.println("MySQL JDBC Driver not found!");
             e.printStackTrace();
-            return null;
+            throw new SQLException("Database driver not available", e);
         }
-        return connection;
+    }
+
+    // Method to safely close a connection
+    public static void closeConnection(Connection connection) {
+        if (connection != null) {
+            try {
+                connection.close();
+            } catch (SQLException e) {
+                System.err.println("Error closing database connection: " + e.getMessage());
+            }
+        }
     }
 }

@@ -65,9 +65,9 @@ function switchToTab(targetTab) {
     const tabContents = document.querySelectorAll('.tab-content');
     
     // Remove active class from all nav links and tab contents
-    navLinks.forEach(l => l.classList.remove('active'));
-    tabContents.forEach(content => content.classList.remove('active'));
-    
+            navLinks.forEach(l => l.classList.remove('active'));
+            tabContents.forEach(content => content.classList.remove('active'));
+            
     // Add active class to target nav link and tab content
     const targetNavLink = document.querySelector(`[data-tab="${targetTab}"]`);
     const targetTabContent = document.getElementById(`${targetTab}-tab`);
@@ -78,9 +78,9 @@ function switchToTab(targetTab) {
     if (targetTabContent) {
         targetTabContent.classList.add('active');
     }
-    
-    // Load tab data
-    loadTabData(targetTab);
+            
+            // Load tab data
+            loadTabData(targetTab);
 }
 
 function loadTabData(tab) {
@@ -404,7 +404,7 @@ function renderAssignedJobsTable(jobs) {
                         Update Status
                     </button>
                     <button class="btn btn-sm btn-outline view-details-btn" data-job-id="${job.jobId}">
-                        Details
+                    Details
                     </button>
                     <button class="btn btn-sm btn-secondary use-parts-btn" data-job-id="${job.jobId}">
                         Use Parts
@@ -416,42 +416,79 @@ function renderAssignedJobsTable(jobs) {
 }
 
 function updateJobStatus(jobId) {
-    // Fetch current job status and show update modal
-    fetch(`http://localhost:8080/api/employee/jobs/${jobId}/details`)
-        .then(response => response.json())
-        .then(job => {
-            createStatusUpdateModal(job);
-        })
-        .catch(error => {
-            console.error('Error fetching job details:', error);
-            showNotification('Failed to load job details', 'error');
+    const statusOptions = ['Booked', 'In Progress', 'Completed', 'Invoiced', 'Paid'];
+    
+    const modal = document.createElement('div');
+    modal.className = 'modal';
+    modal.innerHTML = `
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Update Job Status</h3>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="status-update-form">
+                    <div class="form-group">
+                        <label for="new-status">New Status:</label>
+                        <select id="new-status" required>
+                            ${statusOptions.map(status => `<option value="${status}">${status}</option>`).join('')}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="status-notes">Notes:</label>
+                        <textarea id="status-notes" rows="3" placeholder="Add any notes about the status update..."></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+                <button class="btn btn-primary" onclick="submitStatusUpdate(${jobId})">Update Status</button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    modal.style.display = 'flex';
+}
+
+async function submitStatusUpdate(jobId) {
+    const newStatus = document.getElementById('new-status').value;
+    const notes = document.getElementById('status-notes').value;
+    
+    try {
+        const response = await fetch(`http://localhost:8080/api/admin/jobs`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                jobId: jobId,
+                status: newStatus,
+                notes: notes
+            })
         });
+        
+        if (response.ok) {
+            showNotification('Job status updated successfully', 'success');
+            closeModal();
+            loadAssignedJobs(); // Refresh the jobs list
+        } else {
+            throw new Error('Failed to update job status');
+        }
+    } catch (error) {
+        console.error('Error updating job status:', error);
+        showNotification('Failed to update job status', 'error');
+    }
 }
 
 function viewJobDetails(jobId) {
-    // Fetch job details and show modal
-    fetch(`http://localhost:8080/api/employee/jobs/${jobId}/details`)
-        .then(response => response.json())
-        .then(job => {
-            createJobDetailsModal(job);
-        })
-        .catch(error => {
-            console.error('Error fetching job details:', error);
-            showNotification('Failed to load job details', 'error');
-        });
+    // Implementation for viewing job details
+    showNotification(`Viewing details for job #${jobId}`, 'info');
 }
 
 function usePartsForJob(jobId) {
-    // Fetch available inventory and show parts usage modal
-    fetch('http://localhost:8080/api/employee/inventory')
-        .then(response => response.json())
-        .then(inventory => {
-            createPartsUsageModal(jobId, inventory);
-        })
-        .catch(error => {
-            console.error('Error fetching inventory:', error);
-            showNotification('Failed to load inventory', 'error');
-        });
+    // Implementation for using parts in a job
+    showNotification(`Opening parts usage for job #${jobId}`, 'info');
 }
 
 // Inventory Management
@@ -525,9 +562,9 @@ function renderInventoryTable(inventory) {
             <td>
                 <div class="supplier-info">
                     <div class="supplier-name">${item.supplier}</div>
-                </div>
-            </td>
-            <td>
+                    </div>
+                </td>
+                <td>
                 <div class="inventory-actions">
                     <button class="btn btn-sm btn-outline check-stock-btn" data-part-id="${item.id}">
                         Check Stock
@@ -536,8 +573,8 @@ function renderInventoryTable(inventory) {
                         Use Part
                     </button>
                 </div>
-            </td>
-        </tr>
+                </td>
+            </tr>
     `).join('');
 }
 
@@ -744,421 +781,4 @@ function loadEmployeeData() {
     
     // Load employee profile data if needed
     // This could include contact info, skills, etc.
-}
-
-// Modal Creation Functions
-function createJobDetailsModal(job) {
-    const modal = document.createElement('div');
-    modal.className = 'modal show';
-    modal.innerHTML = `
-        <div class="modal-content large-modal">
-            <div class="modal-header">
-                <h3 class="modal-title">Job Details - #${job.jobId}</h3>
-                <button class="modal-close" onclick="closeModal()">
-                    <svg class="icon" viewBox="0 0 24 24">
-                        <line x1="18" y1="6" x2="6" y2="18"/>
-                        <line x1="6" y1="6" x2="18" y2="18"/>
-                    </svg>
-                </button>
-            </div>
-            <div class="modal-body">
-                <div class="job-details-grid">
-                    <div class="details-section">
-                        <h4>
-                            <svg class="icon" viewBox="0 0 24 24">
-                                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-                                <circle cx="12" cy="7" r="4"/>
-                            </svg>
-                            Customer Information
-                        </h4>
-                        <div class="detail-item">
-                            <label>Customer Name:</label>
-                            <span>${job.customerName || 'N/A'}</span>
-                        </div>
-                        <div class="detail-item">
-                            <label>Contact:</label>
-                            <span>${job.customerPhone || 'N/A'}</span>
-                        </div>
-                        <div class="detail-item">
-                            <label>Email:</label>
-                            <span>${job.customerEmail || 'N/A'}</span>
-                        </div>
-                    </div>
-                    <div class="details-section">
-                        <h4>
-                            <svg class="icon" viewBox="0 0 24 24">
-                                <rect x="1" y="3" width="15" height="13"/>
-                                <polygon points="16,8 20,8 23,11 23,16 16,16"/>
-                                <circle cx="5.5" cy="18.5" r="2.5"/>
-                                <circle cx="18.5" cy="18.5" r="2.5"/>
-                            </svg>
-                            Vehicle Information
-                        </h4>
-                        <div class="detail-item">
-                            <label>Vehicle:</label>
-                            <span>${job.vehicle || 'N/A'}</span>
-                        </div>
-                        <div class="detail-item">
-                            <label>Year:</label>
-                            <span>${job.vehicleYear || 'N/A'}</span>
-                        </div>
-                        <div class="detail-item">
-                            <label>VIN:</label>
-                            <span>${job.vin || 'N/A'}</span>
-                        </div>
-                    </div>
-                    <div class="details-section">
-                        <h4>
-                            <svg class="icon" viewBox="0 0 24 24">
-                                <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
-                            </svg>
-                            Service Information
-                        </h4>
-                        <div class="detail-item">
-                            <label>Service:</label>
-                            <span>${job.service || 'N/A'}</span>
-                        </div>
-                        <div class="detail-item">
-                            <label>Status:</label>
-                            <span class="status-badge status-${job.status?.toLowerCase().replace(' ', '-')}">${job.status || 'N/A'}</span>
-                        </div>
-                        <div class="detail-item">
-                            <label>Estimated Duration:</label>
-                            <span>${job.estimatedDuration || 'N/A'} minutes</span>
-                        </div>
-                    </div>
-                    <div class="details-section">
-                        <h4>
-                            <svg class="icon" viewBox="0 0 24 24">
-                                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
-                                <line x1="16" y1="2" x2="16" y2="6"/>
-                                <line x1="8" y1="2" x2="8" y2="6"/>
-                                <line x1="3" y1="10" x2="21" y2="10"/>
-                            </svg>
-                            Schedule & Progress
-                        </h4>
-                        <div class="detail-item">
-                            <label>Booking Date:</label>
-                            <span>${job.bookingDate ? new Date(job.bookingDate).toLocaleString() : 'N/A'}</span>
-                        </div>
-                        <div class="detail-item">
-                            <label>Start Time:</label>
-                            <span>${job.startTime ? new Date(job.startTime).toLocaleString() : 'Not started'}</span>
-                        </div>
-                        <div class="detail-item">
-                            <label>Completion Date:</label>
-                            <span>${job.completionDate ? new Date(job.completionDate).toLocaleString() : 'Not completed'}</span>
-                        </div>
-                    </div>
-                </div>
-                ${job.notes ? `
-                    <div class="details-section">
-                        <h4>
-                            <svg class="icon" viewBox="0 0 24 24">
-                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                                <polyline points="14,2 14,8 20,8"/>
-                                <line x1="16" y1="13" x2="8" y2="13"/>
-                                <line x1="16" y1="17" x2="8" y2="17"/>
-                            </svg>
-                            Notes
-                        </h4>
-                        <p>${job.notes}</p>
-                    </div>
-                ` : ''}
-                ${job.usedParts && job.usedParts.length > 0 ? `
-                    <div class="details-section">
-                        <h4>
-                            <svg class="icon" viewBox="0 0 24 24">
-                                <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/>
-                                <line x1="7" y1="7" x2="7.01" y2="7"/>
-                            </svg>
-                            Parts Used
-                        </h4>
-                        <div class="parts-used-list">
-                            ${job.usedParts.map(part => `
-                                <div class="part-item">
-                                    <span class="part-name">${part.partName}</span>
-                                    <span class="part-quantity">${part.quantity} units</span>
-                                    <span class="part-cost">$${part.cost}</span>
-                                </div>
-                            `).join('')}
-                        </div>
-                    </div>
-                ` : ''}
-            </div>
-            <div class="modal-footer">
-                <button class="btn btn-secondary" onclick="closeModal()">Close</button>
-                <button class="btn btn-primary" onclick="updateJobStatus(${job.jobId})">Update Status</button>
-                <button class="btn btn-success" onclick="usePartsForJob(${job.jobId})">Use Parts</button>
-            </div>
-        </div>
-    `;
-    
-    document.body.appendChild(modal);
-    
-    // Close on backdrop click
-    modal.addEventListener('click', (e) => {
-        if (e.target === modal) {
-            closeModal();
-        }
-    });
-}
-
-function createStatusUpdateModal(job) {
-    const modal = document.createElement('div');
-    modal.className = 'modal show';
-    modal.innerHTML = `
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3 class="modal-title">Update Job Status - #${job.jobId}</h3>
-                <button class="modal-close" onclick="closeModal()">
-                    <svg class="icon" viewBox="0 0 24 24">
-                        <line x1="18" y1="6" x2="6" y2="18"/>
-                        <line x1="6" y1="6" x2="18" y2="18"/>
-                    </svg>
-                </button>
-            </div>
-            <div class="modal-body">
-                <form id="status-update-form">
-                    <div class="form-group">
-                        <label for="new-status" class="form-label">New Status</label>
-                        <select id="new-status" class="form-input" required>
-                            <option value="In Progress" ${job.status === 'In Progress' ? 'selected' : ''}>In Progress</option>
-                            <option value="Completed" ${job.status === 'Completed' ? 'selected' : ''}>Completed</option>
-                            <option value="On Hold" ${job.status === 'On Hold' ? 'selected' : ''}>On Hold</option>
-                            <option value="Waiting for Parts" ${job.status === 'Waiting for Parts' ? 'selected' : ''}>Waiting for Parts</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label for="status-notes" class="form-label">Status Notes</label>
-                        <textarea id="status-notes" class="form-input" rows="3" placeholder="Any additional notes about the status change..."></textarea>
-                    </div>
-                    <div class="form-group">
-                        <label for="completion-notes" class="form-label">Completion Notes (if completing)</label>
-                        <textarea id="completion-notes" class="form-input" rows="3" placeholder="Work performed, issues found, recommendations..."></textarea>
-                    </div>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
-                <button class="btn btn-primary" onclick="submitStatusUpdate(${job.jobId})">Update Status</button>
-            </div>
-        </div>
-    `;
-    
-    document.body.appendChild(modal);
-    
-    // Close on backdrop click
-    modal.addEventListener('click', (e) => {
-        if (e.target === modal) {
-            closeModal();
-        }
-    });
-}
-
-function createPartsUsageModal(jobId, inventory) {
-    const modal = document.createElement('div');
-    modal.className = 'modal show';
-    modal.innerHTML = `
-        <div class="modal-content large-modal">
-            <div class="modal-header">
-                <h3 class="modal-title">Use Parts for Job #${jobId}</h3>
-                <button class="modal-close" onclick="closeModal()">
-                    <svg class="icon" viewBox="0 0 24 24">
-                        <line x1="18" y1="6" x2="6" y2="18"/>
-                        <line x1="6" y1="6" x2="18" y2="18"/>
-                    </svg>
-                </button>
-            </div>
-            <div class="modal-body">
-                <div class="parts-selection">
-                    <h4>Select Parts to Use</h4>
-                    <div class="inventory-grid">
-                        ${inventory.map(item => `
-                            <div class="inventory-item" data-part-id="${item.id}">
-                                <div class="item-header">
-                                    <h5>${item.partName}</h5>
-                                    <span class="stock-info ${item.quantity <= item.minQuantity ? 'low-stock' : 'in-stock'}">
-                                        ${item.quantity} in stock
-                                    </span>
-                                </div>
-                                <div class="item-details">
-                                    <p><strong>Part #:</strong> ${item.partNumber || 'N/A'}</p>
-                                    <p><strong>Category:</strong> ${item.category || 'N/A'}</p>
-                                    <p><strong>Price:</strong> $${item.pricePerUnit}</p>
-                                </div>
-                                <div class="item-actions">
-                                    <label for="quantity-${item.id}">Quantity:</label>
-                                    <input type="number" id="quantity-${item.id}" class="form-input" min="0" max="${item.quantity}" value="0">
-                                    <button class="btn btn-sm btn-primary" onclick="addPartToJob(${item.id}, '${item.partName}', ${item.pricePerUnit})">
-                                        Add to Job
-                                    </button>
-                                </div>
-                            </div>
-                        `).join('')}
-                    </div>
-                </div>
-                <div class="selected-parts">
-                    <h4>Parts Selected for This Job</h4>
-                    <div id="selected-parts-list">
-                        <p class="no-parts">No parts selected yet</p>
-                    </div>
-                    <div class="parts-summary" id="parts-summary" style="display: none;">
-                        <div class="summary-item">
-                            <span>Total Parts:</span>
-                            <span id="total-parts-count">0</span>
-                        </div>
-                        <div class="summary-item">
-                            <span>Total Cost:</span>
-                            <span id="total-parts-cost">$0.00</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
-                <button class="btn btn-primary" onclick="submitPartsUsage(${jobId})">Confirm Parts Usage</button>
-            </div>
-        </div>
-    `;
-    
-    document.body.appendChild(modal);
-    
-    // Close on backdrop click
-    modal.addEventListener('click', (e) => {
-        if (e.target === modal) {
-            closeModal();
-        }
-    });
-}
-
-// Form Submission Functions
-function submitStatusUpdate(jobId) {
-    const formData = {
-        status: document.getElementById('new-status').value,
-        notes: document.getElementById('status-notes').value,
-        completionNotes: document.getElementById('completion-notes').value
-    };
-
-    fetch(`http://localhost:8080/api/employee/jobs/${jobId}/status`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData)
-    })
-    .then(response => response.json())
-    .then(result => {
-        if (result.success) {
-            showNotification('Job status updated successfully', 'success');
-            closeModal();
-            loadAssignedJobs(); // Refresh the table
-        } else {
-            showNotification(result.error || 'Failed to update job status', 'error');
-        }
-    })
-    .catch(error => {
-        console.error('Error updating job status:', error);
-        showNotification('Failed to update job status', 'error');
-    });
-}
-
-// Global variables for parts usage
-let selectedParts = [];
-
-function addPartToJob(partId, partName, pricePerUnit) {
-    const quantity = parseInt(document.getElementById(`quantity-${partId}`).value);
-    if (quantity <= 0) {
-        showNotification('Please enter a valid quantity', 'error');
-        return;
-    }
-
-    // Check if part is already selected
-    const existingPart = selectedParts.find(p => p.partId === partId);
-    if (existingPart) {
-        existingPart.quantity = quantity;
-        existingPart.cost = quantity * pricePerUnit;
-    } else {
-        selectedParts.push({
-            partId: partId,
-            partName: partName,
-            quantity: quantity,
-            pricePerUnit: pricePerUnit,
-            cost: quantity * pricePerUnit
-        });
-    }
-
-    updateSelectedPartsDisplay();
-    showNotification(`${partName} added to job`, 'success');
-}
-
-function updateSelectedPartsDisplay() {
-    const selectedPartsList = document.getElementById('selected-parts-list');
-    const partsSummary = document.getElementById('parts-summary');
-    
-    if (selectedParts.length === 0) {
-        selectedPartsList.innerHTML = '<p class="no-parts">No parts selected yet</p>';
-        partsSummary.style.display = 'none';
-        return;
-    }
-
-    selectedPartsList.innerHTML = selectedParts.map(part => `
-        <div class="selected-part-item">
-            <div class="part-info">
-                <span class="part-name">${part.partName}</span>
-                <span class="part-quantity">${part.quantity} units</span>
-            </div>
-            <div class="part-cost">$${part.cost.toFixed(2)}</div>
-            <button class="btn btn-sm btn-danger" onclick="removePartFromJob(${part.partId})">
-                <svg class="icon icon-sm" viewBox="0 0 24 24">
-                    <line x1="18" y1="6" x2="6" y2="18"/>
-                    <line x1="6" y1="6" x2="18" y2="18"/>
-                </svg>
-            </button>
-        </div>
-    `).join('');
-
-    // Update summary
-    const totalParts = selectedParts.reduce((sum, part) => sum + part.quantity, 0);
-    const totalCost = selectedParts.reduce((sum, part) => sum + part.cost, 0);
-    
-    document.getElementById('total-parts-count').textContent = totalParts;
-    document.getElementById('total-parts-cost').textContent = `$${totalCost.toFixed(2)}`;
-    partsSummary.style.display = 'block';
-}
-
-function removePartFromJob(partId) {
-    selectedParts = selectedParts.filter(p => p.partId !== partId);
-    updateSelectedPartsDisplay();
-    showNotification('Part removed from job', 'info');
-}
-
-function submitPartsUsage(jobId) {
-    if (selectedParts.length === 0) {
-        showNotification('Please select at least one part', 'error');
-        return;
-    }
-
-    const formData = {
-        parts: selectedParts
-    };
-
-    fetch(`http://localhost:8080/api/employee/jobs/${jobId}/inventory`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData)
-    })
-    .then(response => response.json())
-    .then(result => {
-        if (result.success) {
-            showNotification('Parts usage recorded successfully', 'success');
-            closeModal();
-            selectedParts = []; // Reset selected parts
-            loadAssignedJobs(); // Refresh the table
-        } else {
-            showNotification(result.error || 'Failed to record parts usage', 'error');
-        }
-    })
-    .catch(error => {
-        console.error('Error recording parts usage:', error);
-        showNotification('Failed to record parts usage', 'error');
-    });
 }

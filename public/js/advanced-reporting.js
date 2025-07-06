@@ -1,16 +1,14 @@
-// Advanced Reporting System - Professional Implementation
+// Advanced Reporting System - Database-Driven Implementation
 class AdvancedReporting {
     constructor() {
         this.currentPeriod = '6months';
         this.charts = {};
-        this.summaryData = {};
         this.init();
     }
 
     init() {
         this.initializePeriodSelector();
-        this.initializeTabSwitching();
-        this.loadAllData();
+        this.initializeCharts();
         this.attachEventListeners();
     }
 
@@ -19,62 +17,21 @@ class AdvancedReporting {
         if (periodSelector) {
             periodSelector.addEventListener('change', (e) => {
                 this.currentPeriod = e.target.value;
-                this.loadAllData();
+                this.refreshAllCharts();
             });
         }
     }
 
-    initializeTabSwitching() {
-        const tabButtons = document.querySelectorAll('.tab-btn');
-        const tabContents = document.querySelectorAll('.report-tab');
-
-        tabButtons.forEach(button => {
-            button.addEventListener('click', () => {
-                const targetTab = button.getAttribute('data-tab');
-                
-                // Update active button
-                tabButtons.forEach(btn => btn.classList.remove('active'));
-                button.classList.add('active');
-                
-                // Update active content
-                tabContents.forEach(content => content.classList.remove('active'));
-                const targetContent = document.getElementById(targetTab);
-                if (targetContent) {
-                    targetContent.classList.add('active');
-                    this.loadTabData(targetTab);
-                }
-            });
-        });
-    }
-
-    async loadAllData() {
+    async initializeCharts() {
         try {
-            await Promise.all([
-                this.loadSummaryData(),
-                this.loadChartData(),
-                this.loadTabData('top-services')
-            ]);
+            await this.loadAllChartData();
         } catch (error) {
-            console.error('Error loading all data:', error);
-            this.showGlobalError('Failed to load dashboard data');
+            console.error('Error initializing charts:', error);
+            this.showErrorState('Failed to load chart data');
         }
     }
 
-    async loadSummaryData() {
-        try {
-            const [dashboard, revenue] = await Promise.all([
-                this.fetchData('/api/admin/dashboard'),
-                this.fetchData(`/api/admin/reports/revenue?period=${this.currentPeriod}`)
-            ]);
-
-            this.updateSummaryCards(dashboard, revenue);
-        } catch (error) {
-            console.error('Error loading summary data:', error);
-            this.showSummaryError();
-        }
-    }
-
-    async loadChartData() {
+    async loadAllChartData() {
         const chartContainers = {
             'revenue-chart': this.fetchRevenueData.bind(this),
             'service-distribution-chart': this.fetchServiceDistributionData.bind(this),
@@ -94,36 +51,14 @@ class AdvancedReporting {
         }
     }
 
-    async loadTabData(tabName) {
-        const tabDataFunctions = {
-            'top-services': this.fetchTopServicesData.bind(this),
-            'employee-stats': this.fetchEmployeeStatsData.bind(this),
-            'customer-segments': this.fetchCustomerSegmentsData.bind(this),
-            'inventory-alerts': this.fetchInventoryAlertsData.bind(this)
-        };
-
-        const fetchFunction = tabDataFunctions[tabName];
-        if (fetchFunction) {
-            try {
-                const data = await fetchFunction();
-                this.renderTabData(tabName, data);
-            } catch (error) {
-                console.error(`Error loading ${tabName} data:`, error);
-                this.showTabError(tabName, 'Failed to load data');
-            }
-        }
-    }
-
-    async fetchData(endpoint) {
-        const response = await fetch(`http://localhost:8080${endpoint}`);
-        if (!response.ok) {
-            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-        }
-        return await response.json();
-    }
-
     async fetchRevenueData() {
-        const data = await this.fetchData(`/api/admin/reports/revenue?period=${this.currentPeriod}`);
+        const response = await fetch(`http://localhost:8080/api/admin/reports/revenue?period=${this.currentPeriod}`);
+        if (!response.ok) {
+            throw new Error(`Failed to fetch revenue data: ${response.status}`);
+        }
+        const data = await response.json();
+        
+        // Transform data for chart
         return {
             labels: data.map(item => item.month),
             values: data.map(item => parseFloat(item.totalRevenue || 0))
@@ -131,7 +66,13 @@ class AdvancedReporting {
     }
 
     async fetchServiceDistributionData() {
-        const data = await this.fetchData(`/api/admin/reports/part-usage?period=${this.currentPeriod}`);
+        const response = await fetch(`http://localhost:8080/api/admin/reports/part-usage?period=${this.currentPeriod}`);
+        if (!response.ok) {
+            throw new Error(`Failed to fetch service data: ${response.status}`);
+        }
+        const data = await response.json();
+        
+        // Transform data for chart
         return {
             labels: data.map(item => item.partName),
             values: data.map(item => item.totalUsed)
@@ -139,7 +80,13 @@ class AdvancedReporting {
     }
 
     async fetchEmployeePerformanceData() {
-        const data = await this.fetchData(`/api/admin/reports/employee-performance?period=${this.currentPeriod}`);
+        const response = await fetch(`http://localhost:8080/api/admin/reports/employee-performance?period=${this.currentPeriod}`);
+        if (!response.ok) {
+            throw new Error(`Failed to fetch employee data: ${response.status}`);
+        }
+        const data = await response.json();
+        
+        // Transform data for chart
         return {
             labels: data.map(item => item.employeeName),
             jobsCompleted: data.map(item => item.jobsCompleted),
@@ -148,7 +95,13 @@ class AdvancedReporting {
     }
 
     async fetchInventoryData() {
-        const inventory = await this.fetchData('/api/admin/inventory');
+        const response = await fetch('http://localhost:8080/api/admin/inventory');
+        if (!response.ok) {
+            throw new Error(`Failed to fetch inventory data: ${response.status}`);
+        }
+        const inventory = await response.json();
+        
+        // Process inventory data for chart
         const labels = inventory.slice(0, 10).map(item => item.partName);
         const currentStock = inventory.slice(0, 10).map(item => item.quantity);
         const minRequired = inventory.slice(0, 10).map(item => item.minQuantity || 5);
@@ -157,7 +110,13 @@ class AdvancedReporting {
     }
 
     async fetchCustomerActivityData() {
-        const data = await this.fetchData(`/api/admin/reports/customer-activity?period=${this.currentPeriod}`);
+        const response = await fetch(`http://localhost:8080/api/admin/reports/customer-activity?period=${this.currentPeriod}`);
+        if (!response.ok) {
+            throw new Error(`Failed to fetch customer data: ${response.status}`);
+        }
+        const data = await response.json();
+        
+        // Transform data for chart
         return {
             labels: data.map(item => item.month),
             newCustomers: data.map(item => item.newCustomers),
@@ -165,49 +124,14 @@ class AdvancedReporting {
         };
     }
 
-    async fetchTopServicesData() {
-        return await this.fetchData('/api/admin/reports/top-services');
-    }
-
-    async fetchEmployeeStatsData() {
-        return await this.fetchData('/api/admin/reports/employee-performance');
-    }
-
-    async fetchCustomerSegmentsData() {
-        return await this.fetchData('/api/admin/reports/customer-activity');
-    }
-
-    async fetchInventoryAlertsData() {
-        const inventory = await this.fetchData('/api/admin/inventory');
-        return inventory.filter(item => item.quantity <= item.minQuantity);
-    }
-
-    updateSummaryCards(dashboard, revenue) {
-        // Update summary cards with real data
-        document.getElementById('total-revenue').textContent = `$${parseFloat(dashboard.totalRevenue || 0).toLocaleString()}`;
-        document.getElementById('total-jobs').textContent = dashboard.totalJobs || 0;
-        document.getElementById('total-customers').textContent = dashboard.totalCustomers || 0;
-        document.getElementById('avg-rating').textContent = '4.5'; // Placeholder
-
-        // Calculate trends (simplified)
-        const revenueTrend = revenue.length > 1 ? '+12%' : '+0%';
-        document.getElementById('revenue-trend').textContent = revenueTrend;
-        document.getElementById('jobs-trend').textContent = '+8%';
-        document.getElementById('customers-trend').textContent = '+15%';
-        document.getElementById('rating-trend').textContent = '+2%';
-    }
-
     renderChart(containerId, data) {
         const container = document.getElementById(containerId);
         if (!container) return;
 
         if (!data || (Array.isArray(data.labels) && data.labels.length === 0)) {
-            container.innerHTML = this.createEmptyState('No data available for this period');
+            container.innerHTML = this.createEmptyState('No data available');
             return;
         }
-
-        // Clear container
-        container.innerHTML = '';
 
         switch (containerId) {
             case 'revenue-chart':
@@ -239,22 +163,19 @@ class AdvancedReporting {
                 datasets: [{
                     label: 'Revenue',
                     data: data.values,
-                    borderColor: '#667eea',
-                    backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                    borderColor: '#3b82f6',
+                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
                     tension: 0.4,
-                    fill: true,
-                    pointBackgroundColor: '#667eea',
-                    pointBorderColor: '#ffffff',
-                    pointBorderWidth: 2,
-                    pointRadius: 6
+                    fill: true
                 }]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
                 plugins: {
-                    legend: {
-                        display: false
+                    title: {
+                        display: true,
+                        text: 'Revenue Trend'
                     }
                 },
                 scales: {
@@ -264,20 +185,8 @@ class AdvancedReporting {
                             callback: function(value) {
                                 return '$' + value.toLocaleString();
                             }
-                        },
-                        grid: {
-                            color: 'rgba(0, 0, 0, 0.05)'
-                        }
-                    },
-                    x: {
-                        grid: {
-                            display: false
                         }
                     }
-                },
-                interaction: {
-                    intersect: false,
-                    mode: 'index'
                 }
             }
         });
@@ -287,32 +196,28 @@ class AdvancedReporting {
         const ctx = this.createCanvas(container, 'service-distribution-chart-canvas');
         if (!ctx) return;
 
-        const colors = [
-            '#667eea', '#f093fb', '#4facfe', '#43e97b', '#f093fb',
-            '#f5576c', '#4facfe', '#00f2fe', '#43e97b', '#38f9d7'
-        ];
-
         new Chart(ctx, {
             type: 'doughnut',
             data: {
                 labels: data.labels,
                 datasets: [{
                     data: data.values,
-                    backgroundColor: colors.slice(0, data.labels.length),
-                    borderWidth: 0,
-                    cutout: '60%'
+                    backgroundColor: [
+                        '#3b82f6', '#ef4444', '#f59e0b', '#22c55e', '#8b5cf6',
+                        '#06b6d4', '#84cc16', '#f97316', '#ec4899', '#6366f1'
+                    ]
                 }]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
                 plugins: {
+                    title: {
+                        display: true,
+                        text: 'Service Distribution'
+                    },
                     legend: {
-                        position: 'bottom',
-                        labels: {
-                            padding: 20,
-                            usePointStyle: true
-                        }
+                        position: 'bottom'
                     }
                 }
             }
@@ -330,22 +235,23 @@ class AdvancedReporting {
                 datasets: [{
                     label: 'Jobs Completed',
                     data: data.jobsCompleted,
-                    backgroundColor: '#667eea',
-                    borderRadius: 6
+                    backgroundColor: '#3b82f6',
+                    yAxisID: 'y'
                 }, {
-                    label: 'Avg Rating',
+                    label: 'Average Rating',
                     data: data.ratings,
-                    backgroundColor: '#43e97b',
-                    borderRadius: 6,
-                    yAxisID: 'y1'
+                    backgroundColor: '#f59e0b',
+                    yAxisID: 'y1',
+                    type: 'line'
                 }]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
                 plugins: {
-                    legend: {
-                        position: 'top'
+                    title: {
+                        display: true,
+                        text: 'Employee Performance'
                     }
                 },
                 scales: {
@@ -353,18 +259,17 @@ class AdvancedReporting {
                         type: 'linear',
                         display: true,
                         position: 'left',
-                        grid: {
-                            color: 'rgba(0, 0, 0, 0.05)'
-                        }
+                        beginAtZero: true
                     },
                     y1: {
                         type: 'linear',
                         display: true,
                         position: 'right',
+                        beginAtZero: true,
+                        max: 5,
                         grid: {
                             drawOnChartArea: false
-                        },
-                        max: 5
+                        }
                     }
                 }
             }
@@ -382,34 +287,25 @@ class AdvancedReporting {
                 datasets: [{
                     label: 'Current Stock',
                     data: data.currentStock,
-                    backgroundColor: '#43e97b',
-                    borderRadius: 6
+                    backgroundColor: '#22c55e'
                 }, {
-                    label: 'Min Required',
+                    label: 'Minimum Required',
                     data: data.minRequired,
-                    backgroundColor: '#f093fb',
-                    borderRadius: 6
+                    backgroundColor: '#ef4444'
                 }]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
                 plugins: {
-                    legend: {
-                        position: 'top'
+                    title: {
+                        display: true,
+                        text: 'Inventory Levels'
                     }
                 },
                 scales: {
                     y: {
-                        beginAtZero: true,
-                        grid: {
-                            color: 'rgba(0, 0, 0, 0.05)'
-                        }
-                    },
-                    x: {
-                        grid: {
-                            display: false
-                        }
+                        beginAtZero: true
                     }
                 }
             }
@@ -421,124 +317,61 @@ class AdvancedReporting {
         if (!ctx) return;
 
         new Chart(ctx, {
-            type: 'line',
+            type: 'bar',
             data: {
                 labels: data.labels,
                 datasets: [{
                     label: 'New Customers',
                     data: data.newCustomers,
-                    borderColor: '#667eea',
-                    backgroundColor: 'rgba(102, 126, 234, 0.1)',
-                    tension: 0.4,
-                    fill: false
+                    backgroundColor: '#3b82f6'
                 }, {
                     label: 'Returning Customers',
                     data: data.returningCustomers,
-                    borderColor: '#43e97b',
-                    backgroundColor: 'rgba(67, 233, 123, 0.1)',
-                    tension: 0.4,
-                    fill: false
+                    backgroundColor: '#22c55e'
                 }]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
                 plugins: {
-                    legend: {
-                        position: 'top'
+                    title: {
+                        display: true,
+                        text: 'Customer Activity'
                     }
                 },
                 scales: {
                     y: {
-                        beginAtZero: true,
-                        grid: {
-                            color: 'rgba(0, 0, 0, 0.05)'
-                        }
-                    },
-                    x: {
-                        grid: {
-                            display: false
-                        }
+                        beginAtZero: true
                     }
                 }
             }
         });
     }
 
-    renderTabData(tabName, data) {
-        const tbodyId = `${tabName.replace('-', '-')}-data`;
-        const tbody = document.getElementById(tbodyId);
-        if (!tbody) return;
-
-        if (!data || data.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="5" class="empty-state">No data available</td></tr>`;
-            return;
-        }
-
-        let html = '';
-        switch (tabName) {
-            case 'top-services':
-                html = data.map(service => `
-                    <tr>
-                        <td>${service.serviceName}</td>
-                        <td>${service.jobCount}</td>
-                        <td>$${parseFloat(service.totalRevenue || 0).toLocaleString()}</td>
-                        <td>$${parseFloat(service.avgRevenue || 0).toLocaleString()}</td>
-                        <td>${service.avgRating || 'N/A'}</td>
-                    </tr>
-                `).join('');
-                break;
-            case 'employee-stats':
-                html = data.map(employee => `
-                    <tr>
-                        <td>${employee.employeeName}</td>
-                        <td>${employee.jobsCompleted}</td>
-                        <td>${employee.avgRating || 'N/A'}</td>
-                        <td><span class="performance-indicator performance-good">Good</span></td>
-                    </tr>
-                `).join('');
-                break;
-            case 'customer-segments':
-                html = data.map(segment => `
-                    <tr>
-                        <td>${segment.month}</td>
-                        <td>${segment.newCustomers}</td>
-                        <td>${segment.returningCustomers || 0}</td>
-                        <td>${segment.newCustomers + (segment.returningCustomers || 0)}</td>
-                    </tr>
-                `).join('');
-                break;
-            case 'inventory-alerts':
-                html = data.map(item => `
-                    <tr>
-                        <td>${item.partName}</td>
-                        <td>${item.quantity}</td>
-                        <td>${item.minQuantity}</td>
-                        <td><span class="status-badge low-stock">Low Stock</span></td>
-                        <td>${item.supplier || 'N/A'}</td>
-                    </tr>
-                `).join('');
-                break;
-        }
-
-        tbody.innerHTML = html;
-    }
-
     createCanvas(container, canvasId) {
+        // Clear container
+        container.innerHTML = '';
+        
+        // Create canvas
         const canvas = document.createElement('canvas');
         canvas.id = canvasId;
         canvas.style.width = '100%';
         canvas.style.height = '300px';
         container.appendChild(canvas);
+        
         return canvas.getContext('2d');
     }
 
     createEmptyState(message) {
         return `
-            <div class="empty-state">
-                <i class="fas fa-chart-line"></i>
-                <h4>No Data Available</h4>
-                <p>${message}</p>
+            <div class="chart-empty-state">
+                <div class="empty-state-icon">
+                    <svg class="icon icon-xl" viewBox="0 0 24 24">
+                        <path d="M3 3v18h18"/>
+                        <path d="M18.7 8l-5.1 5.2-2.8-2.7L7 14.3"/>
+                    </svg>
+                </div>
+                <div class="empty-state-message">${message}</div>
             </div>
         `;
     }
@@ -547,157 +380,190 @@ class AdvancedReporting {
         const container = document.getElementById(containerId);
         if (container) {
             container.innerHTML = `
-                <div class="error-state">
-                    <i class="fas fa-exclamation-triangle"></i>
-                    <p>${message}</p>
-                    <button class="retry-btn" onclick="advancedReporting.refreshChart('${containerId}')">
-                        <i class="fas fa-sync-alt"></i> Retry
+                <div class="chart-error-state">
+                    <div class="error-icon">
+                        <svg class="icon icon-xl" viewBox="0 0 24 24">
+                            <circle cx="12" cy="12" r="10"/>
+                            <line x1="15" y1="9" x2="9" y2="15"/>
+                            <line x1="9" y1="9" x2="15" y2="15"/>
+                        </svg>
+                    </div>
+                    <div class="error-message">${message}</div>
+                    <button class="btn btn-sm btn-primary" onclick="window.advancedReporting.refreshChart('${containerId}')">
+                        Retry
                     </button>
                 </div>
             `;
         }
     }
 
-    showTabError(tabName, message) {
-        const tbodyId = `${tabName.replace('-', '-')}-data`;
-        const tbody = document.getElementById(tbodyId);
-        if (tbody) {
-            tbody.innerHTML = `
-                <tr>
-                    <td colspan="5" class="error-state">
-                        <i class="fas fa-exclamation-triangle"></i>
-                        <p>${message}</p>
-                        <button class="retry-btn" onclick="advancedReporting.loadTabData('${tabName}')">
-                            <i class="fas fa-sync-alt"></i> Retry
-                        </button>
-                    </td>
-                </tr>
+    showErrorState(message) {
+        const errorContainer = document.getElementById('reports-error-container');
+        if (errorContainer) {
+            errorContainer.innerHTML = `
+                <div class="error-state">
+                    <div class="error-icon">
+                        <svg class="icon icon-xl" viewBox="0 0 24 24">
+                            <circle cx="12" cy="12" r="10"/>
+                            <line x1="15" y1="9" x2="9" y2="15"/>
+                            <line x1="9" y1="9" x2="15" y2="15"/>
+                        </svg>
+                    </div>
+                    <div class="error-message">${message}</div>
+                    <button class="btn btn-primary" onclick="window.advancedReporting.initializeCharts()">
+                        Retry
+                    </button>
+                </div>
             `;
         }
     }
 
-    showSummaryError() {
-        const summaryCards = ['total-revenue', 'total-jobs', 'total-customers', 'avg-rating'];
-        summaryCards.forEach(id => {
-            const element = document.getElementById(id);
-            if (element) {
-                element.textContent = 'N/A';
-            }
-        });
-    }
-
-    showGlobalError(message) {
-        // Show a global error notification
-        console.error(message);
-    }
-
     async refreshChart(containerId) {
-        const container = document.getElementById(containerId);
-        if (!container) return;
+        const fetchFunctions = {
+            'revenue-chart': this.fetchRevenueData.bind(this),
+            'service-distribution-chart': this.fetchServiceDistributionData.bind(this),
+            'employee-performance-chart': this.fetchEmployeePerformanceData.bind(this),
+            'inventory-chart': this.fetchInventoryData.bind(this),
+            'customer-activity-chart': this.fetchCustomerActivityData.bind(this)
+        };
 
-        // Show loading state
-        container.innerHTML = `
-            <div class="loading-spinner">
-                <div class="spinner"></div>
-                <p>Refreshing data...</p>
-            </div>
-        `;
-
-        try {
-            const chartFunctions = {
-                'revenue-chart': this.fetchRevenueData.bind(this),
-                'service-distribution-chart': this.fetchServiceDistributionData.bind(this),
-                'employee-performance-chart': this.fetchEmployeePerformanceData.bind(this),
-                'inventory-chart': this.fetchInventoryData.bind(this),
-                'customer-activity-chart': this.fetchCustomerActivityData.bind(this)
-            };
-
-            const fetchFunction = chartFunctions[containerId];
-            if (fetchFunction) {
+        const fetchFunction = fetchFunctions[containerId];
+        if (fetchFunction) {
+            try {
                 const data = await fetchFunction();
                 this.renderChart(containerId, data);
+            } catch (error) {
+                console.error(`Error refreshing ${containerId}:`, error);
+                this.showChartError(containerId, 'Failed to refresh data');
             }
-        } catch (error) {
-            console.error(`Error refreshing ${containerId}:`, error);
-            this.showChartError(containerId, 'Failed to refresh data');
+        }
+    }
+
+    async refreshAllCharts() {
+        await this.loadAllChartData();
+    }
+
+    attachEventListeners() {
+        // Export button
+        const exportBtn = document.getElementById('export-reports-btn');
+        if (exportBtn) {
+            exportBtn.addEventListener('click', () => this.exportData());
+        }
+
+        // Refresh button
+        const refreshBtn = document.getElementById('refresh-reports-btn');
+        if (refreshBtn) {
+            refreshBtn.addEventListener('click', () => this.refreshAllCharts());
         }
     }
 
     async exportData() {
         try {
-            const data = await this.generateSummaryReport();
-            const csv = this.convertToCSV(data);
-            this.downloadCSV(csv, `autorepair-report-${new Date().toISOString().split('T')[0]}.csv`);
+            const [revenueData, serviceData, employeeData, inventoryData, customerData] = await Promise.all([
+                this.fetchRevenueData(),
+                this.fetchServiceDistributionData(),
+                this.fetchEmployeePerformanceData(),
+                this.fetchInventoryData(),
+                this.fetchCustomerActivityData()
+            ]);
+
+            const csvData = this.convertToCSV({
+                revenue: revenueData,
+                services: serviceData,
+                employees: employeeData,
+                inventory: inventoryData,
+                customers: customerData
+            });
+
+            this.downloadCSV(csvData, `autorepairpro-reports-${this.currentPeriod}-${new Date().toISOString().split('T')[0]}.csv`);
+            
+            if (window.showNotification) {
+                window.showNotification('Reports exported successfully!', 'success');
+            }
         } catch (error) {
             console.error('Error exporting data:', error);
-            alert('Failed to export data. Please try again.');
+            if (window.showNotification) {
+                window.showNotification('Failed to export reports', 'error');
+            }
         }
     }
 
-    async generateSummaryReport() {
-        const [dashboard, revenue, services, employees] = await Promise.all([
-            this.fetchData('/api/admin/dashboard'),
-            this.fetchData(`/api/admin/reports/revenue?period=${this.currentPeriod}`),
-            this.fetchData('/api/admin/reports/top-services'),
-            this.fetchData('/api/admin/reports/employee-performance')
-        ]);
-
-        return {
-            summary: dashboard,
-            revenue: revenue,
-            topServices: services,
-            employeePerformance: employees,
-            generatedAt: new Date().toISOString()
-        };
-    }
-
     convertToCSV(data) {
-        // Simplified CSV conversion
-        const lines = [];
-        lines.push('AutoRepair Pro - Business Report');
-        lines.push(`Generated: ${new Date().toLocaleString()}`);
-        lines.push('');
+        let csv = '';
         
-        // Summary
-        lines.push('SUMMARY');
-        lines.push('Metric,Value');
-        lines.push(`Total Revenue,$${data.summary.totalRevenue || 0}`);
-        lines.push(`Total Jobs,${data.summary.totalJobs || 0}`);
-        lines.push(`Total Customers,${data.summary.totalCustomers || 0}`);
-        lines.push('');
+        // Revenue data
+        csv += 'Revenue Report\n';
+        csv += 'Period,Revenue\n';
+        data.revenue.labels.forEach((label, index) => {
+            csv += `${label},${data.revenue.values[index]}\n`;
+        });
+        csv += '\n';
         
-        // Revenue
-        lines.push('REVENUE BY MONTH');
-        lines.push('Month,Revenue');
-        data.revenue.forEach(item => {
-            lines.push(`${item.month},$${item.totalRevenue || 0}`);
+        // Service distribution
+        csv += 'Service Distribution\n';
+        csv += 'Service,Count\n';
+        data.services.labels.forEach((label, index) => {
+            csv += `${label},${data.services.values[index]}\n`;
+        });
+        csv += '\n';
+        
+        // Employee performance
+        csv += 'Employee Performance\n';
+        csv += 'Employee,Jobs Completed,Rating\n';
+        data.employees.labels.forEach((label, index) => {
+            csv += `${label},${data.employees.jobsCompleted[index]},${data.employees.ratings[index]}\n`;
         });
         
-        return lines.join('\n');
+        return csv;
     }
 
     downloadCSV(csvData, filename) {
-        const blob = new Blob([csvData], { type: 'text/csv;charset=utf-8;' });
-        const link = document.createElement('a');
-        const url = URL.createObjectURL(blob);
-        link.setAttribute('href', url);
-        link.setAttribute('download', filename);
-        link.style.visibility = 'hidden';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+        const blob = new Blob([csvData], { type: 'text/csv' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
     }
 
-    attachEventListeners() {
-        // Add any additional event listeners here
-        document.addEventListener('DOMContentLoaded', () => {
-            // Initialize any DOM-dependent functionality
-        });
+    // Generate summary report
+    async generateSummaryReport() {
+        try {
+            const [revenueData, serviceData, employeeData] = await Promise.all([
+                this.fetchRevenueData(),
+                this.fetchServiceDistributionData(),
+                this.fetchEmployeePerformanceData()
+            ]);
+
+            const totalRevenue = revenueData.values.reduce((sum, val) => sum + val, 0);
+            const totalServices = serviceData.values.reduce((sum, val) => sum + val, 0);
+            const avgEmployeeRating = employeeData.ratings.reduce((sum, val) => sum + val, 0) / employeeData.ratings.length;
+
+            return {
+                totalRevenue,
+                totalServices,
+                avgEmployeeRating: avgEmployeeRating.toFixed(2),
+                period: this.currentPeriod,
+                generatedAt: new Date().toISOString()
+            };
+        } catch (error) {
+            console.error('Error generating summary report:', error);
+            throw error;
+        }
     }
 }
 
-// Initialize the reporting system when the page loads
-let advancedReporting;
+// Initialize when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
-    advancedReporting = new AdvancedReporting();
-}); 
+    if (typeof Chart !== 'undefined') {
+        window.advancedReporting = new AdvancedReporting();
+    } else {
+        console.error('Chart.js not loaded');
+    }
+});
+
+// Export for use in other modules
+window.AdvancedReporting = AdvancedReporting; 

@@ -461,8 +461,8 @@ public class EmployeeHandler {
         jsonBuilder.append("[");
 
         try (Connection conn = DatabaseConnector.getConnection();
-             Statement stmt = conn.createStatement();
-             ResultSet rs = stmt.executeQuery(sql)) {
+             PreparedStatement pstmt = conn.prepareStatement(sql);
+             ResultSet rs = pstmt.executeQuery()) {
             
             boolean first = true;
             while (rs.next()) {

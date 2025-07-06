@@ -4,7 +4,6 @@ import com.autorepairpro.db.DatabaseConnector;
 import java.sql.*;
 import java.util.*;
 import java.io.*;
-import java.math.BigDecimal;
 
 public class AdminHandler {
     
@@ -51,7 +50,9 @@ public class AdminHandler {
     }
     
     private String getDashboardStats() {
-        try (Connection conn = DatabaseConnector.getConnection()) {
+        Connection conn = null;
+        try {
+            conn = DatabaseConnector.getConnection();
             // Total jobs
             String jobsSql = "SELECT COUNT(*) as total, " +
                            "SUM(CASE WHEN status = 'Booked' THEN 1 ELSE 0 END) as booked, " +
@@ -64,13 +65,13 @@ public class AdminHandler {
             String revenueSql = "SELECT COALESCE(SUM(total_amount), 0) as totalRevenue FROM invoices WHERE status = 'Paid'";
             
             // Total customers
-            String customersSql = "SELECT COUNT(*) as totalCustomers FROM users WHERE role = 'customer'";
+            String customersSql = "SELECT COUNT(*) as totalCustomers FROM users WHERE role = 'customer' AND is_active = true";
             
             // Total employees
-            String employeesSql = "SELECT COUNT(*) as totalEmployees FROM users WHERE role = 'employee'";
+            String employeesSql = "SELECT COUNT(*) as totalEmployees FROM users WHERE role = 'employee' AND is_active = true";
             
             // Low stock items
-            String lowStockSql = "SELECT COUNT(*) as lowStockItems FROM inventory WHERE quantity <= min_quantity";
+            String lowStockSql = "SELECT COUNT(*) as lowStockItems FROM inventory WHERE quantity <= min_quantity AND is_active = true";
             
             StringBuilder jsonBuilder = new StringBuilder();
             jsonBuilder.append("{");
@@ -91,8 +92,7 @@ public class AdminHandler {
             try (PreparedStatement pstmt = conn.prepareStatement(revenueSql);
                  ResultSet rs = pstmt.executeQuery()) {
                 if (rs.next()) {
-                    BigDecimal totalRevenue = rs.getBigDecimal("totalRevenue");
-                    jsonBuilder.append("\"totalRevenue\":").append(totalRevenue != null ? totalRevenue : BigDecimal.ZERO).append(",");
+                    jsonBuilder.append("\"totalRevenue\":").append(rs.getBigDecimal("totalRevenue")).append(",");
                 }
             }
             
@@ -126,24 +126,28 @@ public class AdminHandler {
         } catch (SQLException e) {
             e.printStackTrace();
             return createErrorResponse("Database error fetching dashboard stats", 500);
+        } finally {
+            DatabaseConnector.closeConnection(conn);
         }
     }
     
     private String handleJobs(String method, String requestBody) {
-        try (Connection conn = DatabaseConnector.getConnection()) {
-            switch (method) {
-                case "GET":
-                    return getAllJobs(conn);
-                case "POST":
-                    return createJob(conn, requestBody);
-                case "PUT":
-                    return updateJob(conn, requestBody);
-                default:
-                    return createErrorResponse("Method not allowed", 405);
+        Connection conn = null;
+        try {
+            conn = DatabaseConnector.getConnection();
+            if ("GET".equals(method)) {
+                return getAllJobs(conn);
+            } else if ("POST".equals(method)) {
+                return createJob(conn, requestBody);
+            } else if ("PUT".equals(method)) {
+                return updateJob(conn, requestBody);
             }
+            return createErrorResponse("Method not allowed", 405);
         } catch (SQLException e) {
             e.printStackTrace();
             return createErrorResponse("Database error handling jobs", 500);
+        } finally {
+            DatabaseConnector.closeConnection(conn);
         }
     }
     
@@ -169,23 +173,22 @@ public class AdminHandler {
                 job.put("jobId", rs.getInt("jobId"));
                 job.put("status", rs.getString("status"));
                 
-                // Handle null timestamp
-                Timestamp bookingDate = rs.getTimestamp("booking_date");
+                // Safe timestamp handling
+                java.sql.Timestamp bookingDate = rs.getTimestamp("booking_date");
                 job.put("bookingDate", bookingDate != null ? bookingDate.toString() : null);
                 
-                // Handle null BigDecimal
-                BigDecimal totalCost = rs.getBigDecimal("total_cost");
-                job.put("totalCost", totalCost != null ? totalCost : BigDecimal.ZERO);
+                // Safe decimal handling
+                java.math.BigDecimal totalCost = rs.getBigDecimal("total_cost");
+                job.put("totalCost", totalCost);
                 
                 job.put("notes", rs.getString("notes"));
                 job.put("customerName", rs.getString("customerName"));
                 
-                // Build vehicle string safely
+                // Safe string concatenation
                 String make = rs.getString("make");
                 String model = rs.getString("model");
-                Integer year = rs.getObject("year", Integer.class);
-                String vehicle = (make != null ? make : "") + " " + (model != null ? model : "") + 
-                               (year != null ? " (" + year + ")" : "");
+                int year = rs.getInt("year");
+                String vehicle = (make != null ? make : "") + " " + (model != null ? model : "") + " (" + year + ")";
                 job.put("vehicle", vehicle.trim());
                 
                 job.put("service", rs.getString("service_name"));
@@ -211,9 +214,11 @@ public class AdminHandler {
     }
     
     private String handleUsers(String method, String requestBody) {
-        try (Connection conn = DatabaseConnector.getConnection()) {
+        Connection conn = null;
+        try {
+            conn = DatabaseConnector.getConnection();
             if ("GET".equals(method)) {
-                String sql = "SELECT id, username, full_name, email, phone, role, created_at " +
+                String sql = "SELECT id, username, full_name, email, phone, role, created_at, is_active " +
                            "FROM users ORDER BY created_at DESC";
                 
                 List<Map<String, Object>> users = new ArrayList<>();
@@ -228,8 +233,13 @@ public class AdminHandler {
                         user.put("email", rs.getString("email"));
                         user.put("phone", rs.getString("phone"));
                         user.put("role", rs.getString("role"));
-                        user.put("createdAt", rs.getTimestamp("created_at").toString());
-                        user.put("isActive", true); // Default to true since we don't have is_active column
+                        
+                        // Safe timestamp handling
+                        java.sql.Timestamp createdAt = rs.getTimestamp("created_at");
+                        user.put("createdAt", createdAt != null ? createdAt.toString() : null);
+                        
+                        // Safe boolean handling
+                        user.put("isActive", rs.getBoolean("is_active"));
                         users.add(user);
                     }
                 }
@@ -240,14 +250,18 @@ public class AdminHandler {
         } catch (SQLException e) {
             e.printStackTrace();
             return createErrorResponse("Database error fetching users", 500);
+        } finally {
+            DatabaseConnector.closeConnection(conn);
         }
     }
     
     private String handleServices(String method, String requestBody) {
-        try (Connection conn = DatabaseConnector.getConnection()) {
+        Connection conn = null;
+        try {
+            conn = DatabaseConnector.getConnection();
             if ("GET".equals(method)) {
-                String sql = "SELECT id, service_name, price, description, estimated_duration, category " +
-                           "FROM services ORDER BY service_name";
+                String sql = "SELECT id, service_name, price, description, estimated_duration, category, is_active " +
+                           "FROM services WHERE is_active = true ORDER BY service_name";
                 
                 List<Map<String, Object>> services = new ArrayList<>();
                 try (PreparedStatement pstmt = conn.prepareStatement(sql);
@@ -257,11 +271,19 @@ public class AdminHandler {
                         Map<String, Object> service = new HashMap<>();
                         service.put("id", rs.getInt("id"));
                         service.put("serviceName", rs.getString("service_name"));
-                        service.put("price", rs.getBigDecimal("price"));
+                        
+                        // Safe decimal handling
+                        java.math.BigDecimal price = rs.getBigDecimal("price");
+                        service.put("price", price);
+                        
                         service.put("description", rs.getString("description"));
-                        service.put("estimatedDuration", rs.getInt("estimated_duration"));
+                        
+                        // Safe integer handling
+                        int estimatedDuration = rs.getInt("estimated_duration");
+                        service.put("estimatedDuration", rs.wasNull() ? null : estimatedDuration);
+                        
                         service.put("category", rs.getString("category"));
-                        service.put("isActive", true); // Default to true since we don't have is_active column
+                        service.put("isActive", rs.getBoolean("is_active"));
                         services.add(service);
                     }
                 }
@@ -272,15 +294,19 @@ public class AdminHandler {
         } catch (SQLException e) {
             e.printStackTrace();
             return createErrorResponse("Database error fetching services", 500);
+        } finally {
+            DatabaseConnector.closeConnection(conn);
         }
     }
     
     private String handleInventory(String method, String requestBody) {
-        try (Connection conn = DatabaseConnector.getConnection()) {
+        Connection conn = null;
+        try {
+            conn = DatabaseConnector.getConnection();
             if ("GET".equals(method)) {
                 String sql = "SELECT id, part_name, part_number, quantity, min_quantity, price_per_unit, " +
-                           "category, supplier, location " +
-                           "FROM inventory ORDER BY part_name";
+                           "category, supplier, location, is_active " +
+                           "FROM inventory WHERE is_active = true ORDER BY part_name";
                 
                 List<Map<String, Object>> inventory = new ArrayList<>();
                 try (PreparedStatement pstmt = conn.prepareStatement(sql);
@@ -291,14 +317,23 @@ public class AdminHandler {
                         item.put("id", rs.getInt("id"));
                         item.put("partName", rs.getString("part_name"));
                         item.put("partNumber", rs.getString("part_number"));
-                        item.put("quantity", rs.getInt("quantity"));
-                        item.put("minQuantity", rs.getInt("min_quantity"));
-                        item.put("pricePerUnit", rs.getBigDecimal("price_per_unit"));
+                        
+                        // Safe integer handling
+                        int quantity = rs.getInt("quantity");
+                        item.put("quantity", quantity);
+                        
+                        int minQuantity = rs.getInt("min_quantity");
+                        item.put("minQuantity", minQuantity);
+                        
+                        // Safe decimal handling
+                        java.math.BigDecimal pricePerUnit = rs.getBigDecimal("price_per_unit");
+                        item.put("pricePerUnit", pricePerUnit);
+                        
                         item.put("category", rs.getString("category"));
                         item.put("supplier", rs.getString("supplier"));
                         item.put("location", rs.getString("location"));
-                        item.put("isActive", true); // Default to true since we don't have is_active column
-                        item.put("lowStock", rs.getInt("quantity") <= rs.getInt("min_quantity"));
+                        item.put("isActive", rs.getBoolean("is_active"));
+                        item.put("lowStock", quantity <= minQuantity);
                         inventory.add(item);
                     }
                 }
@@ -309,19 +344,25 @@ public class AdminHandler {
         } catch (SQLException e) {
             e.printStackTrace();
             return createErrorResponse("Database error fetching inventory", 500);
+        } finally {
+            DatabaseConnector.closeConnection(conn);
         }
     }
     
     private String handleBranches(String method, String requestBody) {
-        try (Connection conn = DatabaseConnector.getConnection()) {
+        Connection conn = null;
+        try {
+            conn = DatabaseConnector.getConnection();
             if ("GET".equals(method)) {
                 String sql = "SELECT b.id, b.name, b.address, b.phone, b.email, b.latitude, b.longitude, b.rating, " +
+                           "b.is_active, " +
                            "GROUP_CONCAT(DISTINCT bh.day_of_week, ': ', " +
                            "CASE WHEN bh.is_closed THEN 'Closed' " +
                            "ELSE CONCAT(TIME_FORMAT(bh.open_time, '%H:%i'), '-', TIME_FORMAT(bh.close_time, '%H:%i')) " +
                            "END ORDER BY FIELD(bh.day_of_week, 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday')) as hours " +
                            "FROM branches b " +
                            "LEFT JOIN business_hours bh ON b.id = bh.branch_id " +
+                           "WHERE b.is_active = true " +
                            "GROUP BY b.id " +
                            "ORDER BY b.name";
                 
@@ -336,10 +377,18 @@ public class AdminHandler {
                         branch.put("address", rs.getString("address"));
                         branch.put("phone", rs.getString("phone"));
                         branch.put("email", rs.getString("email"));
-                        branch.put("latitude", rs.getBigDecimal("latitude"));
-                        branch.put("longitude", rs.getBigDecimal("longitude"));
-                        branch.put("rating", rs.getBigDecimal("rating"));
-                        branch.put("isActive", true); // Default to true since we don't have is_active column
+                        
+                        // Safe decimal handling for coordinates
+                        java.math.BigDecimal latitude = rs.getBigDecimal("latitude");
+                        branch.put("latitude", latitude);
+                        
+                        java.math.BigDecimal longitude = rs.getBigDecimal("longitude");
+                        branch.put("longitude", longitude);
+                        
+                        java.math.BigDecimal rating = rs.getBigDecimal("rating");
+                        branch.put("rating", rating);
+                        
+                        branch.put("isActive", rs.getBoolean("is_active"));
                         branch.put("hours", rs.getString("hours"));
                         branches.add(branch);
                     }
@@ -351,11 +400,15 @@ public class AdminHandler {
         } catch (SQLException e) {
             e.printStackTrace();
             return createErrorResponse("Database error fetching branches", 500);
+        } finally {
+            DatabaseConnector.closeConnection(conn);
         }
     }
     
     private String handleInvoices(String method, String requestBody) {
-        try (Connection conn = DatabaseConnector.getConnection()) {
+        Connection conn = null;
+        try {
+            conn = DatabaseConnector.getConnection();
             if ("GET".equals(method)) {
                 String sql = "SELECT i.id, i.invoice_number, i.amount, i.tax_amount, i.total_amount, " +
                            "i.status, i.due_date, i.created_at, " +
@@ -374,12 +427,27 @@ public class AdminHandler {
                         Map<String, Object> invoice = new HashMap<>();
                         invoice.put("id", rs.getInt("id"));
                         invoice.put("invoiceNumber", rs.getString("invoice_number"));
-                        invoice.put("amount", rs.getBigDecimal("amount"));
-                        invoice.put("taxAmount", rs.getBigDecimal("tax_amount"));
-                        invoice.put("totalAmount", rs.getBigDecimal("total_amount"));
+                        
+                        // Safe decimal handling
+                        java.math.BigDecimal amount = rs.getBigDecimal("amount");
+                        invoice.put("amount", amount);
+                        
+                        java.math.BigDecimal taxAmount = rs.getBigDecimal("tax_amount");
+                        invoice.put("taxAmount", taxAmount);
+                        
+                        java.math.BigDecimal totalAmount = rs.getBigDecimal("total_amount");
+                        invoice.put("totalAmount", totalAmount);
+                        
                         invoice.put("status", rs.getString("status"));
-                        invoice.put("dueDate", rs.getDate("due_date").toString());
-                        invoice.put("createdAt", rs.getTimestamp("created_at").toString());
+                        
+                        // Safe date handling
+                        java.sql.Date dueDate = rs.getDate("due_date");
+                        invoice.put("dueDate", dueDate != null ? dueDate.toString() : null);
+                        
+                        // Safe timestamp handling
+                        java.sql.Timestamp createdAt = rs.getTimestamp("created_at");
+                        invoice.put("createdAt", createdAt != null ? createdAt.toString() : null);
+                        
                         invoice.put("jobId", rs.getInt("jobId"));
                         invoice.put("customerName", rs.getString("customerName"));
                         invoice.put("serviceName", rs.getString("service_name"));
@@ -393,11 +461,15 @@ public class AdminHandler {
         } catch (SQLException e) {
             e.printStackTrace();
             return createErrorResponse("Database error fetching invoices", 500);
+        } finally {
+            DatabaseConnector.closeConnection(conn);
         }
     }
     
     private String handlePayments(String method, String requestBody) {
-        try (Connection conn = DatabaseConnector.getConnection()) {
+        Connection conn = null;
+        try {
+            conn = DatabaseConnector.getConnection();
             if ("GET".equals(method)) {
                 String sql = "SELECT p.id, p.amount, p.payment_method, p.payment_status, " +
                            "p.transaction_id, p.payment_date, p.notes, " +
@@ -415,11 +487,19 @@ public class AdminHandler {
                     while (rs.next()) {
                         Map<String, Object> payment = new HashMap<>();
                         payment.put("id", rs.getInt("id"));
-                        payment.put("amount", rs.getBigDecimal("amount"));
+                        
+                        // Safe decimal handling
+                        java.math.BigDecimal amount = rs.getBigDecimal("amount");
+                        payment.put("amount", amount);
+                        
                         payment.put("paymentMethod", rs.getString("payment_method"));
                         payment.put("paymentStatus", rs.getString("payment_status"));
                         payment.put("transactionId", rs.getString("transaction_id"));
-                        payment.put("paymentDate", rs.getTimestamp("payment_date").toString());
+                        
+                        // Safe timestamp handling
+                        java.sql.Timestamp paymentDate = rs.getTimestamp("payment_date");
+                        payment.put("paymentDate", paymentDate != null ? paymentDate.toString() : null);
+                        
                         payment.put("notes", rs.getString("notes"));
                         payment.put("invoiceNumber", rs.getString("invoice_number"));
                         payment.put("customerName", rs.getString("customerName"));
@@ -433,21 +513,21 @@ public class AdminHandler {
         } catch (SQLException e) {
             e.printStackTrace();
             return createErrorResponse("Database error fetching payments", 500);
+        } finally {
+            DatabaseConnector.closeConnection(conn);
         }
     }
     
     private String handleReports(String[] pathParts, String method) {
-        if (pathParts.length < 5) {
+        if (pathParts.length < 4) {
             return createErrorResponse("Report type not specified", 400);
         }
         
-        String reportType = pathParts[4];
-        // Remove query parameters if present
-        if (reportType.contains("?")) {
-            reportType = reportType.substring(0, reportType.indexOf("?"));
-        }
+        String reportType = pathParts[3];
+        Connection conn = null;
         
-        try (Connection conn = DatabaseConnector.getConnection()) {
+        try {
+            conn = DatabaseConnector.getConnection();
             switch (reportType) {
                 case "revenue":
                     return getRevenueReport(conn);
@@ -457,16 +537,14 @@ public class AdminHandler {
                     return getEmployeePerformanceReport(conn);
                 case "customer-activity":
                     return getCustomerActivityReport(conn);
-                case "inventory-status":
-                    return getInventoryStatusReport(conn);
-                case "top-services":
-                    return getTopServicesReport(conn);
                 default:
-                    return createErrorResponse("Report type not found: " + reportType, 404);
+                    return createErrorResponse("Report type not found", 404);
             }
         } catch (SQLException e) {
             e.printStackTrace();
-            return createErrorResponse("Database error generating report: " + e.getMessage(), 500);
+            return createErrorResponse("Database error generating report", 500);
+        } finally {
+            DatabaseConnector.closeConnection(conn);
         }
     }
     
@@ -498,6 +576,7 @@ public class AdminHandler {
         String sql = "SELECT i.part_name, COALESCE(SUM(ji.quantity_used), 0) as totalUsed " +
                     "FROM inventory i " +
                     "LEFT JOIN job_inventory ji ON i.id = ji.inventory_id " +
+                    "WHERE i.is_active = true " +
                     "GROUP BY i.id, i.part_name " +
                     "ORDER BY totalUsed DESC " +
                     "LIMIT 10";
@@ -524,7 +603,7 @@ public class AdminHandler {
                     "FROM users u " +
                     "LEFT JOIN jobs j ON u.id = j.assigned_employee_id AND j.status = 'Completed' " +
                     "LEFT JOIN performance_metrics pm ON u.id = pm.employee_id AND pm.metric_type = 'customer_rating' " +
-                    "WHERE u.role = 'employee' " +
+                    "WHERE u.role = 'employee' AND u.is_active = true " +
                     "GROUP BY u.id, u.full_name " +
                     "ORDER BY jobsCompleted DESC";
         
@@ -569,61 +648,10 @@ public class AdminHandler {
         return convertToJson(activity);
     }
     
-    private String getInventoryStatusReport(Connection conn) throws SQLException {
-        String sql = "SELECT " +
-                    "SUM(CASE WHEN quantity > min_quantity THEN 1 ELSE 0 END) as inStock, " +
-                    "SUM(CASE WHEN quantity <= min_quantity AND quantity > 0 THEN 1 ELSE 0 END) as lowStock, " +
-                    "SUM(CASE WHEN quantity = 0 THEN 1 ELSE 0 END) as outOfStock " +
-                    "FROM inventory";
-        
-        List<Map<String, Object>> status = new ArrayList<>();
-        try (PreparedStatement pstmt = conn.prepareStatement(sql);
-             ResultSet rs = pstmt.executeQuery()) {
-            
-            if (rs.next()) {
-                Map<String, Object> inventoryStatus = new HashMap<>();
-                inventoryStatus.put("inStock", rs.getInt("inStock"));
-                inventoryStatus.put("lowStock", rs.getInt("lowStock"));
-                inventoryStatus.put("outOfStock", rs.getInt("outOfStock"));
-                status.add(inventoryStatus);
-            }
-        }
-        
-        return convertToJson(status);
-    }
-    
-    private String getTopServicesReport(Connection conn) throws SQLException {
-        String sql = "SELECT s.service_name, " +
-                    "COUNT(j.id) as jobCount, " +
-                    "COALESCE(SUM(i.total_amount), 0) as totalRevenue, " +
-                    "COALESCE(AVG(i.total_amount), 0) as avgRevenue " +
-                    "FROM services s " +
-                    "LEFT JOIN jobs j ON s.id = j.service_id " +
-                    "LEFT JOIN invoices i ON j.id = i.job_id " +
-                    "GROUP BY s.id, s.service_name " +
-                    "ORDER BY totalRevenue DESC " +
-                    "LIMIT 10";
-        
-        List<Map<String, Object>> services = new ArrayList<>();
-        try (PreparedStatement pstmt = conn.prepareStatement(sql);
-             ResultSet rs = pstmt.executeQuery()) {
-            
-            while (rs.next()) {
-                Map<String, Object> service = new HashMap<>();
-                service.put("serviceName", rs.getString("service_name"));
-                service.put("jobCount", rs.getInt("jobCount"));
-                service.put("totalRevenue", rs.getBigDecimal("totalRevenue"));
-                service.put("avgRevenue", rs.getBigDecimal("avgRevenue"));
-                service.put("avgRating", 4.5); // Placeholder - would need ratings table
-                services.add(service);
-            }
-        }
-        
-        return convertToJson(services);
-    }
-    
     private String handleSettings(String method, String requestBody) {
-        try (Connection conn = DatabaseConnector.getConnection()) {
+        Connection conn = null;
+        try {
+            conn = DatabaseConnector.getConnection();
             if ("GET".equals(method)) {
                 String sql = "SELECT setting_key, setting_value, setting_type, description, is_public " +
                            "FROM system_settings ORDER BY setting_key";
@@ -649,24 +677,28 @@ public class AdminHandler {
         } catch (SQLException e) {
             e.printStackTrace();
             return createErrorResponse("Database error fetching settings", 500);
+        } finally {
+            DatabaseConnector.closeConnection(conn);
         }
     }
     
     private String handlePerformance(String method, String requestBody) {
-        try (Connection conn = DatabaseConnector.getConnection()) {
+        Connection conn = null;
+        try {
+            conn = DatabaseConnector.getConnection();
             if ("GET".equals(method)) {
                 String sql = "SELECT u.full_name, pm.metric_type, pm.metric_value, " +
                            "pm.period_start, pm.period_end " +
                            "FROM performance_metrics pm " +
                            "JOIN users u ON pm.employee_id = u.id " +
-                           "WHERE u.role = 'employee' " +
+                           "WHERE u.role = 'employee' AND u.is_active = true " +
                            "ORDER BY pm.period_start DESC, u.full_name";
                 
                 List<Map<String, Object>> metrics = new ArrayList<>();
                 try (PreparedStatement pstmt = conn.prepareStatement(sql);
                      ResultSet rs = pstmt.executeQuery()) {
                     
-                    while (rs.next()) {
+            while (rs.next()) {
                         Map<String, Object> metric = new HashMap<>();
                         metric.put("employeeName", rs.getString("full_name"));
                         metric.put("metricType", rs.getString("metric_type"));
@@ -683,6 +715,8 @@ public class AdminHandler {
         } catch (SQLException e) {
             e.printStackTrace();
             return createErrorResponse("Database error fetching performance metrics", 500);
+        } finally {
+            DatabaseConnector.closeConnection(conn);
         }
     }
     

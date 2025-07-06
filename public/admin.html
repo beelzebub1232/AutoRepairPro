@@ -458,269 +458,87 @@
             </div>
 
             <!-- Reports Tab -->
-            <div id="reports" class="tab-content">
-                <div class="reports-header">
-                    <div class="reports-title">
-                        <h2>Analytics & Reports</h2>
-                        <p>Comprehensive business insights and performance metrics</p>
+            <div id="reports-tab" class="tab-content">
+                <div class="page-header">
+                    <div>
+                        <h1 class="page-title">Reports & Analytics</h1>
+                        <p class="page-subtitle">Business insights and performance metrics</p>
                     </div>
-                    <div class="reports-controls">
-                        <div class="period-selector">
-                            <label for="period-selector">Time Period:</label>
-                            <select id="period-selector">
-                                <option value="1month">Last Month</option>
-                                <option value="3months">Last 3 Months</option>
-                                <option value="6months" selected>Last 6 Months</option>
-                                <option value="1year">Last Year</option>
-                            </select>
-                        </div>
-                        <button class="btn btn-primary" onclick="advancedReporting.exportData()">
-                            <i class="fas fa-download"></i> Export Report
+                    <div class="header-actions">
+                        <button id="refresh-reports-btn" class="btn btn-primary">
+                            <svg class="icon icon-sm" viewBox="0 0 24 24">
+                                <polyline points="23,4 23,10 17,10"/>
+                                <polyline points="1,20 1,14 7,14"/>
+                                <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"/>
+                            </svg>
+                            <span>Refresh</span>
+                        </button>
+                        <button id="export-csv-btn" class="btn btn-secondary">
+                            <svg class="icon icon-sm" viewBox="0 0 24 24">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                                <polyline points="14,2 14,8 20,8"/>
+                                <line x1="16" y1="13" x2="8" y2="13"/>
+                                <line x1="16" y1="17" x2="8" y2="17"/>
+                                <polyline points="10,9 9,9 8,9"/>
+                            </svg>
+                            <span>Export CSV</span>
                         </button>
                     </div>
                 </div>
+                
+                <div class="grid grid-cols-2">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">Revenue Report</h3>
+                            <div class="card-actions">
+                                <select id="report-period" class="form-select form-select-sm">
+                                    <option value="week">This Week</option>
+                                    <option value="month" selected>This Month</option>
+                                    <option value="quarter">This Quarter</option>
+                                    <option value="year">This Year</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="chart-container" id="revenue-chart">
+                            <canvas id="revenue-chart-canvas"></canvas>
+                        </div>
+                    </div>
 
-                <!-- Summary Cards -->
-                <div class="summary-cards">
-                    <div class="summary-card">
-                        <div class="card-icon revenue">
-                            <i class="fas fa-dollar-sign"></i>
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">Service Distribution</h3>
                         </div>
-                        <div class="card-content">
-                            <h3 id="total-revenue">$0</h3>
-                            <p>Total Revenue</p>
-                            <span class="trend positive" id="revenue-trend">+0%</span>
-                        </div>
-                    </div>
-                    <div class="summary-card">
-                        <div class="card-icon jobs">
-                            <i class="fas fa-tools"></i>
-                        </div>
-                        <div class="card-content">
-                            <h3 id="total-jobs">0</h3>
-                            <p>Jobs Completed</p>
-                            <span class="trend positive" id="jobs-trend">+0%</span>
-                        </div>
-                    </div>
-                    <div class="summary-card">
-                        <div class="card-icon customers">
-                            <i class="fas fa-users"></i>
-                        </div>
-                        <div class="card-content">
-                            <h3 id="total-customers">0</h3>
-                            <p>Active Customers</p>
-                            <span class="trend positive" id="customers-trend">+0%</span>
-                        </div>
-                    </div>
-                    <div class="summary-card">
-                        <div class="card-icon efficiency">
-                            <i class="fas fa-chart-line"></i>
-                        </div>
-                        <div class="card-content">
-                            <h3 id="avg-rating">0.0</h3>
-                            <p>Avg. Rating</p>
-                            <span class="trend positive" id="rating-trend">+0%</span>
+                        <div class="chart-container" id="parts-usage-chart">
+                            <canvas id="parts-usage-chart-canvas"></canvas>
                         </div>
                     </div>
                 </div>
 
-                <!-- Charts Section -->
-                <div class="charts-section">
-                    <div class="chart-row">
-                        <div class="chart-container">
-                            <div class="chart-header">
-                                <h3>Revenue Trend</h3>
-                                <div class="chart-actions">
-                                    <button class="btn btn-sm btn-outline" onclick="advancedReporting.refreshChart('revenue-chart')">
-                                        <i class="fas fa-sync-alt"></i>
-                                    </button>
-                                </div>
-                            </div>
-                            <div class="chart-content">
-                                <div id="revenue-chart" class="chart-placeholder">
-                                    <div class="loading-spinner">
-                                        <div class="spinner"></div>
-                                        <p>Loading revenue data...</p>
-                                    </div>
-                                </div>
-                            </div>
+                <div class="grid grid-cols-3">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">Employee Performance</h3>
                         </div>
-                        <div class="chart-container">
-                            <div class="chart-header">
-                                <h3>Service Distribution</h3>
-                                <div class="chart-actions">
-                                    <button class="btn btn-sm btn-outline" onclick="advancedReporting.refreshChart('service-distribution-chart')">
-                                        <i class="fas fa-sync-alt"></i>
-                                    </button>
-                                </div>
-                            </div>
-                            <div class="chart-content">
-                                <div id="service-distribution-chart" class="chart-placeholder">
-                                    <div class="loading-spinner">
-                                        <div class="spinner"></div>
-                                        <p>Loading service data...</p>
-                                    </div>
-                                </div>
-                            </div>
+                        <div class="chart-container" id="employee-performance-chart">
+                            <canvas id="employee-performance-chart-canvas"></canvas>
                         </div>
                     </div>
 
-                    <div class="chart-row">
-                        <div class="chart-container">
-                            <div class="chart-header">
-                                <h3>Employee Performance</h3>
-                                <div class="chart-actions">
-                                    <button class="btn btn-sm btn-outline" onclick="advancedReporting.refreshChart('employee-performance-chart')">
-                                        <i class="fas fa-sync-alt"></i>
-                                    </button>
-                                </div>
-                            </div>
-                            <div class="chart-content">
-                                <div id="employee-performance-chart" class="chart-placeholder">
-                                    <div class="loading-spinner">
-                                        <div class="spinner"></div>
-                                        <p>Loading employee data...</p>
-                                    </div>
-                                </div>
-                            </div>
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">Inventory Status</h3>
                         </div>
-                        <div class="chart-container">
-                            <div class="chart-header">
-                                <h3>Customer Activity</h3>
-                                <div class="chart-actions">
-                                    <button class="btn btn-sm btn-outline" onclick="advancedReporting.refreshChart('customer-activity-chart')">
-                                        <i class="fas fa-sync-alt"></i>
-                                    </button>
-                                </div>
-                            </div>
-                            <div class="chart-content">
-                                <div id="customer-activity-chart" class="chart-placeholder">
-                                    <div class="loading-spinner">
-                                        <div class="spinner"></div>
-                                        <p>Loading customer data...</p>
-                                    </div>
-                                </div>
-                            </div>
+                        <div class="chart-container" id="inventory-chart">
+                            <canvas id="inventory-chart-canvas"></canvas>
                         </div>
                     </div>
 
-                    <div class="chart-row">
-                        <div class="chart-container full-width">
-                            <div class="chart-header">
-                                <h3>Inventory Status</h3>
-                                <div class="chart-actions">
-                                    <button class="btn btn-sm btn-outline" onclick="advancedReporting.refreshChart('inventory-chart')">
-                                        <i class="fas fa-sync-alt"></i>
-                                    </button>
-                                </div>
-                            </div>
-                            <div class="chart-content">
-                                <div id="inventory-chart" class="chart-placeholder">
-                                    <div class="loading-spinner">
-                                        <div class="spinner"></div>
-                                        <p>Loading inventory data...</p>
-                                    </div>
-                                </div>
-                            </div>
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">Customer Activity</h3>
                         </div>
-                    </div>
-                </div>
-
-                <!-- Detailed Reports Section -->
-                <div class="detailed-reports">
-                    <div class="section-header">
-                        <h3>Detailed Reports</h3>
-                        <p>Comprehensive data tables and detailed analysis</p>
-                    </div>
-                    
-                    <div class="reports-tabs">
-                        <button class="tab-btn active" data-tab="top-services">Top Services</button>
-                        <button class="tab-btn" data-tab="employee-stats">Employee Stats</button>
-                        <button class="tab-btn" data-tab="customer-segments">Customer Segments</button>
-                        <button class="tab-btn" data-tab="inventory-alerts">Inventory Alerts</button>
-                    </div>
-
-                    <div class="tab-content">
-                        <div id="top-services" class="report-tab active">
-                            <div class="table-container">
-                                <table class="data-table">
-                                    <thead>
-                                        <tr>
-                                            <th>Service Name</th>
-                                            <th>Jobs Count</th>
-                                            <th>Total Revenue</th>
-                                            <th>Avg. Revenue</th>
-                                            <th>Rating</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="top-services-data">
-                                        <tr>
-                                            <td colspan="5" class="loading">Loading top services data...</td>
-                                        </tr>
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-
-                        <div id="employee-stats" class="report-tab">
-                            <div class="table-container">
-                                <table class="data-table">
-                                    <thead>
-                                        <tr>
-                                            <th>Employee</th>
-                                            <th>Jobs Completed</th>
-                                            <th>Avg. Rating</th>
-                                            <th>Performance</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="employee-stats-data">
-                                        <tr>
-                                            <td colspan="4" class="loading">Loading employee statistics...</td>
-                                        </tr>
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-
-                        <div id="customer-segments" class="report-tab">
-                            <div class="table-container">
-                                <table class="data-table">
-                                    <thead>
-                                        <tr>
-                                            <th>Month</th>
-                                            <th>New Customers</th>
-                                            <th>Returning Customers</th>
-                                            <th>Total Activity</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="customer-segments-data">
-                                        <tr>
-                                            <td colspan="4" class="loading">Loading customer activity data...</td>
-                                        </tr>
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-
-                        <div id="inventory-alerts" class="report-tab">
-                            <div class="table-container">
-                                <table class="data-table">
-                                    <thead>
-                                        <tr>
-                                            <th>Part Name</th>
-                                            <th>Current Stock</th>
-                                            <th>Min Required</th>
-                                            <th>Status</th>
-                                            <th>Supplier</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="inventory-alerts-data">
-                                        <tr>
-                                            <td colspan="5" class="loading">Loading inventory alerts...</td>
-                                        </tr>
-                                    </tbody>
-                                </table>
-                            </div>
+                        <div class="chart-container" id="customer-activity-chart">
+                            <canvas id="customer-activity-chart-canvas"></canvas>
                         </div>
                     </div>
                 </div>
@@ -728,13 +546,9 @@
         </main>
     </div>
 
-    <!-- Notification Container -->
-    <div class="notification-container" id="notification-container"></div>
-
     <!-- Modals will be added here by JavaScript -->
     
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="js/notifications.js"></script>
     <script src="js/enhanced-chatbot.js"></script>
     <script src="js/modern-admin-dashboard.js"></script>

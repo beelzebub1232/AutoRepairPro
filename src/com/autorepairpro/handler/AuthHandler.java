@@ -123,13 +123,13 @@ public class AuthHandler {
     
     // Public services endpoint
     private String getAllServices() {
-        String sql = "SELECT id, service_name, price, description FROM services ORDER BY service_name";
+        String sql = "SELECT id, service_name, price, description FROM services WHERE is_active = true ORDER BY service_name";
         StringBuilder jsonBuilder = new StringBuilder();
         jsonBuilder.append("[");
 
         try (Connection conn = DatabaseConnector.getConnection();
-             Statement stmt = conn.createStatement();
-             ResultSet rs = stmt.executeQuery(sql)) {
+             PreparedStatement pstmt = conn.prepareStatement(sql);
+             ResultSet rs = pstmt.executeQuery()) {
             
             boolean first = true;
             while (rs.next()) {
@@ -138,9 +138,9 @@ public class AuthHandler {
                 }
                 jsonBuilder.append("{");
                 jsonBuilder.append("\"id\":").append(rs.getInt("id")).append(",");
-                jsonBuilder.append("\"serviceName\":\"").append(rs.getString("service_name")).append("\",");
+                jsonBuilder.append("\"serviceName\":\"").append(escapeJson(rs.getString("service_name"))).append("\",");
                 jsonBuilder.append("\"price\":").append(rs.getBigDecimal("price")).append(",");
-                jsonBuilder.append("\"description\":\"").append(rs.getString("description") != null ? rs.getString("description") : "").append("\"");
+                jsonBuilder.append("\"description\":\"").append(escapeJson(rs.getString("description") != null ? rs.getString("description") : "")).append("\"");
                 jsonBuilder.append("}");
                 first = false;
             }
@@ -158,8 +158,9 @@ public class AuthHandler {
         try (Connection conn = DatabaseConnector.getConnection()) {
             if (conn != null && !conn.isClosed()) {
                 // Test a simple query
-                try (Statement stmt = conn.createStatement();
-                     ResultSet rs = stmt.executeQuery("SELECT COUNT(*) as user_count FROM users")) {
+                String sql = "SELECT COUNT(*) as user_count FROM users WHERE is_active = true";
+                try (PreparedStatement pstmt = conn.prepareStatement(sql);
+                     ResultSet rs = pstmt.executeQuery()) {
                     if (rs.next()) {
                         int userCount = rs.getInt("user_count");
                         return "{\"status\":\"success\", \"message\":\"Database connection working\", \"userCount\":" + userCount + "}";
@@ -171,11 +172,11 @@ public class AuthHandler {
             }
         } catch (SQLException e) {
             e.printStackTrace();
-            return "{\"status\":\"error\", \"message\":\"Database error: " + e.getMessage() + "\"}";
+            return "{\"status\":\"error\", \"message\":\"Database error: " + escapeJson(e.getMessage()) + "\"}";
         }
     }
 
-    // Utility method for parsing JSON-like body
+    // Utility method for parsing JSON-like body with improved validation
     private Map<String, String> parseBody(String body) {
         if (body == null || body.trim().isEmpty()) {
             return new HashMap<>();
@@ -198,10 +199,24 @@ public class AuthHandler {
             if (keyValue.length == 2) {
                 String key = keyValue[0].trim().replace("\"", "");
                 String value = keyValue[1].trim().replace("\"", "");
-                result.put(key, value);
+                
+                // Basic input validation
+                if (key.length() > 0 && key.length() <= 100 && value.length() <= 1000) {
+                    result.put(key, value);
+                }
             }
         }
         
         return result;
+    }
+    
+    // Utility method to escape JSON strings
+    private String escapeJson(String input) {
+        if (input == null) return "";
+        return input.replace("\\", "\\\\")
+                   .replace("\"", "\\\"")
+                   .replace("\n", "\\n")
+                   .replace("\r", "\\r")
+                   .replace("\t", "\\t");
     }
 }
