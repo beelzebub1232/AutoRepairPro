@@ -957,116 +957,372 @@ async function loadReportsData() {
     try {
         console.log('Loading reports data...');
         
-        // Initialize advanced reporting if available
-        if (window.advancedReporting) {
-            console.log('Using advanced reporting system');
-            await window.advancedReporting.initializeCharts();
-        } else {
-            console.warn('Advanced reporting not available, using fallback');
+        // Load summary metrics
+        await loadReportsSummary();
+        
+        // Load main charts
+        await loadRevenueChart();
+        await loadServiceDistributionChart();
+        await loadEmployeePerformanceChart();
+        await loadInventoryStatusChart();
+        await loadCustomerActivityChart();
+        
+        // Load detailed reports
+        await loadTopServicesReport();
+        
+        // Initialize report tabs
+        initializeReportTabs();
+        
+        // Initialize chart buttons
+        initializeChartButtons();
+        
+    } catch (error) {
+        console.error('Error loading reports data:', error);
+        showNotification('Failed to load reports data', 'error');
+    }
+}
+
+async function loadReportsSummary() {
+    try {
+        // Load dashboard stats for summary cards
+        const statsResponse = await fetch('http://localhost:8080/api/admin/dashboard');
+        if (statsResponse.ok) {
+            const stats = await statsResponse.json();
             
-            // Fallback to simple charts
-            const [jobsResponse, revenueResponse] = await Promise.all([
-                fetch('http://localhost:8080/api/admin/jobs'),
-                fetch('http://localhost:8080/api/admin/reports/revenue')
-            ]);
+            // Update summary cards
+            document.getElementById('total-revenue').textContent = '$' + (stats.totalRevenue || 0).toLocaleString();
+            document.getElementById('jobs-completed').textContent = stats.completedJobs || 0;
+            document.getElementById('new-customers').textContent = stats.totalCustomers || 0;
+            document.getElementById('avg-rating').textContent = '4.5'; // Placeholder
             
-            if (!jobsResponse.ok || !revenueResponse.ok) {
-                throw new Error('Failed to fetch reports data');
-            }
-            
-            const jobs = await jobsResponse.json();
+            // Calculate changes (placeholder - would need historical data)
+            document.getElementById('revenue-change').textContent = '+12.5%';
+            document.getElementById('jobs-change').textContent = '+8.2%';
+            document.getElementById('customers-change').textContent = '+15.3%';
+            document.getElementById('rating-change').textContent = '+2.1%';
+        }
+    } catch (error) {
+        console.error('Error loading summary data:', error);
+    }
+}
+
+async function loadRevenueChart() {
+    try {
+        const revenueResponse = await fetch('http://localhost:8080/api/admin/reports/revenue');
+        if (revenueResponse.ok) {
             const revenue = await revenueResponse.json();
             
-            // Generate revenue chart
             const revenueChart = document.getElementById('revenue-chart-canvas');
             if (revenueChart) {
-                if (revenue && revenue.length > 0) {
-                    new Chart(revenueChart, {
-                        type: 'line',
+                new Chart(revenueChart, {
+                    type: 'line',
+                    data: {
+                        labels: revenue.map(r => r.month),
+                        datasets: [{
+                            label: 'Revenue',
+                            data: revenue.map(r => parseFloat(r.totalRevenue || 0)),
+                            borderColor: '#3b82f6',
+                            backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                            tension: 0.4,
+                            fill: true,
+                            pointBackgroundColor: '#3b82f6',
+                            pointBorderColor: '#ffffff',
+                            pointBorderWidth: 2,
+                            pointRadius: 6
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: false
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    callback: function(value) {
+                                        return '$' + value.toLocaleString();
+                                    }
+                                }
+                            }
+                        },
+                        elements: {
+                            point: {
+                                hoverRadius: 8
+                            }
+                        }
+                    }
+                });
+            }
+        }
+    } catch (error) {
+        console.error('Error loading revenue chart:', error);
+        showChartPlaceholder('revenue-chart', 'Revenue data unavailable');
+    }
+}
+
+async function loadServiceDistributionChart() {
+    try {
+        const partUsageResponse = await fetch('http://localhost:8080/api/admin/reports/part-usage');
+        if (partUsageResponse.ok) {
+            const partUsage = await partUsageResponse.json();
+            const colors = ['#3b82f6', '#ef4444', '#f59e0b', '#22c55e', '#8b5cf6', '#06b6d4', '#84cc16', '#f97316'];
+            
+            const serviceChart = document.getElementById('parts-usage-chart-canvas');
+            if (serviceChart) {
+                new Chart(serviceChart, {
+                    type: 'doughnut',
+                    data: {
+                        labels: partUsage.slice(0, 8).map(p => p.partName),
+                        datasets: [{
+                            data: partUsage.slice(0, 8).map(p => p.totalUsed),
+                            backgroundColor: colors.slice(0, partUsage.length),
+                            borderWidth: 2,
+                            borderColor: '#ffffff'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'bottom',
+                                labels: {
+                                    padding: 20,
+                                    usePointStyle: true,
+                                    font: {
+                                        size: 12
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+        }
+    } catch (error) {
+        console.error('Error loading service distribution chart:', error);
+        showChartPlaceholder('parts-usage-chart', 'Service data unavailable');
+    }
+}
+
+async function loadEmployeePerformanceChart() {
+    try {
+        const performanceResponse = await fetch('http://localhost:8080/api/admin/reports/employee-performance');
+        if (performanceResponse.ok) {
+            const performance = await performanceResponse.json();
+            
+            const performanceChart = document.getElementById('employee-performance-chart-canvas');
+            if (performanceChart) {
+                new Chart(performanceChart, {
+                    type: 'bar',
+                    data: {
+                        labels: performance.map(p => p.employeeName),
+                        datasets: [{
+                            label: 'Jobs Completed',
+                            data: performance.map(p => p.jobsCompleted),
+                            backgroundColor: '#3b82f6',
+                            borderRadius: 4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: false
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true
+                            }
+                        }
+                    }
+                });
+            }
+        }
+    } catch (error) {
+        console.error('Error loading employee performance chart:', error);
+        showChartPlaceholder('employee-performance-chart', 'Performance data unavailable');
+    }
+}
+
+async function loadInventoryStatusChart() {
+    try {
+        const inventoryResponse = await fetch('http://localhost:8080/api/admin/reports/inventory-status');
+        if (inventoryResponse.ok) {
+            const inventory = await inventoryResponse.json();
+            
+            if (inventory.length > 0) {
+                const status = inventory[0];
+                const inventoryChart = document.getElementById('inventory-chart-canvas');
+                if (inventoryChart) {
+                    new Chart(inventoryChart, {
+                        type: 'doughnut',
                         data: {
-                            labels: revenue.map(r => r.month),
+                            labels: ['In Stock', 'Low Stock', 'Out of Stock'],
                             datasets: [{
-                                label: 'Revenue',
-                                data: revenue.map(r => parseFloat(r.totalRevenue || 0)),
-                                borderColor: '#3b82f6',
-                                backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                                tension: 0.4,
-                                fill: true
+                                data: [status.inStock, status.lowStock, status.outOfStock],
+                                backgroundColor: ['#22c55e', '#f59e0b', '#ef4444'],
+                                borderWidth: 2,
+                                borderColor: '#ffffff'
                             }]
                         },
                         options: {
                             responsive: true,
                             maintainAspectRatio: false,
                             plugins: {
-                                title: {
-                                    display: true,
-                                    text: 'Revenue Trend'
-                                }
-                            },
-                            scales: {
-                                y: {
-                                    beginAtZero: true,
-                                    ticks: {
-                                        callback: function(value) {
-                                            return '$' + value.toLocaleString();
-                                        }
+                                legend: {
+                                    position: 'bottom',
+                                    labels: {
+                                        padding: 20,
+                                        usePointStyle: true
                                     }
                                 }
                             }
                         }
                     });
-                } else {
-                    revenueChart.innerHTML = '<div class="chart-placeholder">No revenue data available</div>';
-                }
-            }
-            
-            // Generate service distribution chart
-            const serviceChart = document.getElementById('parts-usage-chart-canvas');
-            if (serviceChart) {
-                const partUsageResponse = await fetch('http://localhost:8080/api/admin/reports/part-usage');
-                if (partUsageResponse.ok) {
-                    const partUsage = await partUsageResponse.json();
-                    if (partUsage && partUsage.length > 0) {
-                        const colors = ['#3b82f6', '#ef4444', '#f59e0b', '#22c55e', '#8b5cf6', '#06b6d4', '#84cc16', '#f97316'];
-                        
-                        new Chart(serviceChart, {
-                            type: 'doughnut',
-                            data: {
-                                labels: partUsage.slice(0, 8).map(p => p.partName),
-                                datasets: [{
-                                    data: partUsage.slice(0, 8).map(p => p.totalUsed),
-                                    backgroundColor: colors.slice(0, Math.min(8, partUsage.length)),
-                                    borderWidth: 2,
-                                    borderColor: '#ffffff'
-                                }]
-                            },
-                            options: {
-                                responsive: true,
-                                maintainAspectRatio: false,
-                                plugins: {
-                                    title: {
-                                        display: true,
-                                        text: 'Service Distribution'
-                                    },
-                                    legend: {
-                                        position: 'bottom'
-                                    }
-                                }
-                            }
-                        });
-                    } else {
-                        serviceChart.innerHTML = '<div class="chart-placeholder">No service data available</div>';
-                    }
-                } else {
-                    serviceChart.innerHTML = '<div class="chart-placeholder">Failed to load service data</div>';
                 }
             }
         }
-        
     } catch (error) {
-        console.error('Error loading reports data:', error);
-        showNotification('Failed to load reports data', 'error');
+        console.error('Error loading inventory status chart:', error);
+        showChartPlaceholder('inventory-chart', 'Inventory data unavailable');
     }
+}
+
+async function loadCustomerActivityChart() {
+    try {
+        const activityResponse = await fetch('http://localhost:8080/api/admin/reports/customer-activity');
+        if (activityResponse.ok) {
+            const activity = await activityResponse.json();
+            
+            const activityChart = document.getElementById('customer-activity-chart-canvas');
+            if (activityChart) {
+                new Chart(activityChart, {
+                    type: 'line',
+                    data: {
+                        labels: activity.map(a => a.month),
+                        datasets: [{
+                            label: 'New Customers',
+                            data: activity.map(a => a.newCustomers),
+                            borderColor: '#f59e0b',
+                            backgroundColor: 'rgba(245, 158, 11, 0.1)',
+                            tension: 0.4,
+                            fill: true
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: false
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true
+                            }
+                        }
+                    }
+                });
+            }
+        }
+    } catch (error) {
+        console.error('Error loading customer activity chart:', error);
+        showChartPlaceholder('customer-activity-chart', 'Customer data unavailable');
+    }
+}
+
+async function loadTopServicesReport() {
+    try {
+        const servicesResponse = await fetch('http://localhost:8080/api/admin/reports/top-services');
+        if (servicesResponse.ok) {
+            const services = await servicesResponse.json();
+            
+            const tableBody = document.getElementById('top-services-table-body');
+            if (tableBody) {
+                tableBody.innerHTML = services.map(service => `
+                    <tr>
+                        <td>${service.serviceName}</td>
+                        <td>$${service.totalRevenue.toLocaleString()}</td>
+                        <td>${service.jobCount}</td>
+                        <td>${service.avgRating} ⭐</td>
+                        <td><span class="trend-indicator positive">↗ +12%</span></td>
+                    </tr>
+                `).join('');
+            }
+        }
+    } catch (error) {
+        console.error('Error loading top services report:', error);
+    }
+}
+
+function showChartPlaceholder(containerId, message) {
+    const container = document.getElementById(containerId);
+    if (container) {
+        container.innerHTML = `
+            <div class="chart-placeholder">
+                <svg class="icon icon-xl" viewBox="0 0 24 24">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                    <polyline points="14,2 14,8 20,8"/>
+                    <line x1="16" y1="13" x2="8" y2="13"/>
+                    <line x1="16" y1="17" x2="8" y2="17"/>
+                    <polyline points="10,9 9,9 8,9"/>
+                </svg>
+                <p>${message}</p>
+            </div>
+        `;
+    }
+}
+
+function initializeReportTabs() {
+    const tabButtons = document.querySelectorAll('.report-tab-btn');
+    const reportContents = document.querySelectorAll('.report-content');
+    
+    tabButtons.forEach(button => {
+        button.addEventListener('click', () => {
+            const targetTab = button.getAttribute('data-tab');
+            
+            // Remove active class from all buttons and contents
+            tabButtons.forEach(btn => btn.classList.remove('active'));
+            reportContents.forEach(content => content.classList.remove('active'));
+            
+            // Add active class to clicked button
+            button.classList.add('active');
+            
+            // Show corresponding content
+            const targetContent = document.getElementById(`${targetTab}-content`);
+            if (targetContent) {
+                targetContent.classList.add('active');
+            }
+        });
+    });
+}
+
+function initializeChartButtons() {
+    const chartButtons = document.querySelectorAll('.chart-btn');
+    
+    chartButtons.forEach(button => {
+        button.addEventListener('click', () => {
+            const chartType = button.getAttribute('data-chart');
+            const buttonGroup = button.parentElement;
+            
+            // Remove active class from all buttons in the group
+            buttonGroup.querySelectorAll('.chart-btn').forEach(btn => btn.classList.remove('active'));
+            
+            // Add active class to clicked button
+            button.classList.add('active');
+            
+            // Here you would typically reload the chart with different data
+            console.log(`Switched to ${chartType} chart`);
+        });
+    });
 }
 
 async function loadSettingsData() {

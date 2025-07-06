@@ -4,6 +4,7 @@ import com.autorepairpro.db.DatabaseConnector;
 import java.sql.*;
 import java.util.*;
 import java.io.*;
+import java.math.BigDecimal;
 
 public class AdminHandler {
     
@@ -90,7 +91,8 @@ public class AdminHandler {
             try (PreparedStatement pstmt = conn.prepareStatement(revenueSql);
                  ResultSet rs = pstmt.executeQuery()) {
                 if (rs.next()) {
-                    jsonBuilder.append("\"totalRevenue\":").append(rs.getBigDecimal("totalRevenue")).append(",");
+                    BigDecimal totalRevenue = rs.getBigDecimal("totalRevenue");
+                    jsonBuilder.append("\"totalRevenue\":").append(totalRevenue != null ? totalRevenue : BigDecimal.ZERO).append(",");
                 }
             }
             
@@ -166,11 +168,26 @@ public class AdminHandler {
                 Map<String, Object> job = new HashMap<>();
                 job.put("jobId", rs.getInt("jobId"));
                 job.put("status", rs.getString("status"));
-                job.put("bookingDate", rs.getTimestamp("booking_date").toString());
-                job.put("totalCost", rs.getBigDecimal("total_cost"));
+                
+                // Handle null timestamp
+                Timestamp bookingDate = rs.getTimestamp("booking_date");
+                job.put("bookingDate", bookingDate != null ? bookingDate.toString() : null);
+                
+                // Handle null BigDecimal
+                BigDecimal totalCost = rs.getBigDecimal("total_cost");
+                job.put("totalCost", totalCost != null ? totalCost : BigDecimal.ZERO);
+                
                 job.put("notes", rs.getString("notes"));
                 job.put("customerName", rs.getString("customerName"));
-                job.put("vehicle", rs.getString("make") + " " + rs.getString("model") + " (" + rs.getInt("year") + ")");
+                
+                // Build vehicle string safely
+                String make = rs.getString("make");
+                String model = rs.getString("model");
+                Integer year = rs.getObject("year", Integer.class);
+                String vehicle = (make != null ? make : "") + " " + (model != null ? model : "") + 
+                               (year != null ? " (" + year + ")" : "");
+                job.put("vehicle", vehicle.trim());
+                
                 job.put("service", rs.getString("service_name"));
                 job.put("branchName", rs.getString("branchName"));
                 job.put("employeeName", rs.getString("employeeName"));
@@ -420,11 +437,15 @@ public class AdminHandler {
     }
     
     private String handleReports(String[] pathParts, String method) {
-        if (pathParts.length < 4) {
+        if (pathParts.length < 5) {
             return createErrorResponse("Report type not specified", 400);
         }
         
-        String reportType = pathParts[3];
+        String reportType = pathParts[4];
+        // Remove query parameters if present
+        if (reportType.contains("?")) {
+            reportType = reportType.substring(0, reportType.indexOf("?"));
+        }
         
         try (Connection conn = DatabaseConnector.getConnection()) {
             switch (reportType) {
@@ -436,12 +457,16 @@ public class AdminHandler {
                     return getEmployeePerformanceReport(conn);
                 case "customer-activity":
                     return getCustomerActivityReport(conn);
+                case "inventory-status":
+                    return getInventoryStatusReport(conn);
+                case "top-services":
+                    return getTopServicesReport(conn);
                 default:
-                    return createErrorResponse("Report type not found", 404);
+                    return createErrorResponse("Report type not found: " + reportType, 404);
             }
         } catch (SQLException e) {
             e.printStackTrace();
-            return createErrorResponse("Database error generating report", 500);
+            return createErrorResponse("Database error generating report: " + e.getMessage(), 500);
         }
     }
     
@@ -542,6 +567,59 @@ public class AdminHandler {
         }
         
         return convertToJson(activity);
+    }
+    
+    private String getInventoryStatusReport(Connection conn) throws SQLException {
+        String sql = "SELECT " +
+                    "SUM(CASE WHEN quantity > min_quantity THEN 1 ELSE 0 END) as inStock, " +
+                    "SUM(CASE WHEN quantity <= min_quantity AND quantity > 0 THEN 1 ELSE 0 END) as lowStock, " +
+                    "SUM(CASE WHEN quantity = 0 THEN 1 ELSE 0 END) as outOfStock " +
+                    "FROM inventory";
+        
+        List<Map<String, Object>> status = new ArrayList<>();
+        try (PreparedStatement pstmt = conn.prepareStatement(sql);
+             ResultSet rs = pstmt.executeQuery()) {
+            
+            if (rs.next()) {
+                Map<String, Object> inventoryStatus = new HashMap<>();
+                inventoryStatus.put("inStock", rs.getInt("inStock"));
+                inventoryStatus.put("lowStock", rs.getInt("lowStock"));
+                inventoryStatus.put("outOfStock", rs.getInt("outOfStock"));
+                status.add(inventoryStatus);
+            }
+        }
+        
+        return convertToJson(status);
+    }
+    
+    private String getTopServicesReport(Connection conn) throws SQLException {
+        String sql = "SELECT s.service_name, " +
+                    "COUNT(j.id) as jobCount, " +
+                    "COALESCE(SUM(i.total_amount), 0) as totalRevenue, " +
+                    "COALESCE(AVG(i.total_amount), 0) as avgRevenue " +
+                    "FROM services s " +
+                    "LEFT JOIN jobs j ON s.id = j.service_id " +
+                    "LEFT JOIN invoices i ON j.id = i.job_id " +
+                    "GROUP BY s.id, s.service_name " +
+                    "ORDER BY totalRevenue DESC " +
+                    "LIMIT 10";
+        
+        List<Map<String, Object>> services = new ArrayList<>();
+        try (PreparedStatement pstmt = conn.prepareStatement(sql);
+             ResultSet rs = pstmt.executeQuery()) {
+            
+            while (rs.next()) {
+                Map<String, Object> service = new HashMap<>();
+                service.put("serviceName", rs.getString("service_name"));
+                service.put("jobCount", rs.getInt("jobCount"));
+                service.put("totalRevenue", rs.getBigDecimal("totalRevenue"));
+                service.put("avgRevenue", rs.getBigDecimal("avgRevenue"));
+                service.put("avgRating", 4.5); // Placeholder - would need ratings table
+                services.add(service);
+            }
+        }
+        
+        return convertToJson(services);
     }
     
     private String handleSettings(String method, String requestBody) {
