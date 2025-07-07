@@ -244,11 +244,11 @@ function updateVehiclesSummary(vehicles) {
                     <div class="vehicle-info">
                         <div class="vehicle-make-model">${vehicle.make} ${vehicle.model}</div>
                         <div class="vehicle-year-color">${vehicle.year} • ${vehicle.color}</div>
-                    </div>
+            </div>
                     <button class="btn btn-sm btn-outline" onclick="bookForVehicle(${vehicle.id})">
                         Book Service
                     </button>
-                </div>
+            </div>
             `).join('')}
         </div>
         ${vehicles.length > 3 ? `
@@ -274,11 +274,11 @@ async function initializeMapIntegration() {
             mapContainer.innerHTML = createMapInterface(branches);
             attachMapEventListeners();
             
-            // Initialize map after DOM is ready
-            setTimeout(() => {
-                initializeLeafletMap();
+        // Initialize map after DOM is ready
+        setTimeout(() => {
+            initializeLeafletMap();
                 addBranchMarkers(branches);
-            }, 100);
+        }, 100);
         } catch (error) {
             console.error('Error loading branch data:', error);
             mapContainer.innerHTML = `
@@ -355,30 +355,30 @@ function createMapInterface(branches) {
                                     ${branch.address}
                                 </p>
                                 ${branch.contact && branch.contact.phone ? `
-                                    <p class="branch-phone">
-                                        <svg class="icon icon-sm" viewBox="0 0 24 24">
-                                            <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
-                                        </svg>
+                                <p class="branch-phone">
+                                    <svg class="icon icon-sm" viewBox="0 0 24 24">
+                                        <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
+                                    </svg>
                                         ${branch.contact.phone}
-                                    </p>
+                                </p>
                                 ` : ''}
                                 ${branch.hours ? `
-                                    <p class="branch-hours">
-                                        <svg class="icon icon-sm" viewBox="0 0 24 24">
-                                            <circle cx="12" cy="12" r="10"/>
-                                            <polyline points="12,6 12,12 16,14"/>
-                                        </svg>
-                                        ${branch.hours}
-                                    </p>
+                                <p class="branch-hours">
+                                    <svg class="icon icon-sm" viewBox="0 0 24 24">
+                                        <circle cx="12" cy="12" r="10"/>
+                                        <polyline points="12,6 12,12 16,14"/>
+                                    </svg>
+                                    ${branch.hours}
+                                </p>
                                 ` : ''}
                                 ${branch.services && branch.services.length > 0 ? `
-                                    <div class="branch-services">
-                                        <strong>Services:</strong>
-                                        <div class="services-tags">
+                                <div class="branch-services">
+                                    <strong>Services:</strong>
+                                    <div class="services-tags">
                                             ${branch.services.slice(0, 3).map(service => `<span class="service-tag">${service}</span>`).join('')}
                                             ${branch.services.length > 3 ? `<span class="service-tag">+${branch.services.length - 3} more</span>` : ''}
-                                        </div>
                                     </div>
+                                </div>
                                 ` : ''}
                             </div>
                             <button class="btn btn-primary select-branch-btn" data-branch-id="${branch.id}">
@@ -476,26 +476,26 @@ function addBranchMarkers(branches) {
     branches.forEach(branch => {
         if (branch.latitude && branch.longitude) {
             const marker = L.marker([branch.latitude, branch.longitude])
-                .bindPopup(`
-                    <div style="min-width: 200px;">
-                        <h4 style="margin: 0 0 8px 0; color: #1f2937;">${branch.name}</h4>
-                        <p style="margin: 0 0 4px 0; font-size: 12px; color: #6b7280;">${branch.address}</p>
+            .bindPopup(`
+                <div style="min-width: 200px;">
+                    <h4 style="margin: 0 0 8px 0; color: #1f2937;">${branch.name}</h4>
+                    <p style="margin: 0 0 4px 0; font-size: 12px; color: #6b7280;">${branch.address}</p>
                         ${branch.contact && branch.contact.phone ? 
                             `<p style="margin: 0 0 8px 0; font-size: 12px; color: #6b7280;">${branch.contact.phone}</p>` : ''}
-                        <button onclick="selectBranchFromMap(${branch.id})" 
-                                style="background: #2563eb; color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 12px;">
-                            Select This Branch
-                        </button>
-                    </div>
-                `)
-                .addTo(map);
+                    <button onclick="selectBranchFromMap(${branch.id})" 
+                            style="background: #2563eb; color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 12px;">
+                        Select This Branch
+                    </button>
+                </div>
+            `)
+            .addTo(map);
 
-            branchMarkers.push(marker);
+        branchMarkers.push(marker);
 
-            // Add click event to marker
-            marker.on('click', () => {
-                highlightBranchCard(branch.id);
-            });
+        // Add click event to marker
+        marker.on('click', () => {
+            highlightBranchCard(branch.id);
+        });
         }
     });
 }
@@ -604,16 +604,16 @@ function updateSelectedBranchInfo(branchId) {
                         <span>${branchAddress}</span>
                     </div>
                     ${branchPhone ? `
-                        <div class="info-item">
-                            <strong>Phone:</strong>
+                    <div class="info-item">
+                        <strong>Phone:</strong>
                             <span>${branchPhone}</span>
-                        </div>
+                    </div>
                     ` : ''}
                     ${branchHours ? `
-                        <div class="info-item">
-                            <strong>Hours:</strong>
+                    <div class="info-item">
+                        <strong>Hours:</strong>
                             <span>${branchHours}</span>
-                        </div>
+                    </div>
                     ` : ''}
                     <div class="info-item">
                         <strong>Rating:</strong>
@@ -793,7 +793,7 @@ function getDirections(branchId) {
         const branchAddress = selectedCard.querySelector('.branch-address').textContent;
         const encodedAddress = encodeURIComponent(branchAddress);
         const url = `https://www.google.com/maps/dir/?api=1&destination=${encodedAddress}`;
-        window.open(url, '_blank');
+    window.open(url, '_blank');
     }
 }
 

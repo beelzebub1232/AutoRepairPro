@@ -42,7 +42,7 @@ public class AdminHandler {
                     return handlePerformance(method, requestBody);
                 default:
                     return createErrorResponse("Admin route not found", 404);
-            }
+        }
         } catch (Exception e) {
             e.printStackTrace();
             return createErrorResponse("Internal server error: " + e.getMessage(), 500);
@@ -72,8 +72,8 @@ public class AdminHandler {
             
             // Low stock items
             String lowStockSql = "SELECT COUNT(*) as lowStockItems FROM inventory WHERE quantity <= min_quantity AND is_active = true";
-            
-            StringBuilder jsonBuilder = new StringBuilder();
+
+        StringBuilder jsonBuilder = new StringBuilder();
             jsonBuilder.append("{");
             
             // Jobs stats
@@ -120,7 +120,7 @@ public class AdminHandler {
                 }
             }
             
-            jsonBuilder.append("}");
+                jsonBuilder.append("}");
             return jsonBuilder.toString();
             
         } catch (SQLException e) {
@@ -141,7 +141,7 @@ public class AdminHandler {
                 return createJob(conn, requestBody);
             } else if ("PUT".equals(method)) {
                 return updateJob(conn, requestBody);
-            }
+                }
             return createErrorResponse("Method not allowed", 405);
         } catch (SQLException e) {
             e.printStackTrace();
@@ -163,7 +163,7 @@ public class AdminHandler {
                     "JOIN branches b ON j.branch_id = b.id " +
                     "LEFT JOIN users e ON j.assigned_employee_id = e.id " +
                     "ORDER BY j.booking_date DESC";
-        
+            
         List<Map<String, Object>> jobs = new ArrayList<>();
         try (PreparedStatement pstmt = conn.prepareStatement(sql);
              ResultSet rs = pstmt.executeQuery()) {
@@ -195,7 +195,7 @@ public class AdminHandler {
                 job.put("branchName", rs.getString("branchName"));
                 job.put("employeeName", rs.getString("employeeName"));
                 jobs.add(job);
-            }
+        }
         }
         
         return convertToJson(jobs);
@@ -245,7 +245,7 @@ public class AdminHandler {
                 }
                 
                 return convertToJson(users);
-            }
+                }
             return createErrorResponse("Method not allowed", 405);
         } catch (SQLException e) {
             e.printStackTrace();
@@ -266,8 +266,8 @@ public class AdminHandler {
                 List<Map<String, Object>> services = new ArrayList<>();
                 try (PreparedStatement pstmt = conn.prepareStatement(sql);
                      ResultSet rs = pstmt.executeQuery()) {
-                    
-                    while (rs.next()) {
+            
+            while (rs.next()) {
                         Map<String, Object> service = new HashMap<>();
                         service.put("id", rs.getInt("id"));
                         service.put("serviceName", rs.getString("service_name"));
@@ -335,7 +335,7 @@ public class AdminHandler {
                         item.put("isActive", rs.getBoolean("is_active"));
                         item.put("lowStock", quantity <= minQuantity);
                         inventory.add(item);
-                    }
+            }
                 }
                 
                 return convertToJson(inventory);
@@ -391,8 +391,8 @@ public class AdminHandler {
                         branch.put("isActive", rs.getBoolean("is_active"));
                         branch.put("hours", rs.getString("hours"));
                         branches.add(branch);
-                    }
                 }
+            }
                 
                 return convertToJson(branches);
             }
@@ -504,7 +504,7 @@ public class AdminHandler {
                         payment.put("invoiceNumber", rs.getString("invoice_number"));
                         payment.put("customerName", rs.getString("customerName"));
                         payments.add(payment);
-                    }
+            }
                 }
                 
                 return convertToJson(payments);
@@ -525,7 +525,7 @@ public class AdminHandler {
         
         String reportType = pathParts[3];
         Connection conn = null;
-        
+            
         try {
             conn = DatabaseConnector.getConnection();
             switch (reportType) {
@@ -621,7 +621,7 @@ public class AdminHandler {
         }
         
         return convertToJson(performance);
-    }
+                }
     
     private String getCustomerActivityReport(Connection conn) throws SQLException {
         String sql = "SELECT DATE_FORMAT(u.created_at, '%Y-%m') as month, " +
@@ -693,11 +693,11 @@ public class AdminHandler {
                            "JOIN users u ON pm.employee_id = u.id " +
                            "WHERE u.role = 'employee' AND u.is_active = true " +
                            "ORDER BY pm.period_start DESC, u.full_name";
-                
+        
                 List<Map<String, Object>> metrics = new ArrayList<>();
                 try (PreparedStatement pstmt = conn.prepareStatement(sql);
                      ResultSet rs = pstmt.executeQuery()) {
-                    
+            
             while (rs.next()) {
                         Map<String, Object> metric = new HashMap<>();
                         metric.put("employeeName", rs.getString("full_name"));
@@ -717,7 +717,7 @@ public class AdminHandler {
             return createErrorResponse("Database error fetching performance metrics", 500);
         } finally {
             DatabaseConnector.closeConnection(conn);
-        }
+    }
     }
     
     // Utility methods
@@ -742,12 +742,12 @@ public class AdminHandler {
         }
         json.append("]");
         return json.toString();
-    }
+            }
     
     private String createSuccessResponse(String message) {
         return "{\"status\":\"success\",\"message\":\"" + message + "\"}";
-    }
-    
+        }
+
     private String createErrorResponse(String message, int statusCode) {
         return "{\"status\":\"error\",\"message\":\"" + message + "\",\"code\":" + statusCode + "}";
     }

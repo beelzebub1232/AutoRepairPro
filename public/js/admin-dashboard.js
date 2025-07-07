@@ -326,10 +326,10 @@ function renderJobsTable(jobs) {
             <td>${job.vehicle}</td>
             <td>${job.service}</td>
             <td><span class="status-badge status-${job.status.toLowerCase().replace(' ', '-')}">${job.status}</span></td>
-            <td>${job.assignedEmployee || '<span class="text-secondary">Unassigned</span>'}</td>
+            <td>${job.employeeName || '<span class="text-secondary">Unassigned</span>'}</td>
             <td>${job.totalCost ? '$' + job.totalCost : '<span class="text-secondary">Pending</span>'}</td>
             <td class="actions">
-                ${job.status === 'Booked' && !job.assignedEmployee ? 
+                ${job.status === 'Booked' && !job.employeeName ? 
                     `<button class="btn btn-sm btn-primary" onclick="assignEmployee(${job.jobId})">
                         <svg class="icon icon-sm" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><path d="M20 8v6"/><path d="M23 11h-6"/></svg>
                         Assign

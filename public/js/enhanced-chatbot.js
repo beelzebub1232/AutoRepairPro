@@ -243,15 +243,15 @@ class EnhancedChatbot {
         if (this.detectIntent(lowerMessage, ['location', 'where', 'address', 'branch'])) {
             return await this.getLocationResponse();
         }
-        
+
         if (this.detectIntent(lowerMessage, ['hours', 'open', 'close', 'time'])) {
             return await this.getHoursResponse();
         }
-        
+
         if (this.detectIntent(lowerMessage, ['contact', 'phone', 'email', 'call'])) {
             return await this.getContactResponse();
         }
-        
+
         if (this.detectIntent(lowerMessage, ['help', 'support', 'assist'])) {
             return this.getHelpResponse();
         }
@@ -295,10 +295,10 @@ class EnhancedChatbot {
                 `${service.serviceName}: $${service.price}`
             ).join('\n• ');
             
-            return {
+                return {
                 text: `I can help you book an appointment! Here are some of our popular services:\n\n• ${serviceList}\n\nTo book an appointment, please visit the "Book Appointment" section in your dashboard or contact us directly.`,
                 suggestions: ['View All Services', 'Check Availability', 'Contact Support']
-            };
+                };
         } catch (error) {
             return {
                 text: "I can help you book an appointment! Please visit the 'Book Appointment' section in your dashboard or contact our support team for assistance.",
@@ -344,12 +344,12 @@ class EnhancedChatbot {
             return {
                 text: "We offer a wide range of automotive services including body repair, paint jobs, maintenance, and more. Please contact us for specific service details and pricing.",
                 suggestions: ['Contact Support', 'View Pricing', 'Book Service']
-            };
+        };
         }
     }
 
     async getPricingResponse() {
-        try {
+            try {
             const response = await fetch('http://localhost:8080/api/admin/services');
             if (!response.ok) throw new Error('Failed to fetch services');
             
@@ -357,33 +357,33 @@ class EnhancedChatbot {
             const pricingList = services.slice(0, 6).map(service => 
                 `${service.serviceName}: $${service.price}`
             ).join('\n• ');
-            
-            return {
+                        
+                        return {
                 text: `Here are our current service prices:\n\n• ${pricingList}\n\nPrices may vary based on vehicle type and specific requirements. Contact us for a detailed quote.`,
                 suggestions: ['Get Quote', 'Book Service', 'Contact Support']
-            };
-        } catch (error) {
-            return {
+                        };
+            } catch (error) {
+        return {
                 text: "Our pricing varies based on the service and vehicle type. Please contact us for a detailed quote or visit our services page for general pricing information.",
                 suggestions: ['Contact Support', 'Get Quote', 'View Services']
-            };
+        };
         }
     }
 
     async getPaymentResponse() {
         if (this.userContext.role === 'customer') {
-            return {
+                        return {
                 text: "To make a payment, please visit the 'My Jobs' section in your dashboard. You can view invoices and make payments for completed jobs there.",
                 suggestions: ['View My Jobs', 'Make Payment', 'Contact Support']
-            };
-        } else {
-            return {
+                        };
+                    } else {
+                        return {
                 text: "For payment information, please contact our support team or visit the payments section in your dashboard.",
                 suggestions: ['Contact Support', 'View Payments', 'Help']
-            };
-        }
-    }
-
+                        };
+                    }
+            }
+            
     async getInventoryResponse() {
         if (this.userContext.role === 'admin' || this.userContext.role === 'employee') {
             return {
@@ -427,7 +427,7 @@ class EnhancedChatbot {
                 suggestions: ['Get Directions', 'Book Appointment', 'Contact Support']
             };
         } catch (error) {
-            return {
+        return {
                 text: "We have multiple branch locations. Please contact our support team for the nearest location and directions.",
                 suggestions: ['Contact Support', 'Book Appointment', 'Help']
             };
@@ -447,9 +447,9 @@ class EnhancedChatbot {
             return {
                 text: `Here are our business hours:\n\n• ${hoursList}\n\nHours may vary on holidays. Contact us for specific availability.`,
                 suggestions: ['Book Appointment', 'Contact Support', 'View Locations']
-            };
+        };
         } catch (error) {
-            return {
+        return {
                 text: "Our business hours vary by location. Please contact our support team for specific hours at your nearest branch.",
                 suggestions: ['Contact Support', 'Book Appointment', 'View Locations']
             };
@@ -469,12 +469,12 @@ class EnhancedChatbot {
             return {
                 text: `Here are our contact numbers:\n\n• ${contactList}\n\nYou can also email us at support@repairhub.com for assistance.`,
                 suggestions: ['Book Appointment', 'Get Support', 'View Locations']
-            };
+        };
         } catch (error) {
-            return {
+        return {
                 text: "You can contact us by phone or email. Please call our main office or email support@repairhub.com for assistance.",
                 suggestions: ['Book Appointment', 'Get Support', 'Help']
-            };
+        };
         }
     }
 
@@ -492,24 +492,24 @@ class EnhancedChatbot {
                 suggestions: ['View Users', 'Add User', 'Manage Roles']
             };
         } else {
-            return {
+        return {
                 text: "User management is available to administrators only. Please contact your administrator for user-related requests.",
                 suggestions: ['Contact Admin', 'Help', 'Support']
-            };
+        };
         }
     }
 
     async getEmployeeJobResponse() {
         if (this.userContext.role === 'employee') {
-            return {
+                        return {
                 text: "To view your assigned jobs, please visit the 'Assigned Jobs' section in your dashboard. You can update job status and add notes there.",
                 suggestions: ['View Jobs', 'Update Status', 'Add Notes']
-            };
-        } else {
-            return {
+                        };
+                    } else {
+                        return {
                 text: "Job management is available to employees and administrators. Please contact your supervisor for job-related information.",
                 suggestions: ['Contact Supervisor', 'Help', 'Support']
-            };
+                        };
         }
     }
 
@@ -556,13 +556,13 @@ class EnhancedChatbot {
         const messageContent = `
             <div class="message-content">
                 <div class="message-text">${text}</div>
-                ${suggestions.length > 0 ? `
-                    <div class="message-suggestions">
-                        ${suggestions.map(suggestion => 
-                            `<button class="quick-suggestion">${suggestion}</button>`
-                        ).join('')}
-                    </div>
-                ` : ''}
+            ${suggestions.length > 0 ? `
+                <div class="message-suggestions">
+                    ${suggestions.map(suggestion => 
+                        `<button class="quick-suggestion">${suggestion}</button>`
+                    ).join('')}
+                </div>
+            ` : ''}
             </div>
         `;
         
@@ -611,7 +611,7 @@ class EnhancedChatbot {
         const dots = document.querySelectorAll('.typing-dots span');
         let currentDot = 0;
         
-        setInterval(() => {
+            setInterval(() => {
             dots.forEach((dot, index) => {
                 dot.style.opacity = index === currentDot ? '1' : '0.3';
             });

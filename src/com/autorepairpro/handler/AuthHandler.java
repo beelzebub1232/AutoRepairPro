@@ -152,7 +152,7 @@ public class AuthHandler {
         jsonBuilder.append("]");
         return jsonBuilder.toString();
     }
-    
+
     // Test database connection
     private String testDatabaseConnection() {
         try (Connection conn = DatabaseConnector.getConnection()) {

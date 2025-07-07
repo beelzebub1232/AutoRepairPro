@@ -319,13 +319,13 @@ public class EmployeeHandler {
                      "v.make, v.model, v.year, v.vin, v.color, v.license_plate, " +
                      "s.service_name, s.description as service_description, " +
                      "b.name as branch_name, b.address as branch_address " +
-                     "FROM jobs j " +
-                     "JOIN users u ON j.customer_id = u.id " +
-                     "JOIN vehicles v ON j.vehicle_id = v.id " +
-                     "JOIN services s ON j.service_id = s.id " +
+                       "FROM jobs j " +
+                       "JOIN users u ON j.customer_id = u.id " +
+                       "JOIN vehicles v ON j.vehicle_id = v.id " +
+                       "JOIN services s ON j.service_id = s.id " +
                      "LEFT JOIN branches b ON j.branch_id = b.id " +
-                     "WHERE j.id = ?";
-
+                       "WHERE j.id = ?";
+        
         try (Connection conn = DatabaseConnector.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
 
@@ -359,8 +359,8 @@ public class EmployeeHandler {
                 
                 return jsonBuilder.toString();
             } else {
-                return "{\"error\":\"Job not found\"}";
-            }
+                    return "{\"error\":\"Job not found\"}";
+                }
         } catch (SQLException e) {
             e.printStackTrace();
             return "{\"error\":\"Database error fetching job details\"}";
@@ -507,13 +507,13 @@ public class EmployeeHandler {
 
             pstmt.setInt(1, employeeId);
             ResultSet rs = pstmt.executeQuery();
-            
-            boolean first = true;
+                
+                boolean first = true;
             while (rs.next()) {
-                if (!first) {
-                    jsonBuilder.append(",");
-                }
-                jsonBuilder.append("{");
+                    if (!first) {
+                        jsonBuilder.append(",");
+                    }
+                    jsonBuilder.append("{");
                 jsonBuilder.append("\"jobId\":").append(rs.getInt("id")).append(",");
                 jsonBuilder.append("\"bookingDate\":\"").append(rs.getTimestamp("booking_date")).append("\",");
                 jsonBuilder.append("\"estimatedCompletionDate\":").append(rs.getTimestamp("estimated_completion_date") != null ? "\"" + rs.getTimestamp("estimated_completion_date") + "\"" : "null").append(",");
@@ -521,15 +521,15 @@ public class EmployeeHandler {
                 jsonBuilder.append("\"customerName\":\"").append(rs.getString("customer_name")).append("\",");
                 jsonBuilder.append("\"vehicle\":\"").append(rs.getString("make")).append(" ").append(rs.getString("model")).append(" (").append(rs.getInt("year")).append(")\",");
                 jsonBuilder.append("\"service\":\"").append(rs.getString("service_name")).append("\"");
-                jsonBuilder.append("}");
-                first = false;
-            }
+                    jsonBuilder.append("}");
+                    first = false;
+                }
         } catch (SQLException e) {
             e.printStackTrace();
             return "{\"error\":\"Database error fetching employee schedule\"}";
-        }
+            }
 
-        jsonBuilder.append("]");
+            jsonBuilder.append("]");
         return jsonBuilder.toString();
     }
     
@@ -560,7 +560,7 @@ public class EmployeeHandler {
             return "{\"error\":\"Database error adding notes\"}";
         }
     }
-
+    
     // Utility method for parsing JSON-like body
     private Map<String, String> parseBody(String body) {
         if (body == null || body.trim().isEmpty()) {

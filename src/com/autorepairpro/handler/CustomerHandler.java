@@ -24,6 +24,8 @@ public class CustomerHandler {
                     return handleVehicles(pathParts, method, requestBody);
                 case "book":
                     return handleBooking(method, requestBody);
+                case "bookings":
+                    return handleBookings(method, requestBody);
                 case "pay":
                     return handlePayment(method, requestBody);
                 case "branches":
@@ -36,14 +38,14 @@ public class CustomerHandler {
         } catch (Exception e) {
             e.printStackTrace();
             return createErrorResponse("Internal server error: " + e.getMessage(), 500);
+            }
         }
-    }
-    
+        
     private String handleJobs(String[] pathParts, String method, String requestBody) {
         if (pathParts.length < 5) {
             return createErrorResponse("Customer ID not provided", 400);
-        }
-        
+    }
+    
         try {
             int customerId = Integer.parseInt(pathParts[4]);
             
@@ -53,20 +55,20 @@ public class CustomerHandler {
                            "s.service_name, s.price, " +
                            "b.name as branchName, b.address as branchAddress, " +
                            "e.full_name as employeeName " +
-                           "FROM jobs j " +
-                           "JOIN vehicles v ON j.vehicle_id = v.id " +
-                           "JOIN services s ON j.service_id = s.id " +
+                     "FROM jobs j " +
+                     "JOIN vehicles v ON j.vehicle_id = v.id " +
+                     "JOIN services s ON j.service_id = s.id " +
                            "JOIN branches b ON j.branch_id = b.id " +
                            "LEFT JOIN users e ON j.assigned_employee_id = e.id " +
-                           "WHERE j.customer_id = ? " +
-                           "ORDER BY j.booking_date DESC";
-                
+                     "WHERE j.customer_id = ? " +
+                     "ORDER BY j.booking_date DESC";
+
                 List<Map<String, Object>> jobs = new ArrayList<>();
                 try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
-                    pstmt.setInt(1, customerId);
-                    ResultSet rs = pstmt.executeQuery();
-                    
-                    while (rs.next()) {
+            pstmt.setInt(1, customerId);
+            ResultSet rs = pstmt.executeQuery();
+            
+            while (rs.next()) {
                         Map<String, Object> job = new HashMap<>();
                         job.put("jobId", rs.getInt("jobId"));
                         job.put("status", rs.getString("status"));
@@ -211,7 +213,7 @@ public class CustomerHandler {
                     if (servicesStr != null) {
                         String[] services = servicesStr.split(",");
                         branch.put("services", Arrays.asList(services));
-                    } else {
+            } else {
                         branch.put("services", new ArrayList<>());
                     }
                     
@@ -219,7 +221,7 @@ public class CustomerHandler {
                     branch.put("contact", getBranchContact(conn, rs.getInt("id")));
                     
                     branches.add(branch);
-                }
+            }
             }
             
             return convertToJson(branches);
@@ -232,7 +234,7 @@ public class CustomerHandler {
     private Map<String, String> getBranchContact(Connection conn, int branchId) throws SQLException {
         String sql = "SELECT contact_type, contact_value FROM contact_info " +
                     "WHERE branch_id = ? AND is_active = true AND is_primary = true";
-        
+
         Map<String, String> contact = new HashMap<>();
         try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setInt(1, branchId);
@@ -242,7 +244,7 @@ public class CustomerHandler {
                 String type = rs.getString("contact_type");
                 String value = rs.getString("contact_value");
                 contact.put(type, value);
-            }
+        }
         }
         
         return contact;
@@ -262,7 +264,7 @@ public class CustomerHandler {
                                "FROM users WHERE id = ? AND role = 'customer'";
                     
                     try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
-                        pstmt.setInt(1, customerId);
+                pstmt.setInt(1, customerId);
                         ResultSet rs = pstmt.executeQuery();
                         
                         if (rs.next()) {
@@ -359,5 +361,93 @@ public class CustomerHandler {
     
          private String createErrorResponse(String message, int statusCode) {
          return "{\"status\":\"error\",\"message\":\"" + message + "\",\"code\":" + statusCode + "}";
-     }
- }
+    }
+
+    // --- NEW: Handle /api/customer/bookings ---
+    private String handleBookings(String method, String requestBody) {
+        if (!"POST".equals(method)) {
+            return createErrorResponse("Method not allowed", 405);
+        }
+        try (Connection conn = DatabaseConnector.getConnection()) {
+            // Parse JSON body
+            Map<String, Object> data = parseJson(requestBody);
+            if (data == null) {
+                return createErrorResponse("Invalid JSON body", 400);
+            }
+            // Validate required fields
+            Integer customerId = parseIntSafe(data.get("customerId"));
+            Integer vehicleId = parseIntSafe(data.get("vehicleId"));
+            Integer serviceId = parseIntSafe(data.get("serviceId"));
+            Integer branchId = parseIntSafe(data.get("branchId"));
+            String bookingDate = (String) data.get("bookingDate");
+            String notes = (String) data.getOrDefault("notes", "");
+            if (customerId == null || vehicleId == null || serviceId == null || branchId == null || bookingDate == null || bookingDate.isEmpty()) {
+                return createErrorResponse("Missing required booking fields", 400);
+            }
+            // Insert new job (appointment)
+            String sql = "INSERT INTO jobs (customer_id, vehicle_id, service_id, branch_id, status, booking_date, notes) VALUES (?, ?, ?, ?, 'Booked', ?, ?)";
+            try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+                pstmt.setInt(1, customerId);
+                pstmt.setInt(2, vehicleId);
+                pstmt.setInt(3, serviceId);
+                pstmt.setInt(4, branchId);
+                pstmt.setString(5, bookingDate.replace('T', ' ')); // Accept both 'YYYY-MM-DD HH:MM' and 'YYYY-MM-DDTHH:MM'
+                pstmt.setString(6, notes);
+                int rows = pstmt.executeUpdate();
+                if (rows > 0) {
+                    return createSuccessResponse("Appointment booked successfully");
+                } else {
+                    return createErrorResponse("Failed to book appointment", 500);
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return createErrorResponse("Database error booking appointment", 500);
+        }
+    }
+
+    // --- Helper: Parse JSON string to Map ---
+    private Map<String, Object> parseJson(String json) {
+        try {
+            // Use basic parsing (no external libraries)
+            // Only works for flat JSON objects with string/number values
+            Map<String, Object> map = new HashMap<>();
+            json = json.trim();
+            if (json.startsWith("{") && json.endsWith("}")) {
+                json = json.substring(1, json.length() - 1);
+                String[] pairs = json.split(",");
+                for (String pair : pairs) {
+                    String[] kv = pair.split(":", 2);
+                    if (kv.length == 2) {
+                        String key = kv[0].trim().replaceAll("^\"|\"$", "");
+                        String value = kv[1].trim();
+                        if (value.startsWith("\"") && value.endsWith("\"")) {
+                            value = value.substring(1, value.length() - 1);
+                            map.put(key, value);
+                        } else if (value.matches("-?\\d+")) {
+                            map.put(key, Integer.parseInt(value));
+                        } else {
+                            map.put(key, value);
+                        }
+                    }
+                }
+                return map;
+            }
+        } catch (Exception e) {
+            // Ignore parse errors
+        }
+        return null;
+    }
+
+    // --- Helper: Parse Integer safely ---
+    private Integer parseIntSafe(Object obj) {
+        if (obj == null) return null;
+        try {
+            if (obj instanceof Integer) return (Integer) obj;
+            if (obj instanceof String) return Integer.parseInt((String) obj);
+        } catch (Exception e) {
+            // Ignore
+        }
+        return null;
+    }
+}
