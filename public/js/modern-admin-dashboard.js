@@ -89,6 +89,15 @@ function loadTabData(tab) {
             break;
         case 'jobs':
             loadJobsData();
+            // Always attach create-job-btn event listener when Jobs tab is activated
+            setTimeout(() => {
+                const createJobBtn = document.getElementById('create-job-btn');
+                if (createJobBtn) {
+                    createJobBtn.onclick = () => {
+                        showModal('Create Job', '<p>This is a placeholder for the Create Job form/modal.</p>');
+                    };
+                }
+            }, 0);
             break;
         case 'users':
             loadUsersData();
@@ -528,7 +537,7 @@ function renderJobsTable(jobs) {
     if (jobs.length === 0) {
         tableBody.innerHTML = `
             <tr>
-                <td colspan="7" class="no-data">
+                <td colspan="8" class="no-data">
                     <p>No jobs found</p>
                 </td>
             </tr>
@@ -541,12 +550,9 @@ function renderJobsTable(jobs) {
             <td>${job.customerName ?? ''}</td>
             <td>${job.vehicle ?? ''}</td>
             <td>${job.service ?? ''}</td>
-            <td>
-                <span class="status-badge status-${job.status ? job.status.toLowerCase().replace(' ', '-') : ''}">
-                    ${job.status ?? ''}
-                </span>
-            </td>
-            <td>${job.bookingDate ? new Date(job.bookingDate).toLocaleDateString() : ''}</td>
+            <td><span class="status-badge status-${job.status ? job.status.toLowerCase().replace(' ', '-') : ''}">${job.status ?? ''}</span></td>
+            <td>${job.employeeName || '<span class="text-secondary">Unassigned</span>'}</td>
+            <td>${job.totalCost ? '$' + job.totalCost : '<span class="text-secondary">Pending</span>'}</td>
             <td>
                 <div class="table-actions">
                     <button class="btn btn-sm btn-primary" onclick="viewJob(${job.jobId})">View</button>
@@ -968,18 +974,15 @@ function getInputType(settingType) {
 
 // Action Functions
 function viewJob(jobId) {
-    showNotification(`Viewing job #${jobId}`, 'info');
-    // Implementation for viewing job details
+    showModal('View Job', `<p>Details for job #${jobId} (placeholder).</p>`);
 }
 
 function editJob(jobId) {
-    showNotification(`Editing job #${jobId}`, 'info');
-    // Implementation for editing job
+    showModal('Edit Job', `<p>Edit form for job #${jobId} (placeholder).</p>`);
 }
 
 function assignEmployee(jobId) {
-    showNotification(`Assigning employee to job #${jobId}`, 'info');
-    // Implementation for assigning employee
+    showModal('Assign Employee', `<p>Assign employee to job #${jobId} (placeholder).</p>`);
 }
 
 function viewUser(userId) {
@@ -1157,3 +1160,36 @@ function showNotification(message, type = 'info') {
         });
     }
 }
+
+// --- Modal Utility ---
+function showModal(title, content) {
+    let modal = document.getElementById('admin-modal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'admin-modal';
+        modal.className = 'modal-overlay';
+        modal.innerHTML = `
+            <div class="modal">
+                <div class="modal-header">
+                    <span class="modal-title"></span>
+                    <button class="modal-close">&times;</button>
+                </div>
+                <div class="modal-content"></div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+        modal.querySelector('.modal-close').onclick = () => modal.style.display = 'none';
+        modal.onclick = (e) => { if (e.target === modal) modal.style.display = 'none'; };
+    }
+    modal.querySelector('.modal-title').textContent = title;
+    modal.querySelector('.modal-content').innerHTML = content;
+    modal.style.display = 'flex';
+}
+
+// Event delegation for Create Job button (works even if button is dynamically rendered)
+document.addEventListener('click', function(e) {
+    const btn = e.target.closest('#create-job-btn');
+    if (btn) {
+        showModal('Create Job', '<p>This is a placeholder for the Create Job form/modal.</p>');
+    }
+});
