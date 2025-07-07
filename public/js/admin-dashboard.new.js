@@ -582,20 +582,23 @@ function createModal(modalId, title, bodyHtml, footerHtml = '') {
     const existingModal = document.getElementById(modalId);
     if (existingModal) existingModal.remove();
 
+    // Use shared .modal structure for consistency
     const modalWrapper = document.createElement('div');
     modalWrapper.id = modalId;
-    modalWrapper.className = 'admin-modal';
+    modalWrapper.className = 'modal';
     modalWrapper.style.display = 'none';
-    modalWrapper.innerHTML = `<div class="admin-modal-content">
-            <div class="admin-modal-header">
-                <h3 class="admin-modal-title">${title}</h3>
-                <button class="admin-modal-close-btn" data-modal-id="${modalId}">&times;</button>
+    modalWrapper.innerHTML = `
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">${title}</h3>
+                <button class="modal-close-btn" data-modal-id="${modalId}" aria-label="Close">&times;</button>
             </div>
-            <div class="admin-modal-body">${bodyHtml}</div>
-            ${footerHtml ? `<div class="admin-modal-footer">${footerHtml}</div>` : ''}
-        </div>`;
+            <div class="modal-body">${bodyHtml}</div>
+            ${footerHtml ? `<div class="modal-footer">${footerHtml}</div>` : ''}
+        </div>
+    `;
     document.body.appendChild(modalWrapper);
-    modalWrapper.querySelector('.admin-modal-close-btn').addEventListener('click', () => closeModal(modalId));
+    modalWrapper.querySelector('.modal-close-btn').addEventListener('click', () => closeModal(modalId));
     modalWrapper.addEventListener('click', function(event) {
         if (event.target === modalWrapper) closeModal(modalId);
     });
@@ -622,26 +625,29 @@ function closeModal(modalId) {
 function handleCreateJobClick() {
     const modalId = 'createJobModal';
     const title = 'Create New Job';
+    // Use grid layout for form fields
     const bodyHtml = `<form id="create-job-form">
-            <div class="form-group">
-                <label for="job-customer" class="form-label">Customer</label>
-                <select id="job-customer" class="form-input" required><option value="">Loading customers...</option></select>
-            </div>
-            <div class="form-group">
-                <label for="job-vehicle" class="form-label">Vehicle</label>
-                <select id="job-vehicle" class="form-input" required disabled><option value="">Select a customer first...</option></select>
-            </div>
-            <div class="form-group">
-                <label for="job-service" class="form-label">Service</label>
-                <select id="job-service" class="form-input" required><option value="">Loading services...</option></select>
-            </div>
-            <div class="form-group">
-                <label for="job-date" class="form-label">Booking Date</label>
-                <input type="datetime-local" id="job-date" class="form-input" required>
-            </div>
-            <div class="form-group">
-                <label for="job-notes" class="form-label">Notes (Optional)</label>
-                <textarea id="job-notes" class="form-textarea" rows="3"></textarea>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="job-customer" class="form-label">Customer</label>
+                    <select id="job-customer" class="form-input" required><option value="">Loading customers...</option></select>
+                </div>
+                <div class="form-group">
+                    <label for="job-vehicle" class="form-label">Vehicle</label>
+                    <select id="job-vehicle" class="form-input" required disabled><option value="">Select a customer first...</option></select>
+                </div>
+                <div class="form-group">
+                    <label for="job-service" class="form-label">Service</label>
+                    <select id="job-service" class="form-input" required><option value="">Loading services...</option></select>
+                </div>
+                <div class="form-group">
+                    <label for="job-date" class="form-label">Booking Date</label>
+                    <input type="datetime-local" id="job-date" class="form-input" required>
+                </div>
+                <div class="form-group form-group-full">
+                    <label for="job-notes" class="form-label">Notes (Optional)</label>
+                    <textarea id="job-notes" class="form-textarea" rows="3"></textarea>
+                </div>
             </div>
             <div id="create-job-error" class="text-error" style="display:none; margin-bottom: var(--space-3);"></div>
         </form>`;
@@ -743,17 +749,20 @@ async function handleViewJobClick(jobId) {
         return;
     }
 
-    const bodyHtml = `<div class="job-details-view">
-            <p><strong>Job ID:</strong> #${jobData.jobId}</p>
-            <p><strong>Customer:</strong> ${jobData.customerName || 'N/A'}</p>
-            <p><strong>Vehicle:</strong> ${jobData.vehicle || 'N/A'}</p>
-            <p><strong>Service:</strong> ${jobData.service || 'N/A'}</p>
-            <p><strong>Status:</strong> <span class="status-badge status-${(jobData.status || 'unknown').toLowerCase().replace(' ', '-')}">${jobData.status || 'Unknown'}</span></p>
-            <p><strong>Assigned Employee:</strong> ${jobData.employeeName || 'Unassigned'}</p>
-            <p><strong>Booking Date:</strong> ${jobData.bookingDate ? new Date(jobData.bookingDate).toLocaleString() : 'N/A'}</p>
-            <p><strong>Total Cost:</strong> ${jobData.totalCost ? '$' + parseFloat(jobData.totalCost).toFixed(2) : 'Pending'}</p>
-            <p><strong>Notes:</strong> ${jobData.notes || 'None'}</p>
-            <p><strong>Branch:</strong> ${jobData.branchName || 'N/A'}</p>
+    // Use card-like container and grid for details
+    const bodyHtml = `<div class="job-details-view card">
+            <div class="details-grid">
+                <div><strong>Job ID:</strong> #${jobData.jobId}</div>
+                <div><strong>Customer:</strong> ${jobData.customerName || 'N/A'}</div>
+                <div><strong>Vehicle:</strong> ${jobData.vehicle || 'N/A'}</div>
+                <div><strong>Service:</strong> ${jobData.service || 'N/A'}</div>
+                <div><strong>Status:</strong> <span class="status-badge status-${(jobData.status || 'unknown').toLowerCase().replace(' ', '-')}">${jobData.status || 'Unknown'}</span></div>
+                <div><strong>Assigned Employee:</strong> ${jobData.employeeName || 'Unassigned'}</div>
+                <div><strong>Booking Date:</strong> ${jobData.bookingDate ? new Date(jobData.bookingDate).toLocaleString() : 'N/A'}</div>
+                <div><strong>Total Cost:</strong> ${jobData.totalCost ? '$' + parseFloat(jobData.totalCost).toFixed(2) : 'Pending'}</div>
+                <div class="details-notes"><strong>Notes:</strong> ${jobData.notes || 'None'}</div>
+                <div><strong>Branch:</strong> ${jobData.branchName || 'N/A'}</div>
+            </div>
         </div>`;
     const footerHtml = `<button type="button" class="btn btn-secondary" onclick="closeModal('${modalId}')">Close</button>`;
     createModal(modalId, title, bodyHtml, footerHtml);
@@ -767,76 +776,47 @@ async function handleEditJobClick(jobId) {
     const jobData = allJobsData.find(j => j.jobId == jobId);
 
     if (!jobData) {
-        showAdminNotification(`Could not find details for Job ID ${jobId} to edit. Try refreshing.`, 'error');
+        showAdminNotification(`Could not find details for Job ID ${jobId}. Try refreshing.`, 'error');
         return;
     }
 
-    let employeeOptions = '<option value="">Unassign</option>';
-    try {
-        const usersResponse = await fetch('/api/admin/users');
-        const users = await usersResponse.json();
-        const employees = users.filter(user => user.role === 'employee' && user.isActive);
-        const currentEmployee = employees.find(emp => emp.fullName === jobData.employeeName);
-        const currentEmployeeId = currentEmployee ? currentEmployee.id : (jobData.employeeId || null) ;
-
-
-        employees.forEach(emp => {
-            employeeOptions += `<option value="${emp.id}" ${currentEmployeeId == emp.id ? 'selected' : ''}>${emp.fullName}</option>`;
-        });
-    } catch (error) { console.error("Failed to load employees for edit job form:", error); employeeOptions = '<option value="">Error loading employees</option>'; }
-
-    const jobStatuses = ['Booked', 'In Progress', 'Hold', 'Awaiting Parts', 'Completed', 'Invoiced', 'Cancelled'];
-    let statusOptions = '';
-    jobStatuses.forEach(status => {
-        statusOptions += `<option value="${status}" ${jobData.status === status ? 'selected' : ''}>${status}</option>`;
-    });
-
-    let formattedBookingDate = '';
-    if (jobData.bookingDate) {
-        const date = new Date(jobData.bookingDate);
-        const timezoneOffset = date.getTimezoneOffset() * 60000;
-        const localISOTime = new Date(date.getTime() - timezoneOffset).toISOString().slice(0,16);
-        formattedBookingDate = localISOTime;
-    }
-
-    const bodyHtml = `
-        <form id="edit-job-form-${jobId}">
-            <input type="hidden" id="edit-job-id" value="${jobData.jobId}">
-            <p><strong>Customer:</strong> ${jobData.customerName || 'N/A'} (${jobData.vehicle || 'N/A'})</p>
-            <p><strong>Service:</strong> ${jobData.service || 'N/A'}</p>
-            <div class="form-group">
-                <label for="edit-job-status-${jobId}" class="form-label">Status</label>
-                <select id="edit-job-status-${jobId}" class="form-input" required>${statusOptions}</select>
-            </div>
-            <div class="form-group">
-                <label for="edit-job-employee-${jobId}" class="form-label">Assigned Employee</label>
-                <select id="edit-job-employee-${jobId}" class="form-input">${employeeOptions}</select>
-            </div>
-            <div class="form-group">
-                <label for="edit-job-booking-date-${jobId}" class="form-label">Booking Date</label>
-                <input type="datetime-local" id="edit-job-booking-date-${jobId}" class="form-input" value="${formattedBookingDate}" required>
-            </div>
-            <div class="form-group">
-                <label for="edit-job-notes-${jobId}" class="form-label">Admin Notes</label>
-                <textarea id="edit-job-notes-${jobId}" class="form-textarea" rows="3">${jobData.notes || ''}</textarea>
+    // Use grid layout for form fields
+    const bodyHtml = `<form id="edit-job-form-${jobId}">
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="edit-job-customer-${jobId}" class="form-label">Customer</label>
+                    <select id="edit-job-customer-${jobId}" class="form-input" required disabled><option>${jobData.customerName || 'N/A'}</option></select>
+                </div>
+                <div class="form-group">
+                    <label for="edit-job-vehicle-${jobId}" class="form-label">Vehicle</label>
+                    <select id="edit-job-vehicle-${jobId}" class="form-input" required disabled><option>${jobData.vehicle || 'N/A'}</option></select>
+                </div>
+                <div class="form-group">
+                    <label for="edit-job-service-${jobId}" class="form-label">Service</label>
+                    <select id="edit-job-service-${jobId}" class="form-input" required><option value="${jobData.serviceId}">${jobData.service || 'N/A'}</option></select>
+                </div>
+                <div class="form-group">
+                    <label for="edit-job-date-${jobId}" class="form-label">Booking Date</label>
+                    <input type="datetime-local" id="edit-job-date-${jobId}" class="form-input" required value="${jobData.bookingDate ? new Date(jobData.bookingDate).toISOString().slice(0,16) : ''}">
+                </div>
+                <div class="form-group form-group-full">
+                    <label for="edit-job-notes-${jobId}" class="form-label">Notes (Optional)</label>
+                    <textarea id="edit-job-notes-${jobId}" class="form-textarea" rows="3">${jobData.notes || ''}</textarea>
+                </div>
             </div>
             <div id="edit-job-error-${jobId}" class="text-error" style="display:none; margin-bottom: var(--space-3);"></div>
-        </form>
-    `;
-    const footerHtml = `
-        <button type="button" class="btn btn-secondary" onclick="closeModal('${modalId}')">Cancel</button>
-        <button type="submit" form="edit-job-form-${jobId}" class="btn btn-primary">Save Changes</button>
-    `;
-
+        </form>`;
+    const footerHtml = `<button type="button" class="btn btn-secondary" onclick="closeModal('${modalId}')">Cancel</button>
+                        <button type="submit" form="edit-job-form-${jobId}" class="btn btn-primary">Save Changes</button>`;
     createModal(modalId, title, bodyHtml, footerHtml);
-    document.getElementById(`edit-job-form-${jobId}`).onsubmit = submitEditJobForm;
+    // Populate service dropdown if needed (optional: implement if services can be changed)
+    document.getElementById(`edit-job-form-${jobId}`).onsubmit = (e) => submitEditJobForm(e, jobId);
     showModal(modalId);
 }
 
-async function submitEditJobForm(event) {
+async function submitEditJobForm(event, jobId) {
     event.preventDefault();
     const form = event.target;
-    const jobId = form.querySelector('input[type="hidden"]').value;
     const modalId = `editJobModal-${jobId}`;
 
     const status = form.querySelector(`#edit-job-status-${jobId}`).value;
