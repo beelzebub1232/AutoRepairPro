@@ -300,8 +300,8 @@ async function loadJobsData() {
 }
 
 function renderJobsTable(jobs) {
+    console.log("Jobs data received:", jobs);
     const tableBody = document.getElementById('job-table-body');
-    
     if (jobs.length === 0) {
         tableBody.innerHTML = `
             <tr>
@@ -318,14 +318,13 @@ function renderJobsTable(jobs) {
         `;
         return;
     }
-    
-    tableBody.innerHTML = jobs.map(job => `
+    const html = jobs.map(job => `
         <tr>
             <td><strong>#${job.jobId}</strong></td>
             <td>${job.customerName}</td>
             <td>${job.vehicle}</td>
             <td>${job.service}</td>
-            <td><span class="status-badge status-${job.status.toLowerCase().replace(' ', '-')}">${job.status}</span></td>
+            <td><span class="status-badge status-${job.status && job.status.toLowerCase().replace(' ', '-')}\">${job.status}</span></td>
             <td>${job.employeeName || '<span class="text-secondary">Unassigned</span>'}</td>
             <td>${job.totalCost ? '$' + job.totalCost : '<span class="text-secondary">Pending</span>'}</td>
             <td class="actions">
@@ -346,6 +345,8 @@ function renderJobsTable(jobs) {
             </td>
         </tr>
     `).join('');
+    console.log("Generated jobs HTML:", html);
+    tableBody.innerHTML = html;
 }
 
 // Services Module

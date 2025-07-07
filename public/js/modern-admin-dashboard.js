@@ -507,7 +507,7 @@ function createPieChart(data, title) {
 // Data Loading Functions
 async function loadJobsData() {
     try {
-        showLoadingState('jobs-table-body');
+        showLoadingState('job-table-body');
         
         const response = await fetch('http://localhost:8080/api/admin/jobs');
         if (!response.ok) throw new Error('Failed to fetch jobs');
@@ -517,14 +517,14 @@ async function loadJobsData() {
         
     } catch (error) {
         console.error('Error loading jobs:', error);
-        showErrorState('jobs-table-body', 'Failed to load jobs');
+        showErrorState('job-table-body', 'Failed to load jobs');
     }
 }
 
 function renderJobsTable(jobs) {
-    const tableBody = document.getElementById('jobs-table-body');
+    console.log("Jobs data received:", jobs);
+    const tableBody = document.getElementById('job-table-body');
     if (!tableBody) return;
-    
     if (jobs.length === 0) {
         tableBody.innerHTML = `
             <tr>
@@ -535,19 +535,18 @@ function renderJobsTable(jobs) {
         `;
         return;
     }
-    
-    tableBody.innerHTML = jobs.map(job => `
+    const html = jobs.map(job => `
         <tr>
-            <td>#${job.jobId}</td>
-            <td>${job.customerName}</td>
-            <td>${job.vehicle}</td>
-            <td>${job.service}</td>
+            <td>#${job.jobId ?? ''}</td>
+            <td>${job.customerName ?? ''}</td>
+            <td>${job.vehicle ?? ''}</td>
+            <td>${job.service ?? ''}</td>
             <td>
-                <span class="status-badge status-${job.status.toLowerCase().replace(' ', '-')}">
-                    ${job.status}
+                <span class="status-badge status-${job.status ? job.status.toLowerCase().replace(' ', '-') : ''}">
+                    ${job.status ?? ''}
                 </span>
             </td>
-            <td>${new Date(job.bookingDate).toLocaleDateString()}</td>
+            <td>${job.bookingDate ? new Date(job.bookingDate).toLocaleDateString() : ''}</td>
             <td>
                 <div class="table-actions">
                     <button class="btn btn-sm btn-primary" onclick="viewJob(${job.jobId})">View</button>
@@ -557,6 +556,8 @@ function renderJobsTable(jobs) {
             </td>
         </tr>
     `).join('');
+    console.log("Generated jobs HTML:", html);
+    tableBody.innerHTML = html;
 }
 
 async function loadUsersData() {
