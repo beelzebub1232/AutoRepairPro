@@ -52,75 +52,73 @@ class AdvancedReporting {
     }
 
     async fetchRevenueData() {
-        const response = await fetch(`http://localhost:8080/api/admin/reports/revenue?period=${this.currentPeriod}`);
-        if (!response.ok) {
-            throw new Error(`Failed to fetch revenue data: ${response.status}`);
-        }
-        const data = await response.json();
+        // const response = await fetch(`http://localhost:8080/api/admin/reports/revenue?period=${this.currentPeriod}`);
+        const data = {
+            labels: ['January', 'February', 'March', 'April', 'May', 'June'],
+            values: [12000, 15000, 18000, 20000, 22000, 25000]
+        };
         
         // Transform data for chart
         return {
-            labels: data.map(item => item.month),
-            values: data.map(item => parseFloat(item.totalRevenue || 0))
+            labels: data.labels,
+            values: data.values
         };
     }
 
     async fetchServiceDistributionData() {
-        const response = await fetch(`http://localhost:8080/api/admin/reports/part-usage?period=${this.currentPeriod}`);
-        if (!response.ok) {
-            throw new Error(`Failed to fetch service data: ${response.status}`);
-        }
-        const data = await response.json();
+        // const response = await fetch(`http://localhost:8080/api/admin/reports/part-usage?period=${this.currentPeriod}`);
+        const data = {
+            labels: ['Part A', 'Part B', 'Part C', 'Part D', 'Part E', 'Part F'],
+            values: [20, 15, 10, 12, 18, 25]
+        };
         
         // Transform data for chart
         return {
-            labels: data.map(item => item.partName),
-            values: data.map(item => item.totalUsed)
+            labels: data.labels,
+            values: data.values
         };
     }
 
     async fetchEmployeePerformanceData() {
-        const response = await fetch(`http://localhost:8080/api/admin/reports/employee-performance?period=${this.currentPeriod}`);
-        if (!response.ok) {
-            throw new Error(`Failed to fetch employee data: ${response.status}`);
-        }
-        const data = await response.json();
+        // const response = await fetch(`http://localhost:8080/api/admin/reports/employee-performance?period=${this.currentPeriod}`);
+        const data = {
+            labels: ['John Doe', 'Jane Smith', 'Bob Johnson'],
+            jobsCompleted: [10, 8, 12],
+            ratings: [4.5, 4.2, 4.8]
+        };
         
         // Transform data for chart
         return {
-            labels: data.map(item => item.employeeName),
-            jobsCompleted: data.map(item => item.jobsCompleted),
-            ratings: data.map(item => parseFloat(item.avgRating || 0))
+            labels: data.labels,
+            jobsCompleted: data.jobsCompleted,
+            ratings: data.ratings
         };
     }
 
     async fetchInventoryData() {
-        const response = await fetch('http://localhost:8080/api/admin/inventory');
-        if (!response.ok) {
-            throw new Error(`Failed to fetch inventory data: ${response.status}`);
-        }
-        const inventory = await response.json();
+        // const response = await fetch('http://localhost:8080/api/admin/inventory');
+        const data = {
+            labels: ['Part A', 'Part B', 'Part C', 'Part D', 'Part E', 'Part F'],
+            currentStock: [100, 75, 80, 90, 60, 85],
+            minRequired: [50, 30, 40, 50, 20, 40]
+        };
         
-        // Process inventory data for chart
-        const labels = inventory.slice(0, 10).map(item => item.partName);
-        const currentStock = inventory.slice(0, 10).map(item => item.quantity);
-        const minRequired = inventory.slice(0, 10).map(item => item.minQuantity || 5);
-        
-        return { labels, currentStock, minRequired };
+        return { labels: data.labels, currentStock: data.currentStock, minRequired: data.minRequired };
     }
 
     async fetchCustomerActivityData() {
-        const response = await fetch(`http://localhost:8080/api/admin/reports/customer-activity?period=${this.currentPeriod}`);
-        if (!response.ok) {
-            throw new Error(`Failed to fetch customer data: ${response.status}`);
-        }
-        const data = await response.json();
+        // const response = await fetch(`http://localhost:8080/api/admin/reports/customer-activity?period=${this.currentPeriod}`);
+        const data = {
+            labels: ['January', 'February', 'March', 'April', 'May', 'June'],
+            newCustomers: [100, 120, 150, 180, 200, 220],
+            returningCustomers: [50, 60, 70, 80, 90, 100]
+        };
         
         // Transform data for chart
         return {
-            labels: data.map(item => item.month),
-            newCustomers: data.map(item => item.newCustomers),
-            returningCustomers: data.map(item => item.returningCustomers || 0)
+            labels: data.labels,
+            newCustomers: data.newCustomers,
+            returningCustomers: data.returningCustomers
         };
     }
 

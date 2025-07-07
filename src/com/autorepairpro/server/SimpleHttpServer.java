@@ -1,6 +1,5 @@
 package com.autorepairpro.server;
 
-import com.autorepairpro.handler.AdminHandler;
 import com.autorepairpro.handler.AuthHandler;
 import com.autorepairpro.handler.EmployeeHandler;
 import com.autorepairpro.handler.CustomerHandler;
@@ -115,10 +114,6 @@ public class SimpleHttpServer {
                 AuthHandler handler = new AuthHandler();
                 responseJson = handler.handle(method, path, body);
                 statusCode = responseJson.contains("error") ? 401 : 200;
-            } else if (path.startsWith("/api/admin/")) {
-                AdminHandler handler = new AdminHandler();
-                responseJson = handler.handleRequest(path, method, body);
-                statusCode = responseJson.contains("error") ? 500 : 200;
             } else if (path.startsWith("/api/employee/")) {
                 EmployeeHandler handler = new EmployeeHandler();
                 responseJson = handler.handle(method, path, body);
