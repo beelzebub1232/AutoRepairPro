@@ -17,6 +17,32 @@ public class AdminHandler {
             
             String action = pathParts[3];
             
+            if ("jobs".equals(action) && pathParts.length == 5) {
+                try {
+                    int jobId = Integer.parseInt(pathParts[4]);
+                    if ("GET".equals(method)) {
+                        Connection conn = null;
+                        try {
+                            conn = DatabaseConnector.getConnection();
+                            return getJobById(conn, jobId);
+                        } finally {
+                            DatabaseConnector.closeConnection(conn);
+                        }
+                    }
+                    else if ("PUT".equals(method)) {
+                        Connection conn = null;
+                        try {
+                            conn = DatabaseConnector.getConnection();
+                            return updateJobById(conn, jobId, requestBody);
+                        } finally {
+                            DatabaseConnector.closeConnection(conn);
+                        }
+                    }
+                } catch (NumberFormatException e) {
+                    return createErrorResponse("Invalid job ID format", 400);
+                }
+            }
+            
             switch (action) {
                 case "dashboard":
                     return getDashboardStats();
@@ -42,7 +68,7 @@ public class AdminHandler {
                     return handlePerformance(method, requestBody);
                 default:
                     return createErrorResponse("Admin route not found", 404);
-        }
+            }
         } catch (Exception e) {
             e.printStackTrace();
             return createErrorResponse("Internal server error: " + e.getMessage(), 500);
@@ -720,6 +746,99 @@ public class AdminHandler {
     }
     }
     
+    private String getJobById(Connection conn, int jobId) {
+        String sql = "SELECT j.id as jobId, j.status, j.booking_date, j.total_cost, j.notes, " +
+                    "u.full_name as customerName, v.make, v.model, v.year, " +
+                    "s.service_name, b.name as branchName, " +
+                    "e.full_name as employeeName " +
+                    "FROM jobs j " +
+                    "JOIN users u ON j.customer_id = u.id " +
+                    "JOIN vehicles v ON j.vehicle_id = v.id " +
+                    "JOIN services s ON j.service_id = s.id " +
+                    "JOIN branches b ON j.branch_id = b.id " +
+                    "LEFT JOIN users e ON j.assigned_employee_id = e.id " +
+                    "WHERE j.id = ?";
+        try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setInt(1, jobId);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    Map<String, Object> job = new HashMap<>();
+                    job.put("jobId", rs.getInt("jobId"));
+                    job.put("status", rs.getString("status"));
+                    java.sql.Timestamp bookingDate = rs.getTimestamp("booking_date");
+                    job.put("bookingDate", bookingDate != null ? bookingDate.toString() : null);
+                    java.math.BigDecimal totalCost = rs.getBigDecimal("total_cost");
+                    job.put("totalCost", totalCost);
+                    job.put("notes", rs.getString("notes"));
+                    job.put("customerName", rs.getString("customerName"));
+                    String make = rs.getString("make");
+                    String model = rs.getString("model");
+                    int year = rs.getInt("year");
+                    String vehicle = (make != null ? make : "") + " " + (model != null ? model : "") + " (" + year + ")";
+                    job.put("vehicle", vehicle.trim());
+                    job.put("service", rs.getString("service_name"));
+                    job.put("branchName", rs.getString("branchName"));
+                    job.put("employeeName", rs.getString("employeeName"));
+                    return convertToJson(Collections.singletonList(job));
+                } else {
+                    return createErrorResponse("Job not found", 404);
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return createErrorResponse("Database error fetching job", 500);
+        }
+    }
+    
+    private String updateJobById(Connection conn, int jobId, String requestBody) {
+        try {
+            // Parse JSON body
+            Map<String, Object> body = parseJson(requestBody);
+            String status = (String) body.get("status");
+            Integer assignedEmployeeId = body.get("assignedEmployeeId") != null ? ((Number) body.get("assignedEmployeeId")).intValue() : null;
+            String notes = (String) body.get("notes");
+
+            StringBuilder sql = new StringBuilder("UPDATE jobs SET ");
+            List<Object> params = new ArrayList<>();
+            boolean first = true;
+            if (status != null) {
+                sql.append(first ? "status = ?" : ", status = ?");
+                params.add(status);
+                first = false;
+            }
+            if (assignedEmployeeId != null) {
+                sql.append(first ? "assigned_employee_id = ?" : ", assigned_employee_id = ?");
+                params.add(assignedEmployeeId);
+                first = false;
+            }
+            if (notes != null) {
+                sql.append(first ? "notes = ?" : ", notes = ?");
+                params.add(notes);
+                first = false;
+            }
+            if (params.isEmpty()) {
+                return createErrorResponse("No fields to update", 400);
+            }
+            sql.append(" WHERE id = ?");
+            params.add(jobId);
+
+            try (PreparedStatement pstmt = conn.prepareStatement(sql.toString())) {
+                for (int i = 0; i < params.size(); i++) {
+                    pstmt.setObject(i + 1, params.get(i));
+                }
+                int updated = pstmt.executeUpdate();
+                if (updated > 0) {
+                    return createSuccessResponse("Job updated successfully");
+                } else {
+                    return createErrorResponse("Job not found", 404);
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            return createErrorResponse("Error updating job: " + e.getMessage(), 500);
+        }
+    }
+    
     // Utility methods
     private String convertToJson(List<Map<String, Object>> data) {
         StringBuilder json = new StringBuilder("[");
@@ -750,5 +869,34 @@ public class AdminHandler {
 
     private String createErrorResponse(String message, int statusCode) {
         return "{\"status\":\"error\",\"message\":\"" + message + "\",\"code\":" + statusCode + "}";
+    }
+
+    // --- Utility: Naive JSON parser for status, assignedEmployeeId, notes ---
+    private Map<String, Object> parseJson(String json) {
+        Map<String, Object> map = new HashMap<>();
+        if (json == null || json.trim().isEmpty()) return map;
+        // Remove braces and split by comma
+        String body = json.trim();
+        if (body.startsWith("{") && body.endsWith("}")) {
+            body = body.substring(1, body.length() - 1);
+        }
+        String[] pairs = body.split(",");
+        for (String pair : pairs) {
+            String[] kv = pair.split(":", 2);
+            if (kv.length == 2) {
+                String key = kv[0].trim().replaceAll("^\"|\"$", "");
+                String value = kv[1].trim();
+                // Remove quotes if present
+                if (value.startsWith("\"") && value.endsWith("\"")) {
+                    value = value.substring(1, value.length() - 1);
+                }
+                if (key.equals("assignedEmployeeId")) {
+                    try { map.put(key, Integer.parseInt(value)); } catch (Exception e) { /* ignore */ }
+                } else {
+                    map.put(key, value);
+                }
+            }
+        }
+        return map;
     }
 }

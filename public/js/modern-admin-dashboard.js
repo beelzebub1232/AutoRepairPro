@@ -974,15 +974,181 @@ function getInputType(settingType) {
 
 // Action Functions
 function viewJob(jobId) {
-    showModal('View Job', `<p>Details for job #${jobId} (placeholder).</p>`);
+    showModal('View Job', `<div id="job-details-loading"><div class='loading-spinner'></div> Loading...</div>`);
+    fetch(`http://localhost:8080/api/admin/jobs/${jobId}`)
+        .then(response => {
+            if (!response.ok) throw new Error('Failed to fetch job details');
+            return response.json();
+        })
+        .then(data => {
+            const job = Array.isArray(data) ? data[0] : data;
+            if (!job) {
+                document.getElementById('admin-modal').querySelector('.modal-content').innerHTML = '<p>Job not found.</p>';
+                return;
+            }
+            const html = `
+                <div class="job-details-modal">
+                    <h3>Job #${job.jobId}</h3>
+                    <table class="details-table">
+                        <tr><th>Status:</th><td>${job.status ?? ''}</td></tr>
+                        <tr><th>Customer:</th><td>${job.customerName ?? ''}</td></tr>
+                        <tr><th>Vehicle:</th><td>${job.vehicle ?? ''}</td></tr>
+                        <tr><th>Service:</th><td>${job.service ?? ''}</td></tr>
+                        <tr><th>Branch:</th><td>${job.branchName ?? ''}</td></tr>
+                        <tr><th>Assigned Employee:</th><td>${job.employeeName || '<span class="text-secondary">Unassigned</span>'}</td></tr>
+                        <tr><th>Total Cost:</th><td>${job.totalCost ? '$' + job.totalCost : '<span class="text-secondary">Pending</span>'}</td></tr>
+                        <tr><th>Booking Date:</th><td>${job.bookingDate ? new Date(job.bookingDate).toLocaleString() : ''}</td></tr>
+                        <tr><th>Notes:</th><td>${job.notes ?? ''}</td></tr>
+                    </table>
+                </div>
+            `;
+            document.getElementById('admin-modal').querySelector('.modal-content').innerHTML = html;
+        })
+        .catch(err => {
+            document.getElementById('admin-modal').querySelector('.modal-content').innerHTML = `<p class='text-danger'>Error loading job details.</p>`;
+        });
 }
 
 function editJob(jobId) {
-    showModal('Edit Job', `<p>Edit form for job #${jobId} (placeholder).</p>`);
+    showModal('Edit Job', `<div id="edit-job-loading"><div class='loading-spinner'></div> Loading...</div>`);
+    // Fetch job details
+    fetch(`http://localhost:8080/api/admin/jobs/${jobId}`)
+        .then(response => {
+            if (!response.ok) throw new Error('Failed to fetch job details');
+            return response.json();
+        })
+        .then(data => {
+            const job = Array.isArray(data) ? data[0] : data;
+            if (!job) {
+                document.getElementById('admin-modal').querySelector('.modal-content').innerHTML = '<p>Job not found.</p>';
+                return;
+            }
+            // Editable fields: status, assigned employee, notes
+            // For employee select, fetch all employees
+            fetch('http://localhost:8080/api/admin/users')
+                .then(resp => resp.json())
+                .then(users => {
+                    const employees = users.filter(u => u.role === 'employee');
+                    const statusOptions = ['Booked', 'In Progress', 'Completed', 'Paid'];
+                    const html = `
+                        <form id="edit-job-form" class="edit-job-form">
+                            <h3>Edit Job #${job.jobId}</h3>
+                            <label>Status:
+                                <select name="status" required>
+                                    ${statusOptions.map(opt => `<option value="${opt}" ${job.status === opt ? 'selected' : ''}>${opt}</option>`).join('')}
+                                </select>
+                            </label>
+                            <label>Assigned Employee:
+                                <select name="assignedEmployeeId">
+                                    <option value="">Unassigned</option>
+                                    ${employees.map(emp => `<option value="${emp.id}" ${job.employeeName === emp.fullName ? 'selected' : ''}>${emp.fullName}</option>`).join('')}
+                                </select>
+                            </label>
+                            <label>Notes:
+                                <textarea name="notes" rows="3">${job.notes ?? ''}</textarea>
+                            </label>
+                            <div class="modal-actions">
+                                <button type="submit" class="btn btn-primary">Save Changes</button>
+                                <button type="button" class="btn btn-outline" onclick="document.getElementById('admin-modal').remove()">Cancel</button>
+                            </div>
+                        </form>
+                    `;
+                    document.getElementById('admin-modal').querySelector('.modal-content').innerHTML = html;
+                    // Form submit handler
+                    document.getElementById('edit-job-form').onsubmit = function(e) {
+                        e.preventDefault();
+                        const form = e.target;
+                        const status = form.status.value;
+                        const assignedEmployeeId = form.assignedEmployeeId.value ? parseInt(form.assignedEmployeeId.value) : null;
+                        const notes = form.notes.value;
+                        const payload = {
+                            status,
+                            assignedEmployeeId,
+                            notes
+                        };
+                        fetch(`http://localhost:8080/api/admin/jobs/${jobId}`, {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(payload)
+                        })
+                        .then(resp => resp.json())
+                        .then(result => {
+                            if (result.status === 'success') {
+                                showNotification('Job updated successfully', 'success');
+                                document.getElementById('admin-modal').remove();
+                                // Optionally reload jobs table
+                                loadJobsData();
+                            } else {
+                                showNotification(result.message || 'Failed to update job', 'danger');
+                            }
+                        })
+                        .catch(() => {
+                            showNotification('Error updating job', 'danger');
+                        });
+                    };
+                });
+        })
+        .catch(err => {
+            document.getElementById('admin-modal').querySelector('.modal-content').innerHTML = `<p class='text-danger'>Error loading job details.</p>`;
+        });
 }
 
 function assignEmployee(jobId) {
-    showModal('Assign Employee', `<p>Assign employee to job #${jobId} (placeholder).</p>`);
+    showModal('Assign Employee', `<div id="assign-employee-loading"><div class='loading-spinner'></div> Loading...</div>`);
+    // Fetch job details and employees
+    Promise.all([
+        fetch(`http://localhost:8080/api/admin/jobs/${jobId}`).then(r => r.json()),
+        fetch('http://localhost:8080/api/admin/users').then(r => r.json())
+    ]).then(([jobData, users]) => {
+        const job = Array.isArray(jobData) ? jobData[0] : jobData;
+        if (!job) {
+            document.getElementById('admin-modal').querySelector('.modal-content').innerHTML = '<p>Job not found.</p>';
+            return;
+        }
+        const employees = users.filter(u => u.role === 'employee');
+        const html = `
+            <form id="assign-employee-form" class="assign-employee-form">
+                <h3>Assign Employee to Job #${job.jobId}</h3>
+                <label>Employee:
+                    <select name="assignedEmployeeId">
+                        <option value="">Unassigned</option>
+                        ${employees.map(emp => `<option value="${emp.id}" ${job.employeeName === emp.fullName ? 'selected' : ''}>${emp.fullName}</option>`).join('')}
+                    </select>
+                </label>
+                <div class="modal-actions">
+                    <button type="submit" class="btn btn-primary">Assign</button>
+                    <button type="button" class="btn btn-outline" onclick="document.getElementById('admin-modal').remove()">Cancel</button>
+                </div>
+            </form>
+        `;
+        document.getElementById('admin-modal').querySelector('.modal-content').innerHTML = html;
+        document.getElementById('assign-employee-form').onsubmit = function(e) {
+            e.preventDefault();
+            const form = e.target;
+            const assignedEmployeeId = form.assignedEmployeeId.value ? parseInt(form.assignedEmployeeId.value) : null;
+            const payload = { assignedEmployeeId };
+            fetch(`http://localhost:8080/api/admin/jobs/${jobId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            })
+            .then(resp => resp.json())
+            .then(result => {
+                if (result.status === 'success') {
+                    showNotification('Employee assigned successfully', 'success');
+                    document.getElementById('admin-modal').remove();
+                    loadJobsData();
+                } else {
+                    showNotification(result.message || 'Failed to assign employee', 'danger');
+                }
+            })
+            .catch(() => {
+                showNotification('Error assigning employee', 'danger');
+            });
+        };
+    }).catch(() => {
+        document.getElementById('admin-modal').querySelector('.modal-content').innerHTML = `<p class='text-danger'>Error loading data.</p>`;
+    });
 }
 
 function viewUser(userId) {
@@ -1193,3 +1359,23 @@ document.addEventListener('click', function(e) {
         showModal('Create Job', '<p>This is a placeholder for the Create Job form/modal.</p>');
     }
 });
+
+// Make action functions globally available for inline onclick
+window.viewJob = viewJob;
+window.editJob = editJob;
+window.assignEmployee = assignEmployee;
+window.viewUser = viewUser;
+window.editUser = editUser;
+window.toggleUserStatus = toggleUserStatus;
+window.viewService = viewService;
+window.editService = editService;
+window.toggleServiceStatus = toggleServiceStatus;
+window.viewInventory = viewInventory;
+window.editInventory = editInventory;
+window.reorderInventory = reorderInventory;
+window.viewBranch = viewBranch;
+window.editBranch = editBranch;
+window.manageBranchHours = manageBranchHours;
+window.viewInvoice = viewInvoice;
+window.editInvoice = editInvoice;
+window.sendInvoice = sendInvoice;

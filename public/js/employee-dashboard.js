@@ -32,7 +32,9 @@ function initializeDashboard(userName, userId) {
     
     // Load initial data
     loadEmployeeData();
-    loadOverviewData();
+    
+    // Activate the default tab and load its data
+    switchToTab('assigned-jobs');
 }
 
 // Navigation System
@@ -117,6 +119,7 @@ function initializeLogout() {
 async function loadOverviewData() {
     const urlParams = new URLSearchParams(window.location.search);
     const userId = urlParams.get('id');
+    const userName = urlParams.get('name');
     
     try {
         // Load assigned jobs
@@ -482,13 +485,117 @@ async function submitStatusUpdate(jobId) {
 }
 
 function viewJobDetails(jobId) {
-    // Implementation for viewing job details
-    showNotification(`Viewing details for job #${jobId}`, 'info');
+    // Fetch job details from the backend
+    fetch(`http://localhost:8080/api/admin/jobs`)
+        .then(response => response.json())
+        .then(jobs => {
+            const job = jobs.find(j => j.jobId == jobId);
+            if (!job) {
+                showNotification(`Job #${jobId} not found`, 'error');
+                return;
+            }
+            // Create and show modal with job details
+            const modal = document.createElement('div');
+            modal.className = 'modal';
+            modal.innerHTML = `
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h3>Job Details - #${job.jobId}</h3>
+                        <button class="modal-close">&times;</button>
+                    </div>
+                    <div class="modal-body">
+                        <p><strong>Customer:</strong> ${job.customerName}</p>
+                        <p><strong>Vehicle:</strong> ${job.vehicle}</p>
+                        <p><strong>Service:</strong> ${job.service}</p>
+                        <p><strong>Status:</strong> ${job.status}</p>
+                        <p><strong>Booking Date:</strong> ${new Date(job.bookingDate).toLocaleDateString()}</p>
+                        <p><strong>Notes:</strong> ${job.notes || 'None'}</p>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn btn-secondary" onclick="closeModal()">Close</button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+            modal.style.display = 'flex';
+            modal.querySelector('.modal-close').onclick = () => closeModal();
+        })
+        .catch(error => {
+            console.error('Error fetching job details:', error);
+            showNotification('Failed to load job details', 'error');
+        });
 }
 
 function usePartsForJob(jobId) {
-    // Implementation for using parts in a job
-    showNotification(`Opening parts usage for job #${jobId}`, 'info');
+    // Fetch inventory from backend
+    fetch('http://localhost:8080/api/admin/inventory')
+        .then(response => response.json())
+        .then(inventory => {
+            // Create modal with inventory list and quantity input
+            const modal = document.createElement('div');
+            modal.className = 'modal';
+            modal.innerHTML = `
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h3>Use Parts for Job #${jobId}</h3>
+                        <button class="modal-close">&times;</button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="use-parts-form">
+                            <div class="form-group">
+                                <label for="part-select">Select Part:</label>
+                                <select id="part-select" required>
+                                    ${inventory.map(part => `<option value="${part.id}">${part.partName} (Stock: ${part.quantity})</option>`).join('')}
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="part-qty">Quantity:</label>
+                                <input type="number" id="part-qty" min="1" value="1" required />
+                            </div>
+                        </form>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+                        <button class="btn btn-primary" id="submit-use-part">Use Part</button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+            modal.style.display = 'flex';
+            modal.querySelector('.modal-close').onclick = () => closeModal();
+            // Handle submit
+            modal.querySelector('#submit-use-part').onclick = function(e) {
+                e.preventDefault();
+                const inventoryId = modal.querySelector('#part-select').value;
+                const quantityUsed = parseInt(modal.querySelector('#part-qty').value, 10);
+                if (!inventoryId || quantityUsed < 1) {
+                    showNotification('Please select a part and valid quantity', 'error');
+                    return;
+                }
+                // Send update to backend (JSON)
+                fetch(`http://localhost:8080/api/employee/jobs/${jobId}/inventory`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ inventoryId, quantityUsed })
+                })
+                .then(response => response.json())
+                .then(result => {
+                    if (result.error) throw new Error(result.error);
+                    showNotification('Part usage recorded and inventory updated', 'success');
+                    closeModal();
+                    loadAssignedJobs();
+                    loadInventoryData();
+                })
+                .catch(error => {
+                    console.error('Error using part:', error);
+                    showNotification(error.message || 'Failed to use part', 'error');
+                });
+            };
+        })
+        .catch(error => {
+            console.error('Error loading inventory:', error);
+            showNotification('Failed to load inventory', 'error');
+        });
 }
 
 // Inventory Management
@@ -703,8 +810,47 @@ function loadTimeTrackingData() {
 
 // Employee Reports
 function loadEmployeeReports() {
-    // Load employee-specific reports
-    showNotification('Loading employee reports...', 'info');
+    const urlParams = new URLSearchParams(window.location.search);
+    const userId = urlParams.get('id');
+    const reportsContent = document.getElementById('employee-reports-content');
+    if (!reportsContent) return;
+    reportsContent.innerHTML = '<div class="loading">Loading performance stats...</div>';
+    fetch(`http://localhost:8080/api/employee/stats/${userId}`)
+        .then(response => response.json())
+        .then(stats => {
+            if (stats.error) {
+                reportsContent.innerHTML = `<div class="error">${stats.error}</div>`;
+                return;
+            }
+            reportsContent.innerHTML = `
+                <div class="reports-grid">
+                    <div class="report-card">
+                        <div class="report-title">Total Jobs</div>
+                        <div class="report-value">${stats.totalJobs ?? 0}</div>
+                    </div>
+                    <div class="report-card">
+                        <div class="report-title">Completed Jobs</div>
+                        <div class="report-value">${stats.completedJobs ?? 0}</div>
+                    </div>
+                    <div class="report-card">
+                        <div class="report-title">In Progress</div>
+                        <div class="report-value">${stats.inProgressJobs ?? 0}</div>
+                    </div>
+                    <div class="report-card">
+                        <div class="report-title">Efficiency</div>
+                        <div class="report-value">${stats.efficiency ? stats.efficiency + '%' : 'N/A'}</div>
+                    </div>
+                    <div class="report-card">
+                        <div class="report-title">Average Rating</div>
+                        <div class="report-value">${stats.avgRating ? stats.avgRating.toFixed(1) + ' ⭐' : 'N/A'}</div>
+                    </div>
+                </div>
+            `;
+        })
+        .catch(error => {
+            reportsContent.innerHTML = `<div class="error">Failed to load stats</div>`;
+            console.error('Error loading employee stats:', error);
+        });
 }
 
 // Utility Functions
