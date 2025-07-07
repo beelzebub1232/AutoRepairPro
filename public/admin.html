@@ -193,10 +193,34 @@
                         </button>
                     </div>
                 </div>
-                <div id="overview-content">
-                    <!-- Content will be loaded by JS -->
-                    <p>Loading overview data...</p>
+                <!-- Key Metrics Grid -->
+                <div class="metrics-grid" id="admin-metrics-grid">
+                    <!-- Metrics will be populated by JavaScript -->
+                    <p>Loading metrics...</p>
                 </div>
+
+                <!-- Secondary Info Grid (e.g., Recent Activity, Quick Actions) -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6" id="admin-secondary-info-grid">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">Recent System Activity</h3>
+                            <!-- Optional: <button class="btn btn-sm btn-secondary">View All</button> -->
+                        </div>
+                        <div id="admin-recent-activity-list" class="card-body">
+                            <p>Loading recent activity...</p>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">Quick Actions</h3>
+                        </div>
+                        <div id="admin-quick-actions" class="card-body">
+                            <!-- Quick actions will be populated by JS or statically defined here -->
+                            <p>Loading quick actions...</p>
+                        </div>
+                    </div>
+                </div>
+                {__OLD_CONTENT__} <!-- This will be removed by JS if content is loaded -->
             </div>
 
             <!-- Jobs Tab -->

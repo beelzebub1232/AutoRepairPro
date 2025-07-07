@@ -89,19 +89,24 @@ function initializeNavigation() {
 function loadTabData(tab) {
     console.log(`Loading data for tab: ${tab}`);
     const contentAreaId = `${tab}-content`; // e.g., overview-content, jobs-content
-    const contentArea = document.getElementById(contentAreaId);
+    // For overview, content is now directly in #overview-tab, not #overview-content
+    const contentArea = (tab === 'overview') ? document.getElementById('overview-tab') : document.getElementById(contentAreaId);
+
 
     if (!contentArea) {
         console.error(`Content area for tab ${tab} not found!`);
         return;
     }
 
-    // Placeholder: Clear content and show loading message
-    contentArea.innerHTML = `<p>Loading ${tab} data...</p>`;
+    // Clear previous content only if it's not the main overview tab structure
+    if (tab !== 'overview') {
+        contentArea.innerHTML = `<p>Loading ${tab} data...</p>`;
+    }
+
 
     switch(tab) {
         case 'overview':
-            loadOverviewData(contentArea);
+            loadAdminOverviewData(); // Specific function for the new overview
             break;
         case 'jobs':
             loadJobsData(contentArea);
@@ -128,7 +133,7 @@ function loadTabData(tab) {
             loadSettingsData(contentArea);
             break;
         default:
-            contentArea.innerHTML = `<p>This section (${tab}) is under construction.</p>`;
+            if (contentArea) contentArea.innerHTML = `<p>This section (${tab}) is under construction.</p>`;
             console.warn(`No data loading function defined for tab: ${tab}`);
     }
 }
@@ -145,23 +150,135 @@ function initializeLogout() {
 }
 
 // Data Loading Functions
-function loadOverviewData(contentArea) {
+function loadAdminOverviewData() {
+    const metricsGrid = document.getElementById('admin-metrics-grid');
+    const recentActivityList = document.getElementById('admin-recent-activity-list');
+    const quickActionsContainer = document.getElementById('admin-quick-actions');
+
+    if (!metricsGrid || !recentActivityList || !quickActionsContainer) {
+        console.error('One or more admin overview containers not found.');
+        return;
+    }
+
+    metricsGrid.innerHTML = '<p>Loading metrics...</p>';
+    recentActivityList.innerHTML = '<p>Loading recent activity...</p>';
+    quickActionsContainer.innerHTML = ''; // Clear for new buttons
+
+    // Fetch dashboard summary stats
     fetch('/api/admin/dashboard')
         .then(response => response.json())
         .then(data => {
-            let html = '<h3>Dashboard Metrics</h3><div class="metrics-grid">';
-            if (data.totalJobs !== undefined) html += `<div class="metric-card"><h4>Total Jobs</h4><p>${data.totalJobs}</p></div>`;
-            if (data.totalRevenue !== undefined) html += `<div class="metric-card"><h4>Total Revenue</h4><p>$${data.totalRevenue.toFixed(2)}</p></div>`;
-            if (data.totalCustomers !== undefined) html += `<div class="metric-card"><h4>Active Customers</h4><p>${data.totalCustomers}</p></div>`;
-            if (data.lowStockItems !== undefined) html += `<div class="metric-card"><h4>Low Stock Items</h4><p>${data.lowStockItems}</p></div>`;
-            html += '</div>';
-            contentArea.innerHTML = html;
+            let metricsHtml = '';
+            // Define icons for each metric to mimic customer dashboard
+            const metricDefinitions = [
+                { key: 'totalJobs', title: 'Total Jobs', icon: '<svg class="icon" viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>', class: 'jobs' },
+                { key: 'totalRevenue', title: 'Total Revenue', icon: '<svg class="icon" viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>', class: 'revenue', format: val => `$${parseFloat(val).toFixed(2)}` },
+                { key: 'totalCustomers', title: 'Active Customers', icon: '<svg class="icon" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>', class: 'customers' },
+                { key: 'totalEmployees', title: 'Active Employees', icon: '<svg class="icon" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>', class: 'employees' }, // Placeholder icon for employees
+                { key: 'lowStockItems', title: 'Low Stock Items', icon: '<svg class="icon" viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>', class: 'inventory' }
+            ];
+
+            metricDefinitions.forEach(def => {
+                if (data[def.key] !== undefined) {
+                    const value = def.format ? def.format(data[def.key]) : data[def.key];
+                    metricsHtml += `<div class="metric-card ${def.class || ''}">
+                                      <div class="metric-icon">${def.icon}</div>
+                                      <div class="metric-value">${value}</div>
+                                      <div class="metric-label">${def.title}</div>
+                                   </div>`;
+                }
+            });
+            metricsGrid.innerHTML = metricsHtml || '<p>No metrics to display.</p>';
         })
         .catch(error => {
-            console.error('Error loading overview data:', error);
-            contentArea.innerHTML = '<p class="text-error">Failed to load overview data. Please try again.</p>';
+            console.error('Error loading admin overview metrics:', error);
+            metricsGrid.innerHTML = '<p class="text-error">Failed to load metrics.</p>';
         });
+
+    // Fetch recent jobs for "Recent System Activity"
+    fetch('/api/admin/jobs') // Assuming this gets all jobs, sorted by date desc by default
+        .then(response => response.json())
+        .then(jobs => {
+            if (!Array.isArray(jobs)) {
+                recentActivityList.innerHTML = '<p class="text-error">Error loading recent activity.</p>';
+                return;
+            }
+            const recentJobs = jobs.slice(0, 5); // Display latest 5 jobs
+            if (recentJobs.length === 0) {
+                recentActivityList.innerHTML = '<p>No recent job activity.</p>';
+            } else {
+                let activityHtml = '<ul class="item-list">'; // Use a generic item-list class
+                recentJobs.forEach(job => {
+                    activityHtml += `
+                        <li class="item-list-entry">
+                            <div class="item-icon job-icon">
+                                <svg class="icon" viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+                            </div>
+                            <div class="item-details">
+                                <span class="item-title">New Job: #${job.jobId} for ${job.customerName || 'N/A'}</span>
+                                <span class="item-subtitle">${job.service || 'N/A'} - Status: ${job.status || 'N/A'}</span>
+                            </div>
+                            <span class="item-timestamp">${new Date(job.bookingDate).toLocaleDateString()}</span>
+                        </li>`;
+                });
+                activityHtml += '</ul>';
+                recentActivityList.innerHTML = activityHtml;
+            }
+        })
+        .catch(error => {
+            console.error('Error loading recent jobs for admin overview:', error);
+            recentActivityList.innerHTML = '<p class="text-error">Failed to load recent activity.</p>';
+        });
+
+    // Populate Quick Actions
+    // These are static for now, but could be dynamic
+    quickActionsContainer.innerHTML = `
+        <div class="quick-actions-grid">
+            <button class="btn btn-primary quick-action-btn" data-tab-target="jobs" data-sub-action="create">
+                <svg class="icon" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                <span>Create New Job</span>
+            </button>
+            <button class="btn btn-primary quick-action-btn" data-tab-target="users" data-sub-action="add">
+                <svg class="icon" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>
+                <span>Add New User</span>
+            </button>
+            <button class="btn btn-primary quick-action-btn" data-tab-target="services" data-sub-action="add">
+                 <svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                <span>Manage Services</span>
+            </button>
+             <button class="btn btn-primary quick-action-btn" data-tab-target="inventory" data-sub-action="add">
+                <svg class="icon" viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27,6.96 12,12.01 20.73,6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+                <span>Add Inventory</span>
+            </button>
+        </div>
+    `;
+    // Add event listeners for these new quick action buttons
+    quickActionsContainer.querySelectorAll('.quick-action-btn').forEach(button => {
+        button.addEventListener('click', () => {
+            const targetTab = button.dataset.tabTarget;
+            const subAction = button.dataset.subAction; // e.g., 'create', 'add'
+
+            // Navigate to the tab
+            const navLink = document.querySelector(`.sidebar-nav .nav-link[data-tab='${targetTab}']`);
+            if (navLink) navLink.click();
+
+            // After tab loads, trigger the sub-action (e.g., open the 'add' modal)
+            // This might need a slight delay or a callback system if tab loading is slow
+            setTimeout(() => {
+                if (targetTab === 'jobs' && subAction === 'create') {
+                    document.getElementById('create-job-btn')?.click();
+                } else if (targetTab === 'users' && subAction === 'add') {
+                    document.getElementById('add-user-btn')?.click();
+                } else if (targetTab === 'services' && subAction === 'add') {
+                    document.getElementById('add-service-btn')?.click();
+                } else if (targetTab === 'inventory' && subAction === 'add') {
+                    document.getElementById('add-inventory-item-btn')?.click();
+                }
+            }, 200); // Small delay to allow tab content to potentially render
+        });
+    });
 }
+
 
 // Global Caches
 let allJobsData = [];
@@ -485,7 +602,6 @@ async function loadReportsData(contentArea) {
     } catch (error) {
         console.error('Error loading one or more reports:', error);
         showAdminNotification('Failed to load some report data.', 'error');
-        // Individual card bodies might already show specific errors if their fetch failed.
     }
 }
 
@@ -499,7 +615,7 @@ function loadSettingsData(contentArea) {
             if (settings.length === 0) {
                 formHtml = `<p>No settings available for configuration.</p>`;
             } else {
-                settings.filter(s => s.isPublic).forEach(setting => { // Only display public settings
+                settings.filter(s => s.isPublic).forEach(setting => {
                     formHtml += `<div class="form-group">
                             <label for="setting-${setting.key}" class="form-label">${setting.description || setting.key}</label>
                             <input type="${setting.type === 'boolean' ? 'checkbox' : (setting.type === 'number' ? 'number' : 'text')}"
@@ -530,13 +646,11 @@ async function submitSettingsForm(event) {
     event.preventDefault();
     const form = event.target;
     const settingsPayload = [];
-    // Iterate over expected public setting keys if known, or form elements
-    // This example assumes we iterate form elements that were rendered
     form.querySelectorAll('input[id^="setting-"], select[id^="setting-"]').forEach(input => {
-        const key = input.name; // 'name' attribute should match setting.key
+        const key = input.name;
         let value;
         if (input.type === 'checkbox') {
-            value = input.checked.toString(); // "true" or "false"
+            value = input.checked.toString();
         } else {
             value = input.value;
         }
@@ -552,15 +666,13 @@ async function submitSettingsForm(event) {
         const response = await fetch('/api/admin/settings', {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(settingsPayload) // Send as an array of {key, value} objects
+            body: JSON.stringify(settingsPayload)
         });
         if (!response.ok) {
             const errorResult = await response.json().catch(() => ({ message: 'Failed to save settings.' }));
             throw new Error(errorResult.message);
         }
         showAdminNotification('Settings saved successfully!', 'success');
-        // Optionally, reload settings to confirm, or just assume success
-        // loadTabData('settings');
     } catch (error) {
         console.error('Error saving settings:', error);
         showAdminNotification(`Error saving settings: ${error.message}`, 'error');
@@ -582,23 +694,20 @@ function createModal(modalId, title, bodyHtml, footerHtml = '') {
     const existingModal = document.getElementById(modalId);
     if (existingModal) existingModal.remove();
 
-    // Use shared .modal structure for consistency
     const modalWrapper = document.createElement('div');
     modalWrapper.id = modalId;
-    modalWrapper.className = 'modal';
+    modalWrapper.className = 'admin-modal';
     modalWrapper.style.display = 'none';
-    modalWrapper.innerHTML = `
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3 class="modal-title">${title}</h3>
-                <button class="modal-close-btn" data-modal-id="${modalId}" aria-label="Close">&times;</button>
+    modalWrapper.innerHTML = `<div class="admin-modal-content">
+            <div class="admin-modal-header">
+                <h3 class="admin-modal-title">${title}</h3>
+                <button class="admin-modal-close-btn" data-modal-id="${modalId}">&times;</button>
             </div>
-            <div class="modal-body">${bodyHtml}</div>
-            ${footerHtml ? `<div class="modal-footer">${footerHtml}</div>` : ''}
-        </div>
-    `;
+            <div class="admin-modal-body">${bodyHtml}</div>
+            ${footerHtml ? `<div class="admin-modal-footer">${footerHtml}</div>` : ''}
+        </div>`;
     document.body.appendChild(modalWrapper);
-    modalWrapper.querySelector('.modal-close-btn').addEventListener('click', () => closeModal(modalId));
+    modalWrapper.querySelector('.admin-modal-close-btn').addEventListener('click', () => closeModal(modalId));
     modalWrapper.addEventListener('click', function(event) {
         if (event.target === modalWrapper) closeModal(modalId);
     });
@@ -625,29 +734,26 @@ function closeModal(modalId) {
 function handleCreateJobClick() {
     const modalId = 'createJobModal';
     const title = 'Create New Job';
-    // Use grid layout for form fields
     const bodyHtml = `<form id="create-job-form">
-            <div class="form-grid">
-                <div class="form-group">
-                    <label for="job-customer" class="form-label">Customer</label>
-                    <select id="job-customer" class="form-input" required><option value="">Loading customers...</option></select>
-                </div>
-                <div class="form-group">
-                    <label for="job-vehicle" class="form-label">Vehicle</label>
-                    <select id="job-vehicle" class="form-input" required disabled><option value="">Select a customer first...</option></select>
-                </div>
-                <div class="form-group">
-                    <label for="job-service" class="form-label">Service</label>
-                    <select id="job-service" class="form-input" required><option value="">Loading services...</option></select>
-                </div>
-                <div class="form-group">
-                    <label for="job-date" class="form-label">Booking Date</label>
-                    <input type="datetime-local" id="job-date" class="form-input" required>
-                </div>
-                <div class="form-group form-group-full">
-                    <label for="job-notes" class="form-label">Notes (Optional)</label>
-                    <textarea id="job-notes" class="form-textarea" rows="3"></textarea>
-                </div>
+            <div class="form-group">
+                <label for="job-customer" class="form-label">Customer</label>
+                <select id="job-customer" class="form-input" required><option value="">Loading customers...</option></select>
+            </div>
+            <div class="form-group">
+                <label for="job-vehicle" class="form-label">Vehicle</label>
+                <select id="job-vehicle" class="form-input" required disabled><option value="">Select a customer first...</option></select>
+            </div>
+            <div class="form-group">
+                <label for="job-service" class="form-label">Service</label>
+                <select id="job-service" class="form-input" required><option value="">Loading services...</option></select>
+            </div>
+            <div class="form-group">
+                <label for="job-date" class="form-label">Booking Date</label>
+                <input type="datetime-local" id="job-date" class="form-input" required>
+            </div>
+            <div class="form-group">
+                <label for="job-notes" class="form-label">Notes (Optional)</label>
+                <textarea id="job-notes" class="form-textarea" rows="3"></textarea>
             </div>
             <div id="create-job-error" class="text-error" style="display:none; margin-bottom: var(--space-3);"></div>
         </form>`;
@@ -749,20 +855,17 @@ async function handleViewJobClick(jobId) {
         return;
     }
 
-    // Use card-like container and grid for details
-    const bodyHtml = `<div class="job-details-view card">
-            <div class="details-grid">
-                <div><strong>Job ID:</strong> #${jobData.jobId}</div>
-                <div><strong>Customer:</strong> ${jobData.customerName || 'N/A'}</div>
-                <div><strong>Vehicle:</strong> ${jobData.vehicle || 'N/A'}</div>
-                <div><strong>Service:</strong> ${jobData.service || 'N/A'}</div>
-                <div><strong>Status:</strong> <span class="status-badge status-${(jobData.status || 'unknown').toLowerCase().replace(' ', '-')}">${jobData.status || 'Unknown'}</span></div>
-                <div><strong>Assigned Employee:</strong> ${jobData.employeeName || 'Unassigned'}</div>
-                <div><strong>Booking Date:</strong> ${jobData.bookingDate ? new Date(jobData.bookingDate).toLocaleString() : 'N/A'}</div>
-                <div><strong>Total Cost:</strong> ${jobData.totalCost ? '$' + parseFloat(jobData.totalCost).toFixed(2) : 'Pending'}</div>
-                <div class="details-notes"><strong>Notes:</strong> ${jobData.notes || 'None'}</div>
-                <div><strong>Branch:</strong> ${jobData.branchName || 'N/A'}</div>
-            </div>
+    const bodyHtml = `<div class="job-details-view">
+            <p><strong>Job ID:</strong> #${jobData.jobId}</p>
+            <p><strong>Customer:</strong> ${jobData.customerName || 'N/A'}</p>
+            <p><strong>Vehicle:</strong> ${jobData.vehicle || 'N/A'}</p>
+            <p><strong>Service:</strong> ${jobData.service || 'N/A'}</p>
+            <p><strong>Status:</strong> <span class="status-badge status-${(jobData.status || 'unknown').toLowerCase().replace(' ', '-')}">${jobData.status || 'Unknown'}</span></p>
+            <p><strong>Assigned Employee:</strong> ${jobData.employeeName || 'Unassigned'}</p>
+            <p><strong>Booking Date:</strong> ${jobData.bookingDate ? new Date(jobData.bookingDate).toLocaleString() : 'N/A'}</p>
+            <p><strong>Total Cost:</strong> ${jobData.totalCost ? '$' + parseFloat(jobData.totalCost).toFixed(2) : 'Pending'}</p>
+            <p><strong>Notes:</strong> ${jobData.notes || 'None'}</p>
+            <p><strong>Branch:</strong> ${jobData.branchName || 'N/A'}</p>
         </div>`;
     const footerHtml = `<button type="button" class="btn btn-secondary" onclick="closeModal('${modalId}')">Close</button>`;
     createModal(modalId, title, bodyHtml, footerHtml);
@@ -776,47 +879,76 @@ async function handleEditJobClick(jobId) {
     const jobData = allJobsData.find(j => j.jobId == jobId);
 
     if (!jobData) {
-        showAdminNotification(`Could not find details for Job ID ${jobId}. Try refreshing.`, 'error');
+        showAdminNotification(`Could not find details for Job ID ${jobId} to edit. Try refreshing.`, 'error');
         return;
     }
 
-    // Use grid layout for form fields
-    const bodyHtml = `<form id="edit-job-form-${jobId}">
-            <div class="form-grid">
-                <div class="form-group">
-                    <label for="edit-job-customer-${jobId}" class="form-label">Customer</label>
-                    <select id="edit-job-customer-${jobId}" class="form-input" required disabled><option>${jobData.customerName || 'N/A'}</option></select>
-                </div>
-                <div class="form-group">
-                    <label for="edit-job-vehicle-${jobId}" class="form-label">Vehicle</label>
-                    <select id="edit-job-vehicle-${jobId}" class="form-input" required disabled><option>${jobData.vehicle || 'N/A'}</option></select>
-                </div>
-                <div class="form-group">
-                    <label for="edit-job-service-${jobId}" class="form-label">Service</label>
-                    <select id="edit-job-service-${jobId}" class="form-input" required><option value="${jobData.serviceId}">${jobData.service || 'N/A'}</option></select>
-                </div>
-                <div class="form-group">
-                    <label for="edit-job-date-${jobId}" class="form-label">Booking Date</label>
-                    <input type="datetime-local" id="edit-job-date-${jobId}" class="form-input" required value="${jobData.bookingDate ? new Date(jobData.bookingDate).toISOString().slice(0,16) : ''}">
-                </div>
-                <div class="form-group form-group-full">
-                    <label for="edit-job-notes-${jobId}" class="form-label">Notes (Optional)</label>
-                    <textarea id="edit-job-notes-${jobId}" class="form-textarea" rows="3">${jobData.notes || ''}</textarea>
-                </div>
+    let employeeOptions = '<option value="">Unassign</option>';
+    try {
+        const usersResponse = await fetch('/api/admin/users');
+        const users = await usersResponse.json();
+        const employees = users.filter(user => user.role === 'employee' && user.isActive);
+        const currentEmployee = employees.find(emp => emp.fullName === jobData.employeeName);
+        const currentEmployeeId = currentEmployee ? currentEmployee.id : (jobData.employeeId || null) ;
+
+
+        employees.forEach(emp => {
+            employeeOptions += `<option value="${emp.id}" ${currentEmployeeId == emp.id ? 'selected' : ''}>${emp.fullName}</option>`;
+        });
+    } catch (error) { console.error("Failed to load employees for edit job form:", error); employeeOptions = '<option value="">Error loading employees</option>'; }
+
+    const jobStatuses = ['Booked', 'In Progress', 'Hold', 'Awaiting Parts', 'Completed', 'Invoiced', 'Cancelled'];
+    let statusOptions = '';
+    jobStatuses.forEach(status => {
+        statusOptions += `<option value="${status}" ${jobData.status === status ? 'selected' : ''}>${status}</option>`;
+    });
+
+    let formattedBookingDate = '';
+    if (jobData.bookingDate) {
+        const date = new Date(jobData.bookingDate);
+        const timezoneOffset = date.getTimezoneOffset() * 60000;
+        const localISOTime = new Date(date.getTime() - timezoneOffset).toISOString().slice(0,16);
+        formattedBookingDate = localISOTime;
+    }
+
+    const bodyHtml = `
+        <form id="edit-job-form-${jobId}">
+            <input type="hidden" id="edit-job-id" value="${jobData.jobId}">
+            <p><strong>Customer:</strong> ${jobData.customerName || 'N/A'} (${jobData.vehicle || 'N/A'})</p>
+            <p><strong>Service:</strong> ${jobData.service || 'N/A'}</p>
+            <div class="form-group">
+                <label for="edit-job-status-${jobId}" class="form-label">Status</label>
+                <select id="edit-job-status-${jobId}" class="form-input" required>${statusOptions}</select>
+            </div>
+            <div class="form-group">
+                <label for="edit-job-employee-${jobId}" class="form-label">Assigned Employee</label>
+                <select id="edit-job-employee-${jobId}" class="form-input">${employeeOptions}</select>
+            </div>
+            <div class="form-group">
+                <label for="edit-job-booking-date-${jobId}" class="form-label">Booking Date</label>
+                <input type="datetime-local" id="edit-job-booking-date-${jobId}" class="form-input" value="${formattedBookingDate}" required>
+            </div>
+            <div class="form-group">
+                <label for="edit-job-notes-${jobId}" class="form-label">Admin Notes</label>
+                <textarea id="edit-job-notes-${jobId}" class="form-textarea" rows="3">${jobData.notes || ''}</textarea>
             </div>
             <div id="edit-job-error-${jobId}" class="text-error" style="display:none; margin-bottom: var(--space-3);"></div>
-        </form>`;
-    const footerHtml = `<button type="button" class="btn btn-secondary" onclick="closeModal('${modalId}')">Cancel</button>
-                        <button type="submit" form="edit-job-form-${jobId}" class="btn btn-primary">Save Changes</button>`;
+        </form>
+    `;
+    const footerHtml = `
+        <button type="button" class="btn btn-secondary" onclick="closeModal('${modalId}')">Cancel</button>
+        <button type="submit" form="edit-job-form-${jobId}" class="btn btn-primary">Save Changes</button>
+    `;
+
     createModal(modalId, title, bodyHtml, footerHtml);
-    // Populate service dropdown if needed (optional: implement if services can be changed)
-    document.getElementById(`edit-job-form-${jobId}`).onsubmit = (e) => submitEditJobForm(e, jobId);
+    document.getElementById(`edit-job-form-${jobId}`).onsubmit = submitEditJobForm;
     showModal(modalId);
 }
 
-async function submitEditJobForm(event, jobId) {
+async function submitEditJobForm(event) {
     event.preventDefault();
     const form = event.target;
+    const jobId = form.querySelector('input[type="hidden"]').value;
     const modalId = `editJobModal-${jobId}`;
 
     const status = form.querySelector(`#edit-job-status-${jobId}`).value;
