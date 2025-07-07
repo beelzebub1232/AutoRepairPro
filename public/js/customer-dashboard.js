@@ -1,9 +1,23 @@
 // Customer Dashboard - Complete Implementation
 document.addEventListener('DOMContentLoaded', () => {
-    const userRole = sessionStorage.getItem('userRole');
-    const userName = sessionStorage.getItem('userName');
-    const userId = sessionStorage.getItem('userId');
-    
+    // Try to get from sessionStorage first
+    let userRole = sessionStorage.getItem('userRole');
+    let userName = sessionStorage.getItem('userName');
+    let userId = sessionStorage.getItem('userId');
+
+    // If not in sessionStorage, try to get from URL params (for login redirect)
+    const urlParams = new URLSearchParams(window.location.search);
+    if (!userRole || !userName || !userId) {
+        userRole = urlParams.get('role');
+        userName = urlParams.get('name');
+        userId = urlParams.get('id');
+        if (userRole && userName && userId) {
+            sessionStorage.setItem('userRole', userRole);
+            sessionStorage.setItem('userName', userName);
+            sessionStorage.setItem('userId', userId);
+        }
+    }
+
     // Auth check
     if (!userRole || userRole !== 'customer') {
         window.location.href = '/index.html';
@@ -29,28 +43,40 @@ function initializeDashboard(userName, userId) {
     initializeJobsModule();
     initializePaymentModule();
     initializeMapIntegration();
+    initializeServiceHistoryModule();
     
     // Load initial data
     loadCustomerData();
+
+    // Initialize dashboard overview on load
+    loadDashboardOverview();
 }
 
 // Navigation System
 function initializeNavigation() {
-    const tabButtons = document.querySelectorAll('.tab-button');
+    console.log('[DEBUG] Initializing navigation');
+    // Support both sidebar .nav-link and in-content .nav-button
+    const navLinks = document.querySelectorAll('.nav-link, .nav-button');
     const tabContents = document.querySelectorAll('.tab-content');
 
-    tabButtons.forEach(button => {
-        button.addEventListener('click', () => {
-            const targetTab = button.getAttribute('data-tab');
-            
-            // Remove active class from all buttons and contents
-            tabButtons.forEach(btn => btn.classList.remove('active'));
+    navLinks.forEach(link => {
+        link.addEventListener('click', (e) => {
+            e.preventDefault();
+            const targetTab = link.getAttribute('data-tab');
+            console.log(`[DEBUG] Clicked nav link: data-tab="${targetTab}"`);
+            if (!targetTab) return;
+            // Remove active class from all links and contents
+            navLinks.forEach(l => l.classList.remove('active'));
             tabContents.forEach(content => content.classList.remove('active'));
-            
-            // Add active class to clicked button and corresponding content
-            button.classList.add('active');
-            document.getElementById(`${targetTab}-tab`).classList.add('active');
-            
+            // Add active class to clicked link and corresponding content
+            link.classList.add('active');
+            const targetTabContent = document.getElementById(`${targetTab}-tab`);
+            if (targetTabContent) {
+                targetTabContent.classList.add('active');
+                console.log(`[DEBUG] Activated tab content: #${targetTab}-tab`);
+            } else {
+                console.warn(`[DEBUG] No tab content found for #${targetTab}-tab`);
+            }
             // Load data for the active tab
             loadTabData(targetTab);
         });
@@ -321,389 +347,371 @@ function detectUserLocation() {
 
 // Booking Module
 function initializeBookingModule() {
-    const bookingForm = document.getElementById('booking-form');
-    const serviceSelect = document.getElementById('booking-service');
-    const addVehicleBtn = document.getElementById('add-vehicle-btn');
-
-    if (bookingForm) {
-        bookingForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            await bookAppointment();
-        });
-    }
-
-    if (serviceSelect) {
-        serviceSelect.addEventListener('change', showServiceDetails);
-    }
-
-    if (addVehicleBtn) {
-        addVehicleBtn.addEventListener('click', () => showVehicleModal());
-    }
-
-    // Set minimum date to today
-    const bookingDateInput = document.getElementById('booking-date');
-    if (bookingDateInput) {
-        const now = new Date();
-        now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
-        bookingDateInput.min = now.toISOString().slice(0, 16);
-        bookingDateInput.value = now.toISOString().slice(0, 16);
-    }
+    loadBookingData();
 }
 
 async function loadBookingData() {
-    await Promise.all([
-        loadCustomerVehicles(),
-        loadAvailableServices()
+    // Fetch branches, vehicles, and services in parallel
+    const [branches, vehicles, services] = await Promise.all([
+        fetchData('/api/customer/branches', []),
+        fetchData('/api/customer/vehicles', []),
+        fetchData('/api/services', [])
     ]);
+    renderBranchList(branches);
+    renderVehicleDropdown(vehicles);
+    renderServiceDropdown(services);
+    setupBookingForm(branches, vehicles, services);
 }
 
-async function loadCustomerVehicles() {
-    const userId = sessionStorage.getItem('userId');
-    
+async function fetchData(url, fallback) {
     try {
-        const response = await fetch(`http://localhost:8080/api/customer/vehicles/${userId}`);
-        if (!response.ok) throw new Error('Failed to fetch vehicles');
-        
-        const vehicles = await response.json();
-        populateVehicleSelect(vehicles);
-    } catch (error) {
-        console.error('Error loading vehicles:', error);
-        showNotification('Failed to load vehicles', 'error');
+        const res = await fetch(url);
+        if (!res.ok) throw new Error('Failed to fetch');
+        return await res.json();
+    } catch (err) {
+        showNotification('Error loading data', 'error');
+        return fallback;
     }
 }
 
-function populateVehicleSelect(vehicles) {
-    const vehicleSelect = document.getElementById('booking-vehicle');
-    if (!vehicleSelect) return;
-    
-    vehicleSelect.innerHTML = '<option value="">Choose your vehicle...</option>';
-    
-    vehicles.forEach(vehicle => {
-        const option = document.createElement('option');
-        option.value = vehicle.id;
-        option.textContent = `${vehicle.make} ${vehicle.model} (${vehicle.year})`;
-        vehicleSelect.appendChild(option);
-    });
-}
-
-async function loadAvailableServices() {
-    try {
-        const response = await fetch('http://localhost:8080/api/services');
-        if (!response.ok) throw new Error('Failed to fetch services');
-        
-        const services = await response.json();
-        populateServiceSelect(services);
-    } catch (error) {
-        console.error('Error loading services:', error);
-        showNotification('Failed to load services', 'error');
-    }
-}
-
-function populateServiceSelect(services) {
-    const serviceSelect = document.getElementById('booking-service');
-    if (!serviceSelect) return;
-    
-    serviceSelect.innerHTML = '<option value="">Choose a service...</option>';
-    
-    services.forEach(service => {
-        const option = document.createElement('option');
-        option.value = service.id;
-        option.textContent = `${service.serviceName} - $${service.price}`;
-        option.setAttribute('data-price', service.price);
-        option.setAttribute('data-description', service.description || '');
-        serviceSelect.appendChild(option);
-    });
-}
-
-function showServiceDetails() {
-    const serviceSelect = document.getElementById('booking-service');
-    const serviceDetails = document.getElementById('service-details');
-    const selectedOption = serviceSelect.options[serviceSelect.selectedIndex];
-    
-    if (selectedOption.value) {
-        document.getElementById('selected-service-name').textContent = selectedOption.textContent.split(' - $')[0];
-        document.getElementById('selected-service-price').textContent = '$' + selectedOption.getAttribute('data-price');
-        document.getElementById('selected-service-description').textContent = selectedOption.getAttribute('data-description') || 'No description available';
-        serviceDetails.style.display = 'block';
-    } else {
-        serviceDetails.style.display = 'none';
-    }
-}
-
-async function bookAppointment() {
-    const userId = sessionStorage.getItem('userId');
-    const selectedBranch = document.querySelector('.branch-card.selected');
-    
-    if (!selectedBranch) {
-        showNotification('Please select a branch location before booking', 'error');
+function renderBranchList(branches) {
+    const branchList = document.getElementById('branch-list');
+    if (!branchList) return;
+    branchList.innerHTML = '';
+    if (!branches.length) {
+        branchList.innerHTML = '<div class="no-data">No branches available</div>';
         return;
     }
-    
-    const formData = {
-        customerId: userId,
-        vehicleId: document.getElementById('booking-vehicle').value,
-        serviceId: document.getElementById('booking-service').value,
-        bookingDate: document.getElementById('booking-date').value,
-        notes: document.getElementById('booking-notes').value,
-        branchId: selectedBranch.getAttribute('data-branch-id')
-    };
+    branches.forEach(branch => {
+        const card = document.createElement('div');
+        card.className = 'branch-card animate-slide-in-up';
+        card.setAttribute('data-branch-id', branch.id);
+        card.innerHTML = `
+            <div class="branch-header">
+                <h4>${branch.name}</h4>
+                <div class="branch-rating">${branch.rating || ''}</div>
+            </div>
+            <div class="branch-details">
+                <p class="branch-address">${branch.address}</p>
+                <p class="branch-phone">${branch.phone}</p>
+                <p class="branch-hours">${branch.hours}</p>
+                <div class="branch-services">
+                    <strong>Services:</strong>
+                    <div class="services-tags">${(branch.services||[]).map(s => `<span class='service-tag'>${s}</span>`).join('')}</div>
+                </div>
+            </div>
+        `;
+        card.addEventListener('click', () => selectBranch(branch.id));
+        branchList.appendChild(card);
+    });
+}
 
-    try {
-        const response = await fetch('http://localhost:8080/api/customer/bookings', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(formData)
-        });
+function renderVehicleDropdown(vehicles) {
+    const vehicleSelect = document.getElementById('booking-vehicle-select');
+    if (!vehicleSelect) return;
+    vehicleSelect.innerHTML = '<option value="">Select Vehicle</option>';
+    vehicles.forEach(vehicle => {
+        const opt = document.createElement('option');
+        opt.value = vehicle.id;
+        opt.textContent = `${vehicle.name} (${vehicle.year})`;
+        vehicleSelect.appendChild(opt);
+    });
+}
 
-        const result = await response.json();
-        
-        if (response.ok) {
-            showNotification('Appointment booked successfully!', 'success');
-            document.getElementById('booking-form').reset();
-            document.getElementById('service-details').style.display = 'none';
-            document.getElementById('selected-branch-name').textContent = 'Please select a branch above';
-            loadCustomerData(); // Refresh stats
-        } else {
-            showNotification(result.error || 'Failed to book appointment', 'error');
+function renderServiceDropdown(services) {
+    const serviceSelect = document.getElementById('booking-service-select');
+    if (!serviceSelect) return;
+    serviceSelect.innerHTML = '<option value="">Select Service</option>';
+    services.forEach(service => {
+        const opt = document.createElement('option');
+        opt.value = service.id;
+        opt.textContent = `${service.name} - $${service.price}`;
+        serviceSelect.appendChild(opt);
+    });
+}
+
+function setupBookingForm(branches, vehicles, services) {
+    const form = document.getElementById('booking-form');
+    if (!form) return;
+    form.onsubmit = async (e) => {
+        e.preventDefault();
+        const branchId = form['branch'].value;
+        const vehicleId = form['vehicle'].value;
+        const serviceId = form['service'].value;
+        const date = form['date'].value;
+        if (!branchId || !vehicleId || !serviceId || !date) {
+            showNotification('Please fill all fields', 'warning');
+            return;
         }
-    } catch (error) {
-        console.error('Error booking appointment:', error);
-        showNotification('Failed to book appointment', 'error');
-    }
+        try {
+            const res = await fetch('/api/customer/bookings', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ branchId, vehicleId, serviceId, date })
+            });
+            if (!res.ok) throw new Error('Booking failed');
+            ModalManager.show(`<div class='modal-content'><button class='modal-close'>&times;</button><div class='modal-body'><h3>Booking Confirmed!</h3><p>Your appointment has been booked successfully.</p></div></div>`);
+            showNotification('Appointment booked successfully', 'success');
+            loadDashboardOverview(); // Refresh dashboard
+        } catch (err) {
+            showNotification('Booking failed', 'error');
+        }
+    };
+    // Live summary update
+    ['branch','vehicle','service','date'].forEach(id => {
+        form[id]?.addEventListener('change', updateBookingSummary);
+    });
+}
+
+function updateBookingSummary() {
+    const form = document.getElementById('booking-form');
+    if (!form) return;
+    const summary = document.getElementById('booking-summary');
+    if (!summary) return;
+    const branch = form['branch'].selectedOptions[0]?.textContent || '';
+    const vehicle = form['vehicle'].selectedOptions[0]?.textContent || '';
+    const service = form['service'].selectedOptions[0]?.textContent || '';
+    const date = form['date'].value || '';
+    summary.innerHTML = `
+        <div><strong>Branch:</strong> ${branch}</div>
+        <div><strong>Vehicle:</strong> ${vehicle}</div>
+        <div><strong>Service:</strong> ${service}</div>
+        <div><strong>Date:</strong> ${date}</div>
+    `;
 }
 
 // Vehicle Module
 function initializeVehicleModule() {
-    const vehicleModal = document.getElementById('vehicle-modal');
-    const vehicleForm = document.getElementById('vehicle-form');
-    const vehicleModalClose = document.getElementById('vehicle-modal-close');
-    const vehicleCancelBtn = document.getElementById('vehicle-cancel-btn');
-    const addVehicleMainBtn = document.getElementById('add-vehicle-main-btn');
-
-    if (addVehicleMainBtn) {
-        addVehicleMainBtn.addEventListener('click', () => showVehicleModal());
-    }
-    
-    if (vehicleModalClose) {
-        vehicleModalClose.addEventListener('click', () => hideModal(vehicleModal));
-    }
-    
-    if (vehicleCancelBtn) {
-        vehicleCancelBtn.addEventListener('click', () => hideModal(vehicleModal));
-    }
-
-    if (vehicleForm) {
-        vehicleForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            await addVehicle();
-        });
-    }
-}
-
-function showVehicleModal() {
-    const vehicleForm = document.getElementById('vehicle-form');
-    if (vehicleForm) {
-        vehicleForm.reset();
-    }
-    showModal(document.getElementById('vehicle-modal'));
-}
-
-async function addVehicle() {
-    const userId = sessionStorage.getItem('userId');
-    const formData = {
-        customerId: userId,
-        make: document.getElementById('vehicle-make').value,
-        model: document.getElementById('vehicle-model').value,
-        year: parseInt(document.getElementById('vehicle-year').value),
-        vin: document.getElementById('vehicle-vin').value
-    };
-
-    try {
-        const response = await fetch('http://localhost:8080/api/customer/vehicles', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(formData)
-        });
-
-        const result = await response.json();
-        
-        if (response.ok) {
-            hideModal(document.getElementById('vehicle-modal'));
-            showNotification('Vehicle added successfully!', 'success');
-            loadMyVehicles();
-            loadCustomerVehicles(); // Refresh booking dropdown
-        } else {
-            showNotification(result.error || 'Failed to add vehicle', 'error');
-        }
-    } catch (error) {
-        console.error('Error adding vehicle:', error);
-        showNotification('Failed to add vehicle', 'error');
-    }
+    loadMyVehicles();
+    setupAddVehicleButton();
 }
 
 async function loadMyVehicles() {
-    const userId = sessionStorage.getItem('userId');
-    
-    try {
-        const response = await fetch(`http://localhost:8080/api/customer/vehicles/${userId}`);
-        if (!response.ok) throw new Error('Failed to fetch vehicles');
-        
-        const vehicles = await response.json();
-        populateVehiclesGrid(vehicles);
-    } catch (error) {
-        console.error('Error loading vehicles:', error);
-        showNotification('Failed to load vehicles', 'error');
-    }
+    await fetchWithSkeleton('/api/customer/vehicles', 'vehicles-grid', renderVehiclesGrid, 'Failed to load vehicles');
 }
 
-function populateVehiclesGrid(vehicles) {
-    const vehiclesGrid = document.getElementById('vehicles-grid');
-    if (!vehiclesGrid) return;
-    
-    if (vehicles.length === 0) {
-        vehiclesGrid.innerHTML = `
-            <div class="empty-state">
-                <div class="empty-state-icon">
-                    <svg class="icon icon-xl" viewBox="0 0 24 24">
-                        <path d="M7 17m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0"/>
-                        <path d="M17 17m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0"/>
-                        <path d="M5 17h-2v-6l2-5h9l4 5h1a2 2 0 0 1 2 2v4h-2"/>
-                        <path d="M9 17v-6h8"/>
-                        <path d="M2 6h15"/>
-                    </svg>
-                </div>
-                <div class="empty-state-title">No vehicles found</div>
-                <div class="empty-state-description">Add your first vehicle to get started!</div>
-            </div>
-        `;
+function renderVehiclesGrid(vehicles) {
+    const grid = document.getElementById('vehicles-grid');
+    if (!grid) return;
+    grid.innerHTML = '';
+    if (!vehicles.length) {
+        grid.innerHTML = '<div class="no-data">No vehicles found</div>';
         return;
     }
-
-    vehiclesGrid.innerHTML = vehicles.map(vehicle => `
-        <div class="vehicle-card">
+    vehicles.forEach(vehicle => {
+        const card = document.createElement('div');
+        card.className = 'vehicle-card animate-slide-in-up';
+        card.innerHTML = `
+            <div class="vehicle-header">
+                <div class="vehicle-icon"><svg class="icon"><use href="#car"/></svg></div>
+                <div class="vehicle-actions">
+                    <button class="btn btn-sm btn-secondary" onclick="showEditVehicleModal(${vehicle.id})">Edit</button>
+                    <button class="btn btn-sm btn-danger" onclick="deleteVehicle(${vehicle.id})">Delete</button>
+                </div>
+            </div>
             <div class="vehicle-info">
-                <h3>
-                    <svg class="icon" viewBox="0 0 24 24">
-                        <path d="M7 17m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0"/>
-                        <path d="M17 17m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0"/>
-                        <path d="M5 17h-2v-6l2-5h9l4 5h1a2 2 0 0 1 2 2v4h-2"/>
-                        <path d="M9 17v-6h8"/>
-                        <path d="M2 6h15"/>
-                    </svg>
-                    ${vehicle.make} ${vehicle.model}
-                </h3>
-                <p class="vehicle-year">Year: ${vehicle.year}</p>
-                ${vehicle.vin ? `<p class="vehicle-vin">VIN: ${vehicle.vin}</p>` : ''}
+                <h3>${vehicle.name}</h3>
+                <div class="vehicle-details">
+                    <div class="detail-item"><span class="detail-label">Year:</span> <span class="detail-value">${vehicle.year}</span></div>
+                    <div class="detail-item"><span class="detail-label">VIN:</span> <span class="detail-value">${vehicle.vin || '-'}</span></div>
+                </div>
             </div>
-            <div class="vehicle-actions">
-                <button class="btn btn-sm btn-primary" onclick="bookForVehicle(${vehicle.id})">
-                    <svg class="icon icon-sm" viewBox="0 0 24 24">
-                        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
-                        <line x1="16" y1="2" x2="16" y2="6"/>
-                        <line x1="8" y1="2" x2="8" y2="6"/>
-                        <line x1="3" y1="10" x2="21" y2="10"/>
-                    </svg>
-                    Book Service
-                </button>
-            </div>
-        </div>
-    `).join('');
+        `;
+        grid.appendChild(card);
+    });
 }
 
-function bookForVehicle(vehicleId) {
-    // Switch to booking tab and pre-select vehicle
-    document.querySelector('[data-tab="book-appointment"]').click();
-    setTimeout(() => {
-        const vehicleSelect = document.getElementById('booking-vehicle');
-        if (vehicleSelect) {
-            vehicleSelect.value = vehicleId;
-        }
-    }, 100);
+function setupAddVehicleButton() {
+    const addBtn = document.getElementById('add-vehicle-btn');
+    if (addBtn) {
+        addBtn.addEventListener('click', showAddVehicleModal);
+    }
 }
+
+window.showAddVehicleModal = function() {
+    const modalHtml = `
+        <div class='modal-content animate-slide-up'>
+            <button class='modal-close'>&times;</button>
+            <div class='modal-body'>
+                <h3>Add Vehicle</h3>
+                <form id='add-vehicle-form'>
+                    <div class='form-group'><label>Name</label><input name='name' required></div>
+                    <div class='form-group'><label>Year</label><input name='year' required type='number'></div>
+                    <div class='form-group'><label>VIN</label><input name='vin'></div>
+                    <button class='btn btn-primary' type='submit'>Add</button>
+                </form>
+            </div>
+        </div>`;
+    const modal = ModalManager.show(modalHtml);
+    document.getElementById('add-vehicle-form').onsubmit = async (e) => {
+        e.preventDefault();
+        const form = e.target;
+        const data = {
+            name: form.name.value,
+            year: form.year.value,
+            vin: form.vin.value
+        };
+        try {
+            const res = await fetch('/api/customer/vehicles', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+            if (!res.ok) throw new Error('Failed to add vehicle');
+            showNotification('Vehicle added', 'success');
+            ModalManager.hide(modal);
+            loadMyVehicles();
+        } catch (err) {
+            showNotification('Failed to add vehicle', 'error');
+        }
+    };
+};
+
+window.showEditVehicleModal = function(vehicleId) {
+    fetch(`/api/customer/vehicles/${vehicleId}`)
+        .then(res => res.json())
+        .then(vehicle => {
+            const modalHtml = `
+                <div class='modal-content animate-slide-up'>
+                    <button class='modal-close'>&times;</button>
+                    <div class='modal-body'>
+                        <h3>Edit Vehicle</h3>
+                        <form id='edit-vehicle-form'>
+                            <div class='form-group'><label>Name</label><input name='name' value='${vehicle.name}' required></div>
+                            <div class='form-group'><label>Year</label><input name='year' value='${vehicle.year}' required type='number'></div>
+                            <div class='form-group'><label>VIN</label><input name='vin' value='${vehicle.vin || ''}'></div>
+                            <button class='btn btn-primary' type='submit'>Save</button>
+                        </form>
+                    </div>
+                </div>`;
+            const modal = ModalManager.show(modalHtml);
+            document.getElementById('edit-vehicle-form').onsubmit = async (e) => {
+                e.preventDefault();
+                const form = e.target;
+                const data = {
+                    name: form.name.value,
+                    year: form.year.value,
+                    vin: form.vin.value
+                };
+                try {
+                    const res = await fetch(`/api/customer/vehicles/${vehicleId}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(data)
+                    });
+                    if (!res.ok) throw new Error('Failed to update vehicle');
+                    showNotification('Vehicle updated', 'success');
+                    ModalManager.hide(modal);
+                    loadMyVehicles();
+                } catch (err) {
+                    showNotification('Failed to update vehicle', 'error');
+                }
+            };
+        });
+};
+
+window.deleteVehicle = async function(vehicleId) {
+    if (!confirm('Are you sure you want to delete this vehicle?')) return;
+    try {
+        const res = await fetch(`/api/customer/vehicles/${vehicleId}`, { method: 'DELETE' });
+        if (!res.ok) throw new Error('Failed to delete vehicle');
+        showNotification('Vehicle deleted', 'success');
+        loadMyVehicles();
+    } catch (err) {
+        showNotification('Failed to delete vehicle', 'error');
+    }
+};
 
 // Jobs Module
 function initializeJobsModule() {
-    const jobsSearch = document.getElementById('jobs-search');
-    
-    if (jobsSearch) {
-        jobsSearch.addEventListener('input', (e) => {
-            filterJobs(e.target.value);
-        });
-    }
+    loadMyJobs();
+    setupJobsFilter();
 }
 
 async function loadMyJobs() {
-    const userId = sessionStorage.getItem('userId');
-    
-    try {
-        const response = await fetch(`http://localhost:8080/api/customer/jobs/${userId}`);
-        if (!response.ok) throw new Error('Failed to fetch jobs');
-        
-        const jobs = await response.json();
-        populateJobsTable(jobs.filter(job => job.status !== 'Paid'));
-    } catch (error) {
-        console.error('Error loading jobs:', error);
-        showNotification('Failed to load jobs', 'error');
-    }
+    await fetchWithSkeleton('/api/customer/jobs', 'my-jobs-table-body', renderJobsTable, 'Failed to load jobs');
 }
 
-function populateJobsTable(jobs) {
-    const tableBody = document.getElementById('my-jobs-table-body');
-    if (!tableBody) return;
-    
-    if (jobs.length === 0) {
-        tableBody.innerHTML = `
-            <tr>
-                <td colspan="7" class="empty-state">
-                    <div class="empty-state-icon">
-                        <svg class="icon icon-xl" viewBox="0 0 24 24">
-                            <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
-                        </svg>
-                    </div>
-                    <div class="empty-state-title">No current jobs found</div>
-                    <div class="empty-state-description">Book your first appointment to get started</div>
-                </td>
-            </tr>
-        `;
+function renderJobsTable(jobs) {
+    const tbody = document.getElementById('my-jobs-table-body');
+    if (!tbody) return;
+    tbody.innerHTML = '';
+    if (!jobs.length) {
+        tbody.innerHTML = '<tr><td colspan="7" class="no-data">No jobs found</td></tr>';
         return;
     }
-
-    tableBody.innerHTML = jobs.map(job => `
-        <tr>
-            <td><strong>#${job.jobId}</strong></td>
+    jobs.forEach(job => {
+        const tr = document.createElement('tr');
+        tr.className = 'job-row animate-slide-in-up';
+        tr.innerHTML = `
+            <td>#${job.id}</td>
             <td>${job.vehicle}</td>
             <td>${job.service}</td>
-            <td><span class="status-badge status-${job.status.toLowerCase().replace(' ', '-')}">${job.status}</span></td>
-            <td>${new Date(job.bookingDate).toLocaleDateString()}</td>
-            <td>${job.totalCost ? '$' + job.totalCost : '<span class="text-secondary">Pending</span>'}</td>
-            <td class="actions">
-                <button class="btn btn-sm btn-primary" onclick="showJobDetails(${job.jobId})">
-                    <svg class="icon icon-sm" viewBox="0 0 24 24">
-                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-                        <circle cx="12" cy="12" r="3"/>
-                    </svg>
-                    Details
-                </button>
-                ${job.status === 'Invoiced' ? `
-                    <button class="btn btn-sm btn-success" onclick="showPaymentModal(${job.jobId})">
-                        <svg class="icon icon-sm" viewBox="0 0 24 24">
-                            <rect x="1" y="4" width="22" height="16" rx="2" ry="2"/>
-                            <line x1="1" y1="10" x2="23" y2="10"/>
-                        </svg>
-                        Pay Now
-                    </button>
-                ` : ''}
-            </td>
-        </tr>
-    `).join('');
+            <td><span class="status-badge ${job.status.toLowerCase()}">${job.status}</span></td>
+            <td>${job.date}</td>
+            <td>$${job.totalCost || '-'}</td>
+            <td><button class="btn btn-sm btn-secondary" onclick="showJobDetailsModal(${job.id})">Details</button></td>
+        `;
+        tbody.appendChild(tr);
+    });
 }
 
-function filterJobs(searchTerm) {
-    const rows = document.querySelectorAll('#my-jobs-table-body tr');
-    rows.forEach(row => {
-        const text = row.textContent.toLowerCase();
-        row.style.display = text.includes(searchTerm.toLowerCase()) ? '' : 'none';
-    });
+function setupJobsFilter() {
+    const filterInput = document.getElementById('jobs-filter-input');
+    if (filterInput) {
+        filterInput.addEventListener('input', () => filterJobs(filterInput.value));
+    }
+}
+
+async function filterJobs(searchTerm) {
+    // Fetch jobs and filter client-side for now
+    const res = await fetch('/api/customer/jobs');
+    if (!res.ok) return;
+    const jobs = await res.json();
+    const filtered = jobs.filter(job =>
+        job.vehicle.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        job.service.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        job.status.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+    renderJobsTable(filtered);
+}
+
+window.showJobDetailsModal = async function(jobId) {
+    try {
+        const res = await fetch(`/api/customer/jobs/${jobId}`);
+        if (!res.ok) throw new Error('Failed to load job details');
+        const job = await res.json();
+        const modalHtml = `
+            <div class='modal-content animate-slide-up'>
+                <button class='modal-close'>&times;</button>
+                <div class='modal-body'>
+                    <h3>Job #${job.id}</h3>
+                    <div><strong>Vehicle:</strong> ${job.vehicle}</div>
+                    <div><strong>Service:</strong> ${job.service}</div>
+                    <div><strong>Status:</strong> <span class="status-badge ${job.status.toLowerCase()}">${job.status}</span></div>
+                    <div><strong>Date:</strong> ${job.date}</div>
+                    <div><strong>Total Cost:</strong> $${job.totalCost || '-'}</div>
+                    ${job.status === 'Invoiced' ? `<button class='btn btn-primary' onclick='payForJob(${job.id}, ${job.totalCost})'>Pay Now</button>` : ''}
+                </div>
+            </div>
+        `;
+        ModalManager.show(modalHtml);
+    } catch (err) {
+        showNotification('Failed to load job details', 'error');
+    }
+}
+
+window.payForJob = async function(jobId, amount) {
+    try {
+        const res = await fetch(`/api/customer/jobs/${jobId}/pay`, { method: 'POST' });
+        if (!res.ok) throw new Error('Payment failed');
+        ModalManager.show(`<div class='modal-content'><button class='modal-close'>&times;</button><div class='modal-body'><h3>Payment Successful!</h3><p>Your payment of $${amount} was processed.</p></div></div>`);
+        showNotification('Payment successful', 'success');
+        loadMyJobs();
+        loadDashboardOverview();
+    } catch (err) {
+        showNotification('Payment failed', 'error');
+    }
 }
 
 // Payment Module
@@ -865,74 +873,81 @@ async function processPayment() {
 }
 
 // Service History Module
-async function loadServiceHistory() {
-    const userId = sessionStorage.getItem('userId');
-    
-    try {
-        const response = await fetch(`http://localhost:8080/api/customer/jobs/${userId}`);
-        if (!response.ok) throw new Error('Failed to fetch service history');
-        
-        const jobs = await response.json();
-        populateServiceHistoryTable(jobs);
-        
-        // Initialize filter
-        const historyFilter = document.getElementById('history-filter');
-        if (historyFilter) {
-            historyFilter.addEventListener('change', () => filterServiceHistory(jobs));
-        }
-    } catch (error) {
-        console.error('Error loading service history:', error);
-        showNotification('Failed to load service history', 'error');
-    }
+function initializeServiceHistoryModule() {
+    loadServiceHistory();
+    setupServiceHistoryFilter();
 }
 
-function populateServiceHistoryTable(jobs) {
-    const tableBody = document.getElementById('service-history-table-body');
-    if (!tableBody) return;
+async function loadServiceHistory() {
+    await fetchWithSkeleton('/api/customer/service-history', 'service-history-table-body', renderServiceHistoryTable, 'Failed to load service history');
+}
 
-    if (jobs.length === 0) {
-        tableBody.innerHTML = `
-            <tr>
-                <td colspan="6" class="empty-state">
-                    <div class="empty-state-icon">
-                        <svg class="icon icon-xl" viewBox="0 0 24 24">
-                            <path d="M3 3v5h5"/>
-                            <path d="M3.05 13A9 9 0 1 0 6 5.3L3 8"/>
-                            <path d="M12 7v5l4 2"/>
-                        </svg>
-                    </div>
-                    <div class="empty-state-title">No service history found</div>
-                    <div class="empty-state-description">Your completed services will appear here</div>
-                </td>
-            </tr>
-        `;
+function renderServiceHistoryTable(jobs) {
+    const tbody = document.getElementById('service-history-table-body');
+    if (!tbody) return;
+    tbody.innerHTML = '';
+    if (!jobs.length) {
+        tbody.innerHTML = '<tr><td colspan="7" class="no-data">No service history found</td></tr>';
         return;
     }
-
-    tableBody.innerHTML = jobs.map(job => `
-        <tr class="history-row status-${job.status.toLowerCase().replace(' ', '-')}">
-            <td>${new Date(job.bookingDate).toLocaleDateString()}</td>
+    jobs.forEach(job => {
+        const tr = document.createElement('tr');
+        tr.className = 'job-row animate-slide-in-up';
+        tr.innerHTML = `
+            <td>#${job.id}</td>
             <td>${job.vehicle}</td>
             <td>${job.service}</td>
-            <td><span class="status-badge status-${job.status.toLowerCase().replace(' ', '-')}">${job.status}</span></td>
-            <td>${job.totalCost ? '$' + job.totalCost : '<span class="text-secondary">Pending</span>'}</td>
-            <td class="actions">
-                <button class="btn btn-sm btn-primary" onclick="showJobDetails(${job.jobId})">
-                    <svg class="icon icon-sm" viewBox="0 0 24 24">
-                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-                        <circle cx="12" cy="12" r="3"/>
-                    </svg>
-                    View
-                </button>
-            </td>
-        </tr>
-    `).join('');
+            <td><span class="status-badge ${job.status.toLowerCase()}">${job.status}</span></td>
+            <td>${job.date}</td>
+            <td>$${job.totalCost || '-'}</td>
+            <td><button class="btn btn-sm btn-secondary" onclick="showServiceHistoryDetailsModal(${job.id})">Details</button></td>
+        `;
+        tbody.appendChild(tr);
+    });
 }
 
-function filterServiceHistory(jobs) {
-    const filter = document.getElementById('history-filter').value;
-    const filteredJobs = filter === 'all' ? jobs : jobs.filter(job => job.status.toLowerCase() === filter);
-    populateServiceHistoryTable(filteredJobs);
+function setupServiceHistoryFilter() {
+    const filterInput = document.getElementById('service-history-filter-input');
+    if (filterInput) {
+        filterInput.addEventListener('input', () => filterServiceHistory(filterInput.value));
+    }
+}
+
+async function filterServiceHistory(searchTerm) {
+    const res = await fetch('/api/customer/service-history');
+    if (!res.ok) return;
+    const jobs = await res.json();
+    const filtered = jobs.filter(job =>
+        job.vehicle.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        job.service.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        job.status.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+    renderServiceHistoryTable(filtered);
+}
+
+window.showServiceHistoryDetailsModal = async function(jobId) {
+    try {
+        const res = await fetch(`/api/customer/service-history/${jobId}`);
+        if (!res.ok) throw new Error('Failed to load service details');
+        const job = await res.json();
+        const modalHtml = `
+            <div class='modal-content animate-slide-up'>
+                <button class='modal-close'>&times;</button>
+                <div class='modal-body'>
+                    <h3>Service #${job.id}</h3>
+                    <div><strong>Vehicle:</strong> ${job.vehicle}</div>
+                    <div><strong>Service:</strong> ${job.service}</div>
+                    <div><strong>Status:</strong> <span class="status-badge ${job.status.toLowerCase()}">${job.status}</span></div>
+                    <div><strong>Date:</strong> ${job.date}</div>
+                    <div><strong>Total Cost:</strong> $${job.totalCost || '-'}</div>
+                    <div><strong>Notes:</strong> ${job.notes || '-'}</div>
+                </div>
+            </div>
+        `;
+        ModalManager.show(modalHtml);
+    } catch (err) {
+        showNotification('Failed to load service details', 'error');
+    }
 }
 
 // Customer Data Loading
@@ -1008,3 +1023,189 @@ function hideProcessingMessage(overlay) {
         overlay.parentNode.removeChild(overlay);
     }
 }
+
+// --- Modular Managers ---
+class NotificationManager {
+    constructor(containerId = 'notification-container') {
+        this.container = document.getElementById(containerId);
+    }
+    show(message, type = 'info') {
+        if (!this.container) return;
+        const toast = document.createElement('div');
+        toast.className = `notification-toast ${type} animate-fade-in`;
+        toast.innerHTML = `<span class="toast-message">${message}</span>`;
+        this.container.appendChild(toast);
+        setTimeout(() => toast.remove(), 4000);
+    }
+}
+
+class ModalManager {
+    static show(modalHtml) {
+        let modal = document.createElement('div');
+        modal.className = 'modal show';
+        modal.innerHTML = modalHtml;
+        document.body.appendChild(modal);
+        modal.querySelector('.modal-close')?.addEventListener('click', () => modal.remove());
+        return modal;
+    }
+    static hide(modal) {
+        if (modal) modal.remove();
+    }
+}
+
+class DropdownManager {
+    static init() {
+        document.querySelectorAll('.dropdown-toggle').forEach(toggle => {
+            toggle.addEventListener('click', e => {
+                e.stopPropagation();
+                const menu = toggle.nextElementSibling;
+                if (menu) menu.classList.toggle('show');
+            });
+        });
+        document.addEventListener('click', () => {
+            document.querySelectorAll('.dropdown-menu').forEach(menu => menu.classList.remove('show'));
+        });
+    }
+}
+
+// --- Notification & Chatbot Integration ---
+const notificationManager = new NotificationManager();
+function showNotification(message, type = 'info') {
+    notificationManager.show(message, type);
+}
+
+// Chatbot integration (assume chatbot.js provides ModernChatbot class)
+document.addEventListener('DOMContentLoaded', () => {
+    if (window.ModernChatbot) {
+        // Only initialize once
+        if (!window._chatbotInitialized) {
+            new ModernChatbot('chatbot-container').init();
+            window._chatbotInitialized = true;
+        }
+    }
+});
+
+// --- Animate DOM Updates Helper ---
+function animateIn(element, animation = 'animate-fade-in') {
+    if (element) element.classList.add(animation);
+}
+
+// --- Async Data Fetching with Loading Skeletons & Error Handling ---
+async function fetchWithSkeleton(url, skeletonId, renderFn, errorMsg) {
+    const skeleton = document.getElementById(skeletonId);
+    if (skeleton) skeleton.innerHTML = '<div class="loading-skeleton"></div>';
+    try {
+        const res = await fetch(url);
+        if (!res.ok) throw new Error(errorMsg || 'Failed to fetch data');
+        const data = await res.json();
+        renderFn(data);
+    } catch (err) {
+        if (skeleton) skeleton.innerHTML = `<div class="no-data">${errorMsg || err.message}</div>`;
+        showNotification(errorMsg || err.message, 'error');
+    }
+}
+
+// --- Dashboard Overview Implementation ---
+async function loadDashboardOverview() {
+    // Metrics
+    await fetchWithSkeleton('/api/customer/jobs/overview', 'customer-metrics-grid', renderMetricsGrid, 'Failed to load metrics');
+    // Recent Jobs
+    await fetchWithSkeleton('/api/customer/jobs/recent', 'recent-jobs-list', renderRecentJobs, 'Failed to load recent jobs');
+    // Vehicles Summary
+    await fetchWithSkeleton('/api/customer/vehicles/summary', 'vehicles-summary', renderVehiclesSummary, 'Failed to load vehicles');
+}
+
+function renderMetricsGrid(metrics) {
+    const grid = document.getElementById('customer-metrics-grid');
+    if (!grid) return;
+    grid.innerHTML = '';
+    metrics.forEach((metric, i) => {
+        const card = document.createElement('div');
+        card.className = `metric-card ${metric.class || ''}`;
+        card.style.animationDelay = `${i * 0.1}s`;
+        card.innerHTML = `
+            <div class="metric-header">
+                <div class="metric-icon">${metric.icon || ''}</div>
+            </div>
+            <div class="metric-value">${metric.value}</div>
+            <div class="metric-label">${metric.title}</div>
+        `;
+        animateIn(card, 'animate-slide-up');
+        grid.appendChild(card);
+    });
+}
+
+function renderRecentJobs(jobs) {
+    const list = document.getElementById('recent-jobs-list');
+    if (!list) return;
+    list.innerHTML = '';
+    if (!jobs.length) {
+        list.innerHTML = '<div class="no-data">No recent jobs found</div>';
+        return;
+    }
+    jobs.forEach(job => {
+        const item = document.createElement('div');
+        item.className = 'job-summary-item animate-slide-in-right';
+        item.innerHTML = `
+            <div class="job-summary-header">
+                <span class="job-id">#${job.id}</span>
+                <span class="job-date">${job.date}</span>
+            </div>
+            <div class="job-summary-details">
+                <span class="job-vehicle">${job.vehicle}</span>
+                <span class="job-service">${job.service}</span>
+                <span class="status-badge ${job.status.toLowerCase()}">${job.status}</span>
+            </div>
+        `;
+        list.appendChild(item);
+    });
+}
+
+function renderVehiclesSummary(vehicles) {
+    const summary = document.getElementById('vehicles-summary');
+    if (!summary) return;
+    summary.innerHTML = '';
+    if (!vehicles.length) {
+        summary.innerHTML = '<div class="no-data">No vehicles found</div>';
+        return;
+    }
+    vehicles.forEach(vehicle => {
+        const item = document.createElement('div');
+        item.className = 'vehicle-summary-item animate-slide-in-left';
+        item.innerHTML = `
+            <div class="vehicle-summary-icon"><svg class="icon"><use href="#car"/></svg></div>
+            <div class="vehicle-summary-details">
+                <span class="vehicle-name">${vehicle.name}</span>
+                <span class="vehicle-year">${vehicle.year}</span>
+            </div>
+        `;
+        summary.appendChild(item);
+    });
+}
+
+// Quick Book button event
+const quickBookBtn = document.getElementById('quick-book-btn');
+if (quickBookBtn) {
+    quickBookBtn.addEventListener('click', () => {
+        // Switch to booking tab
+        const bookingTab = document.querySelector('[data-tab="book-appointment"]');
+        if (bookingTab) bookingTab.click();
+    });
+}
+
+// --- Notification System Integration ---
+function notifyAction(type, message) {
+    showNotification(message, type);
+    // Optionally, trigger chatbot or other UI feedback here
+}
+
+// Example: Use notifyAction in all major actions
+// Replace showNotification('...', ...) with notifyAction(...)
+// For booking
+// notifyAction('success', 'Appointment booked successfully');
+// For payment
+// notifyAction('success', 'Payment successful');
+// For vehicle add/edit/delete
+// notifyAction('success', 'Vehicle added');
+// For errors
+// notifyAction('error', 'Failed to ...');

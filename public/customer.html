@@ -6,10 +6,8 @@
     <title>Customer Dashboard - RepairHub Pro</title>
     <link rel="stylesheet" href="css/design-system.css">
     <link rel="stylesheet" href="css/dashboard.css">
-    <link rel="stylesheet" href="css/enhanced-customer.css">
     <link rel="stylesheet" href="css/modals.css">
     <link rel="stylesheet" href="css/notifications.css">
-    <link rel="stylesheet" href="css/enhanced-chatbot.css">
     <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -42,9 +40,14 @@
     <!-- Sidebar Overlay -->
     <div class="sidebar-overlay" id="sidebar-overlay"></div>
 
-    <div class="dashboard-layout">
+    <!-- Notification Container -->
+    <div id="notification-container" class="notification-container"></div>
+    <!-- Chatbot Container -->
+    <div id="chatbot-container" class="chatbot-container"></div>
+    <!-- Main Dashboard Layout (sidebar + main content) -->
+    <div class="dashboard-layout customer-dashboard">
         <!-- Sidebar -->
-        <aside class="sidebar" id="sidebar">
+        <aside class="sidebar" id="sidebar" role="navigation" aria-label="Main sidebar navigation">
             <div class="sidebar-header">
                 <div class="sidebar-logo">
                     <svg class="icon" viewBox="0 0 24 24">
@@ -138,9 +141,9 @@
         </aside>
 
         <!-- Main Content -->
-        <main class="main-content">
+        <main class="main-content" id="main-content" role="main" tabindex="-1">
             <!-- Overview Tab -->
-            <div id="overview-tab" class="tab-content active">
+            <div id="overview-tab" class="tab-content active animate-fade-in">
                 <div class="page-header">
                     <div>
                         <h1 class="page-title">Welcome Back!</h1>
@@ -159,21 +162,17 @@
                     </div>
                 </div>
                 
-                <!-- Key Metrics -->
-                <div class="metrics-grid" id="customer-metrics-grid">
-                    <!-- Metrics will be populated by JavaScript -->
-                </div>
+                <!-- Metrics Grid -->
+                <div class="metrics-grid" id="customer-metrics-grid"></div>
 
-                <!-- Quick Actions -->
+                <!-- Quick Actions: Recent Jobs & Vehicles Summary -->
                 <div class="grid grid-cols-2">
                     <div class="card">
                         <div class="card-header">
                             <h3 class="card-title">Recent Jobs</h3>
                             <button class="btn btn-sm btn-secondary nav-button" data-tab="my-jobs">View All</button>
                         </div>
-                        <div id="recent-jobs-list">
-                            <!-- Recent jobs will be inserted here -->
-                        </div>
+                        <div id="recent-jobs-list"></div>
                     </div>
 
                     <div class="card">
@@ -181,49 +180,39 @@
                             <h3 class="card-title">My Vehicles</h3>
                             <button class="btn btn-sm btn-secondary nav-button" data-tab="my-vehicles">Manage</button>
                         </div>
-                        <div id="vehicles-summary">
-                            <!-- Vehicle summary will be inserted here -->
-                        </div>
+                        <div id="vehicles-summary"></div>
                     </div>
                 </div>
             </div>
 
             <!-- Book Appointment Tab -->
-            <div id="book-appointment-tab" class="tab-content">
+            <div id="book-appointment-tab" class="tab-content animate-fade-in">
                 <div class="page-header">
                     <div>
                         <h1 class="page-title">Book New Appointment</h1>
                         <p class="page-subtitle">Schedule your vehicle service with ease</p>
                     </div>
                 </div>
-                
-                <!-- Branch Selection Map -->
-                <div id="branch-map-container"></div>
-                
-                <div class="booking-container">
-                    <form id="booking-form" class="booking-form">
-                        <div class="form-row">
+                <div class="booking-flex-layout">
+                    <!-- Branch Selection -->
+                    <div class="booking-section" id="branch-section">
+                        <h3>Select Branch</h3>
+                        <div id="branch-list" class="branch-list"></div>
+                    </div>
+                    <!-- Booking Form -->
+                    <div class="booking-section" id="booking-form-section">
+                        <form id="booking-form" class="booking-form">
                             <div class="form-group">
                                 <label for="booking-vehicle" class="form-label">Select Vehicle</label>
-                                <select id="booking-vehicle" class="form-input" required>
-                                    <option value="">Choose your vehicle...</option>
-                                </select>
-                                <button type="button" id="add-vehicle-btn" class="btn btn-secondary btn-sm" style="margin-top: var(--space-2);">
-                                    <svg class="icon icon-sm" viewBox="0 0 24 24">
-                                        <line x1="12" y1="5" x2="12" y2="19"/>
-                                        <line x1="5" y1="12" x2="19" y2="12"/>
-                                    </svg>
-                                    Add New Vehicle
-                                </button>
+                                <div class="vehicle-select-row">
+                                    <select id="booking-vehicle" class="form-input" required></select>
+                                    <button type="button" id="add-vehicle-btn" class="btn btn-secondary btn-sm">Add Vehicle</button>
+                                </div>
                             </div>
                             <div class="form-group">
                                 <label for="booking-service" class="form-label">Select Service</label>
-                                <select id="booking-service" class="form-input" required>
-                                    <option value="">Choose a service...</option>
-                                </select>
+                                <select id="booking-service" class="form-input" required></select>
                             </div>
-                        </div>
-                        <div class="form-row">
                             <div class="form-group">
                                 <label for="booking-date" class="form-label">Preferred Date & Time</label>
                                 <input type="datetime-local" id="booking-date" class="form-input" required>
@@ -232,47 +221,18 @@
                                 <label for="booking-notes" class="form-label">Additional Notes</label>
                                 <textarea id="booking-notes" class="form-input" rows="3" placeholder="Describe the issue or any special requirements..."></textarea>
                             </div>
-                        </div>
-                        <div class="service-details" id="service-details" style="display: none;">
-                            <h4>
-                                <svg class="icon" viewBox="0 0 24 24">
-                                    <circle cx="12" cy="12" r="3"/>
-                                    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
-                                </svg>
-                                Service Details
-                            </h4>
-                            <div class="detail-item">
-                                <label>Service:</label>
-                                <span id="selected-service-name"></span>
+                            <div class="form-actions">
+                                <button type="submit" class="btn btn-primary">Book Appointment</button>
                             </div>
-                            <div class="detail-item">
-                                <label>Price:</label>
-                                <span id="selected-service-price"></span>
-                            </div>
-                            <div class="detail-item">
-                                <label>Description:</label>
-                                <span id="selected-service-description"></span>
-                            </div>
-                            <div class="detail-item">
-                                <label>Selected Branch:</label>
-                                <span id="selected-branch-name">Please select a branch above</span>
-                            </div>
-                        </div>
-                        <div class="form-actions">
-                            <button type="submit" class="btn btn-primary">
-                                <svg class="icon icon-sm" viewBox="0 0 24 24">
-                                    <path d="M9 12l2 2 4-4"/>
-                                    <circle cx="12" cy="12" r="9"/>
-                                </svg>
-                                Book Appointment
-                            </button>
-                        </div>
-                    </form>
+                        </form>
+                        <div id="booking-summary" class="booking-summary"></div>
+                        <div id="booking-confirmation" class="booking-confirmation"></div>
+                    </div>
                 </div>
             </div>
 
             <!-- My Jobs Tab -->
-            <div id="my-jobs-tab" class="tab-content">
+            <div id="my-jobs-tab" class="tab-content animate-fade-in">
                 <div class="page-header">
                     <div>
                         <h1 class="page-title">My Current Jobs</h1>
@@ -314,7 +274,7 @@
             </div>
 
             <!-- My Vehicles Tab -->
-            <div id="my-vehicles-tab" class="tab-content">
+            <div id="my-vehicles-tab" class="tab-content animate-fade-in">
                 <div class="page-header">
                     <div>
                         <h1 class="page-title">My Vehicles</h1>
@@ -337,7 +297,7 @@
             </div>
 
             <!-- Service History Tab -->
-            <div id="service-history-tab" class="tab-content">
+            <div id="service-history-tab" class="tab-content animate-fade-in">
                 <div class="page-header">
                     <div>
                         <h1 class="page-title">Service History</h1>
@@ -595,8 +555,8 @@
     <!-- Lucide Icons JS -->
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
     <script src="js/notifications.js"></script>
-    <script src="js/enhanced-chatbot.js"></script>
-    <script src="js/enhanced-customer-dashboard.js"></script>
+    <script src="js/chatbot.js"></script>
+    <script src="js/customer-dashboard.js"></script>
     <script src="js/dropdown.js"></script>
     <script>
         // Initialize Lucide icons

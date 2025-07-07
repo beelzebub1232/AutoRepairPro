@@ -68,7 +68,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 // Redirect to the appropriate dashboard with user info in URL
                 setTimeout(() => {
-                    window.location.href = `/${data.role}.html?role=${data.role}&name=${encodeURIComponent(data.fullName)}&id=${data.userId}`;
+                    let dashboardFile = `${data.role}.html`;
+                    if (data.role === 'customer') dashboardFile = 'customer.html';
+                    if (data.role === 'employee') dashboardFile = 'employee.html';
+                    if (data.role === 'admin') dashboardFile = 'admin.html';
+                    window.location.href = `/${dashboardFile}?role=${data.role}&name=${encodeURIComponent(data.fullName)}&id=${data.userId}`;
                 }, 500);
             } else {
                 throw new Error(data.error || 'Login failed');
