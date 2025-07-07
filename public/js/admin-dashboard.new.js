@@ -166,7 +166,7 @@ async function loadAdminOverviewData() {
         document.getElementById('metric-total-jobs').textContent = metrics.totalJobs ?? '--';
         document.getElementById('metric-in-progress').textContent = metrics.inProgress ?? '--';
         document.getElementById('metric-completed').textContent = metrics.completed ?? '--';
-        document.getElementById('metric-revenue').textContent = metrics.totalRevenue ? `$${Number(metrics.totalRevenue).toLocaleString()}` : '--';
+        document.getElementById('metric-revenue').textContent = metrics.totalRevenue ? `₹${Number(metrics.totalRevenue).toLocaleString('en-IN')}` : '--';
 
         // Populate recent jobs table
         const tbody = document.getElementById('overview-recent-jobs-body');
@@ -263,7 +263,7 @@ function loadJobsData(contentArea) {
                             <td>${job.service || 'N/A'}</td>
                             <td><span class="status-badge status-${(job.status || 'unknown').toLowerCase().replace(' ', '-')}">${job.status || 'Unknown'}</span></td>
                             <td>${job.employeeName || 'Unassigned'}</td>
-                            <td>${job.totalCost ? '$' + parseFloat(job.totalCost).toFixed(2) : 'Pending'}</td>
+                            <td>${job.totalCost ? '₹' + parseFloat(job.totalCost).toFixed(2) : 'Pending'}</td>
                             <td>
                                 <button class="btn btn-sm btn-secondary view-job-btn" data-job-id="${job.jobId}">View</button>
                                 <button class="btn btn-sm btn-primary edit-job-btn" data-job-id="${job.jobId}">Edit</button>
@@ -297,7 +297,7 @@ function loadServicesData(contentArea) {
                     tableHtml += `<tr>
                             <td>#${service.id}</td>
                             <td>${service.serviceName || 'N/A'}</td>
-                            <td>${service.price ? '$' + parseFloat(service.price).toFixed(2) : 'N/A'}</td>
+                            <td>${service.price ? '₹' + parseFloat(service.price).toFixed(2) : 'N/A'}</td>
                             <td>${service.description || 'No description'}</td>
                             <td>
                                 <button class="btn btn-sm btn-secondary edit-service-btn" data-service-id="${service.id}">Edit</button>
@@ -335,7 +335,7 @@ function loadInventoryData(contentArea) {
                             <td>${item.partName || 'N/A'}</td>
                             <td>${item.quantity !== undefined ? item.quantity : 'N/A'}</td>
                             <td>${item.minQuantity !== undefined ? item.minQuantity : 'N/A'}</td>
-                            <td>${item.pricePerUnit ? '$' + parseFloat(item.pricePerUnit).toFixed(2) : 'N/A'}</td>
+                            <td>${item.pricePerUnit ? '₹' + parseFloat(item.pricePerUnit).toFixed(2) : 'N/A'}</td>
                             <td>${item.category || 'N/A'}</td>
                             <td>
                                 <button class="btn btn-sm btn-secondary edit-inventory-btn" data-item-id="${item.id}">Edit</button>
@@ -449,7 +449,7 @@ function loadInvoicesData(contentArea) {
                             <td>#${invoice.invoiceNumber || invoice.id}</td>
                             <td>${invoice.customerName || 'N/A'}</td>
                             <td>#${invoice.jobId || 'N/A'}</td>
-                            <td>${invoice.totalAmount ? '$' + parseFloat(invoice.totalAmount).toFixed(2) : 'N/A'}</td>
+                            <td>${invoice.totalAmount ? '₹' + parseFloat(invoice.totalAmount).toFixed(2) : 'N/A'}</td>
                             <td><span class="status-badge status-${(invoice.status || 'unknown').toLowerCase()}">${invoice.status || 'Unknown'}</span></td>
                             <td>${invoice.dueDate ? new Date(invoice.dueDate).toLocaleDateString() : 'N/A'}</td>
                             <td>
@@ -499,7 +499,7 @@ async function loadReportsData(contentArea) {
         if (revenueResponse.ok && Array.isArray(revenueData)) {
             let revenueHtml = '<ul>';
             revenueData.forEach(r => {
-                revenueHtml += `<li>Month: ${r.month}, Revenue: $${parseFloat(r.totalRevenue || 0).toFixed(2)}</li>`;
+                revenueHtml += `<li>Month: ${r.month}, Revenue: ₹${parseFloat(r.totalRevenue || 0).toFixed(2)}</li>`;
             });
             revenueHtml += '</ul>';
             revenueCardBody.innerHTML = revenueData.length > 0 ? revenueHtml : '<p>No revenue data available.</p>';
@@ -777,7 +777,7 @@ async function populateJobFormDropdowns() {
         const servicesResponse = await fetch('/api/admin/services');
         const services = await servicesResponse.json();
         serviceSelect.innerHTML = '<option value="">Select Service</option>';
-        services.forEach(serv => serviceSelect.innerHTML += `<option value="${serv.id}">${serv.serviceName} - $${serv.price}</option>`);
+        services.forEach(serv => serviceSelect.innerHTML += `<option value="${serv.id}">${serv.serviceName} - ₹${serv.price}</option>`);
     } catch (error) { console.error("Failed to load services:", error); serviceSelect.innerHTML = '<option value="">Error loading services</option>'; }
     customerSelect.onchange = async function() {
         const customerId = this.value;
@@ -808,18 +808,21 @@ async function handleViewJobClick(jobId) {
         return;
     }
 
-    const bodyHtml = `<div class="job-details-view">
-            <p><strong>Job ID:</strong> #${jobData.jobId}</p>
-            <p><strong>Customer:</strong> ${jobData.customerName || 'N/A'}</p>
-            <p><strong>Vehicle:</strong> ${jobData.vehicle || 'N/A'}</p>
-            <p><strong>Service:</strong> ${jobData.service || 'N/A'}</p>
-            <p><strong>Status:</strong> <span class="status-badge status-${(jobData.status || 'unknown').toLowerCase().replace(' ', '-')}">${jobData.status || 'Unknown'}</span></p>
-            <p><strong>Assigned Employee:</strong> ${jobData.employeeName || 'Unassigned'}</p>
-            <p><strong>Booking Date:</strong> ${jobData.bookingDate ? new Date(jobData.bookingDate).toLocaleString() : 'N/A'}</p>
-            <p><strong>Total Cost:</strong> ${jobData.totalCost ? '$' + parseFloat(jobData.totalCost).toFixed(2) : 'Pending'}</p>
-            <p><strong>Notes:</strong> ${jobData.notes || 'None'}</p>
-            <p><strong>Branch:</strong> ${jobData.branchName || 'N/A'}</p>
-        </div>`;
+    // Use card-like container and grid for details, with modern structure
+    const bodyHtml = `<div class="job-details-view card" style="box-shadow:none; border:none;">
+        <div class="details-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:1.25rem 2rem;">
+            <div><span class="form-label">Job ID:</span> <span class="font-medium">#${jobData.jobId}</span></div>
+            <div><span class="form-label">Customer:</span> <span class="font-medium">${jobData.customerName || 'N/A'}</span></div>
+            <div><span class="form-label">Vehicle:</span> <span class="font-medium">${jobData.vehicle || 'N/A'}</span></div>
+            <div><span class="form-label">Service:</span> <span class="font-medium">${jobData.service || 'N/A'}</span></div>
+            <div><span class="form-label">Status:</span> <span class="status-badge status-${(jobData.status || 'unknown').toLowerCase().replace(' ', '-')}">${jobData.status || 'Unknown'}</span></div>
+            <div><span class="form-label">Assigned Employee:</span> <span class="font-medium">${jobData.employeeName || 'Unassigned'}</span></div>
+            <div><span class="form-label">Booking Date:</span> <span class="font-medium">${jobData.bookingDate ? new Date(jobData.bookingDate).toLocaleString() : 'N/A'}</span></div>
+            <div><span class="form-label">Total Cost:</span> <span class="font-medium">${jobData.totalCost ? '₹' + parseFloat(jobData.totalCost).toFixed(2) : 'Pending'}</span></div>
+            <div class="details-notes" style="grid-column:1/-1;"><span class="form-label">Notes:</span> <span class="font-medium">${jobData.notes || 'None'}</span></div>
+            <div><span class="form-label">Branch:</span> <span class="font-medium">${jobData.branchName || 'N/A'}</span></div>
+        </div>
+    </div>`;
     const footerHtml = `<button type="button" class="btn btn-secondary" onclick="closeModal('${modalId}')">Close</button>`;
     createModal(modalId, title, bodyHtml, footerHtml);
     showModal(modalId);
@@ -1693,19 +1696,20 @@ function handleViewInvoiceClick(invoiceIdFromButton) {
     }
     const modalId = `viewInvoiceModal-${invoiceData.id || invoiceData.invoiceNumber}`;
     const title = `View Invoice Details (ID: #${invoiceData.invoiceNumber || invoiceData.id})`;
-
     const bodyHtml = `
-        <div class="invoice-details-view">
-            <p><strong>Invoice Number:</strong> #${invoiceData.invoiceNumber || invoiceData.id}</p>
-            <p><strong>Customer:</strong> ${invoiceData.customerName || 'N/A'}</p>
-            <p><strong>Job ID:</strong> #${invoiceData.jobId || 'N/A'}</p>
-            <p><strong>Service:</strong> ${invoiceData.serviceName || 'N/A'}</p>
-            <p><strong>Amount:</strong> ${invoiceData.amount ? '$' + parseFloat(invoiceData.amount).toFixed(2) : 'N/A'}</p>
-            <p><strong>Tax:</strong> ${invoiceData.taxAmount ? '$' + parseFloat(invoiceData.taxAmount).toFixed(2) : 'N/A'}</p>
-            <p><strong>Total Amount:</strong> ${invoiceData.totalAmount ? '$' + parseFloat(invoiceData.totalAmount).toFixed(2) : 'N/A'}</p>
-            <p><strong>Status:</strong> <span class="status-badge status-${(invoiceData.status || 'unknown').toLowerCase()}">${invoiceData.status || 'Unknown'}</span></p>
-            <p><strong>Due Date:</strong> ${invoiceData.dueDate ? new Date(invoiceData.dueDate).toLocaleDateString() : 'N/A'}</p>
-            <p><strong>Created At:</strong> ${invoiceData.createdAt ? new Date(invoiceData.createdAt).toLocaleString() : 'N/A'}</p>
+        <div class="invoice-details-view card" style="box-shadow:none; border:none;">
+            <div class="details-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:1.25rem 2rem;">
+                <div><span class="form-label">Invoice Number:</span> <span class="font-medium">#${invoiceData.invoiceNumber || invoiceData.id}</span></div>
+                <div><span class="form-label">Customer:</span> <span class="font-medium">${invoiceData.customerName || 'N/A'}</span></div>
+                <div><span class="form-label">Job ID:</span> <span class="font-medium">#${invoiceData.jobId || 'N/A'}</span></div>
+                <div><span class="form-label">Service:</span> <span class="font-medium">${invoiceData.serviceName || 'N/A'}</span></div>
+                <div><span class="form-label">Amount:</span> <span class="font-medium">${invoiceData.amount ? '₹' + parseFloat(invoiceData.amount).toFixed(2) : 'N/A'}</span></div>
+                <div><span class="form-label">Tax:</span> <span class="font-medium">${invoiceData.taxAmount ? '₹' + parseFloat(invoiceData.taxAmount).toFixed(2) : 'N/A'}</span></div>
+                <div><span class="form-label">Total Amount:</span> <span class="font-medium">${invoiceData.totalAmount ? '₹' + parseFloat(invoiceData.totalAmount).toFixed(2) : 'N/A'}</span></div>
+                <div><span class="form-label">Status:</span> <span class="status-badge status-${(invoiceData.status || 'unknown').toLowerCase()}">${invoiceData.status || 'Unknown'}</span></div>
+                <div><span class="form-label">Due Date:</span> <span class="font-medium">${invoiceData.dueDate ? new Date(invoiceData.dueDate).toLocaleDateString() : 'N/A'}</span></div>
+                <div><span class="form-label">Created At:</span> <span class="font-medium">${invoiceData.createdAt ? new Date(invoiceData.createdAt).toLocaleString() : 'N/A'}</span></div>
+            </div>
         </div>
     `;
     const footerHtml = `<button type="button" class="btn btn-secondary" onclick="closeModal('${modalId}')">Close</button>`;

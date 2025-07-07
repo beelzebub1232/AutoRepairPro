@@ -171,7 +171,7 @@ function updateCustomerMetrics(jobs) {
         },
         {
             title: 'Total Spent',
-            value: `$${totalSpent.toFixed(2)}`,
+            value: `₹${totalSpent.toFixed(2)}`,
             icon: `<svg class="icon" viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>`,
             class: 'spent'
         }
@@ -897,7 +897,7 @@ function populateServiceSelect(services) {
     services.forEach(service => {
         const option = document.createElement('option');
         option.value = service.id;
-        option.textContent = `${service.serviceName} - $${service.price}`;
+        option.textContent = `${service.serviceName} - ₹${service.price}`;
         option.setAttribute('data-price', service.price);
         option.setAttribute('data-description', service.description || '');
         serviceSelect.appendChild(option);
@@ -910,8 +910,8 @@ function showServiceDetails() {
     const selectedOption = serviceSelect.options[serviceSelect.selectedIndex];
     
     if (selectedOption.value) {
-        document.getElementById('selected-service-name').textContent = selectedOption.textContent.split(' - $')[0];
-        document.getElementById('selected-service-price').textContent = '$' + selectedOption.getAttribute('data-price');
+        document.getElementById('selected-service-name').textContent = selectedOption.textContent.split(' - ₹')[0];
+        document.getElementById('selected-service-price').textContent = '₹' + selectedOption.getAttribute('data-price');
         document.getElementById('selected-service-description').textContent = selectedOption.getAttribute('data-description') || 'No description available';
         serviceDetails.style.display = 'block';
         serviceDetails.classList.add('animate-slide-up');
@@ -1197,7 +1197,7 @@ function populateJobsTable(jobs) {
             <td>${job.service}</td>
             <td><span class="status-badge status-${job.status.toLowerCase().replace(' ', '-')}">${job.status}</span></td>
             <td>${new Date(job.bookingDate).toLocaleDateString()}</td>
-            <td>${job.totalCost ? '$' + job.totalCost : '<span class="text-secondary">Pending</span>'}</td>
+            <td>${job.totalCost ? '₹' + job.totalCost : '<span class="text-secondary">Pending</span>'}</td>
             <td class="actions">
                 <button class="btn btn-sm btn-primary" onclick="showJobDetails(${job.jobId})">
                     <svg class="icon icon-sm" viewBox="0 0 24 24">
@@ -1282,7 +1282,7 @@ function populateJobDetailsModal(job) {
     document.getElementById('detail-status').innerHTML = `<span class="status-badge status-${job.status.toLowerCase().replace(' ', '-')}">${job.status}</span>`;
     document.getElementById('detail-booking-date').textContent = new Date(job.bookingDate).toLocaleString();
     document.getElementById('detail-completion-date').textContent = job.completionDate ? new Date(job.completionDate).toLocaleString() : 'Not completed';
-    document.getElementById('detail-total-cost').textContent = job.totalCost ? '$' + job.totalCost : 'Not calculated';
+    document.getElementById('detail-total-cost').textContent = job.totalCost ? '₹' + job.totalCost : 'Not calculated';
     document.getElementById('detail-notes').textContent = job.notes || 'No notes';
 
     // Payment section
@@ -1291,7 +1291,7 @@ function populateJobDetailsModal(job) {
         paymentSection.innerHTML = `
             <div class="payment-amount-display">
                 <span class="amount-label">Amount Due</span>
-                <span class="amount-value">$${job.totalCost}</span>
+                <span class="amount-value">₹${job.totalCost}</span>
             </div>
             <button class="btn btn-success btn-full" onclick="showPaymentModal(${job.jobId})">
                 <svg class="icon icon-sm" viewBox="0 0 24 24">
@@ -1311,7 +1311,7 @@ function populateJobDetailsModal(job) {
                 Payment Completed
             </div>
             <div class="payment-details">
-                <p>Amount Paid: <strong>$${job.totalCost}</strong></p>
+                <p>Amount Paid: <strong>₹${job.totalCost}</strong></p>
                 <p>Payment Date: ${job.completionDate ? new Date(job.completionDate).toLocaleDateString() : 'N/A'}</p>
             </div>
         `;
@@ -1342,7 +1342,7 @@ async function showPaymentModal(jobId) {
         if (job && job.status === 'Invoiced') {
             document.getElementById('payment-job-id').textContent = job.jobId;
             document.getElementById('payment-service').textContent = job.service;
-            document.getElementById('payment-amount').textContent = '$' + job.totalCost;
+            document.getElementById('payment-amount').textContent = '₹' + job.totalCost;
             
             // Store job ID for payment processing
             document.getElementById('process-payment-btn').setAttribute('data-job-id', jobId);
@@ -1454,7 +1454,7 @@ function populateServiceHistoryTable(jobs) {
             <td>${job.vehicle}</td>
             <td>${job.service}</td>
             <td><span class="status-badge status-${job.status.toLowerCase().replace(' ', '-')}">${job.status}</span></td>
-            <td>${job.totalCost ? '$' + job.totalCost : '<span class="text-secondary">Pending</span>'}</td>
+            <td>${job.totalCost ? '₹' + job.totalCost : '<span class="text-secondary">Pending</span>'}</td>
             <td class="actions">
                 <button class="btn btn-sm btn-primary" onclick="showJobDetails(${job.jobId})">
                     <svg class="icon icon-sm" viewBox="0 0 24 24">
