@@ -150,144 +150,97 @@ function initializeLogout() {
 }
 
 // Data Loading Functions
-function loadAdminOverviewData() {
-    const metricsGrid = document.getElementById('admin-metrics-grid');
-    const recentActivityList = document.getElementById('admin-recent-activity-list');
-    const quickActionsContainer = document.getElementById('admin-quick-actions');
+// --- Admin Overview Tab Dynamic Data ---
+async function loadAdminOverviewData() {
+    // Fetch metrics and recent jobs from backend
+    try {
+        // Example endpoints (adjust as needed)
+        const [metricsRes, recentJobsRes] = await Promise.all([
+            fetch('/api/admin/overview-metrics'),
+            fetch('/api/admin/recent-jobs?limit=5')
+        ]);
+        const metrics = await metricsRes.json();
+        const recentJobs = await recentJobsRes.json();
 
-    if (!metricsGrid || !recentActivityList || !quickActionsContainer) {
-        console.error('One or more admin overview containers not found.');
-        return;
+        // Populate metrics
+        document.getElementById('metric-total-jobs').textContent = metrics.totalJobs ?? '--';
+        document.getElementById('metric-in-progress').textContent = metrics.inProgress ?? '--';
+        document.getElementById('metric-completed').textContent = metrics.completed ?? '--';
+        document.getElementById('metric-revenue').textContent = metrics.totalRevenue ? `$${Number(metrics.totalRevenue).toLocaleString()}` : '--';
+
+        // Populate recent jobs table
+        const tbody = document.getElementById('overview-recent-jobs-body');
+        tbody.innerHTML = '';
+        if (recentJobs.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#888;">No recent jobs found.</td></tr>';
+        } else {
+            for (const job of recentJobs) {
+                tbody.innerHTML += `
+                    <tr>
+                        <td>#${job.jobId}</td>
+                        <td>${job.customerName || 'N/A'}</td>
+                        <td>${job.service || 'N/A'}</td>
+                        <td><span class="status-badge status-${(job.status || 'unknown').toLowerCase().replace(' ', '-')}">${job.status || 'Unknown'}</span></td>
+                        <td>${job.bookingDate ? new Date(job.bookingDate).toLocaleDateString() : 'N/A'}</td>
+                    </tr>
+                `;
+            }
+        }
+
+        // Render chart (use Chart.js if available, else fallback)
+        renderOverviewStatusChart(metrics.statusCounts || {});
+    } catch (err) {
+        console.error('Failed to load admin overview data:', err);
     }
-
-    metricsGrid.innerHTML = '<p>Loading metrics...</p>';
-    recentActivityList.innerHTML = '<p>Loading recent activity...</p>';
-    quickActionsContainer.innerHTML = ''; // Clear for new buttons
-
-    // Fetch dashboard summary stats
-    fetch('/api/admin/dashboard')
-        .then(response => response.json())
-        .then(data => {
-            let metricsHtml = '';
-            // Define icons for each metric to mimic customer dashboard
-            const metricDefinitions = [
-                { key: 'totalJobs', title: 'Total Jobs', icon: '<svg class="icon" viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>', class: 'jobs' },
-                { key: 'totalRevenue', title: 'Total Revenue', icon: '<svg class="icon" viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>', class: 'revenue', format: val => `$${parseFloat(val).toFixed(2)}` },
-                { key: 'totalCustomers', title: 'Active Customers', icon: '<svg class="icon" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>', class: 'customers' },
-                { key: 'totalEmployees', title: 'Active Employees', icon: '<svg class="icon" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>', class: 'employees' }, // Placeholder icon for employees
-                { key: 'lowStockItems', title: 'Low Stock Items', icon: '<svg class="icon" viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>', class: 'inventory' }
-            ];
-
-            metricDefinitions.forEach(def => {
-                if (data[def.key] !== undefined) {
-                    const value = def.format ? def.format(data[def.key]) : data[def.key];
-                    metricsHtml += `<div class="metric-card ${def.class || ''}">
-                                      <div class="metric-icon">${def.icon}</div>
-                                      <div class="metric-value">${value}</div>
-                                      <div class="metric-label">${def.title}</div>
-                                   </div>`;
-                }
-            });
-            metricsGrid.innerHTML = metricsHtml || '<p>No metrics to display.</p>';
-        })
-        .catch(error => {
-            console.error('Error loading admin overview metrics:', error);
-            metricsGrid.innerHTML = '<p class="text-error">Failed to load metrics.</p>';
-        });
-
-    // Fetch recent jobs for "Recent System Activity"
-    fetch('/api/admin/jobs') // Assuming this gets all jobs, sorted by date desc by default
-        .then(response => response.json())
-        .then(jobs => {
-            if (!Array.isArray(jobs)) {
-                recentActivityList.innerHTML = '<p class="text-error">Error loading recent activity.</p>';
-                return;
-            }
-            const recentJobs = jobs.slice(0, 5); // Display latest 5 jobs
-            if (recentJobs.length === 0) {
-                recentActivityList.innerHTML = '<p>No recent job activity.</p>';
-            } else {
-                let activityHtml = '<ul class="item-list">'; // Use a generic item-list class
-                recentJobs.forEach(job => {
-                    activityHtml += `
-                        <li class="item-list-entry">
-                            <div class="item-icon job-icon">
-                                <svg class="icon" viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
-                            </div>
-                            <div class="item-details">
-                                <span class="item-title">New Job: #${job.jobId} for ${job.customerName || 'N/A'}</span>
-                                <span class="item-subtitle">${job.service || 'N/A'} - Status: ${job.status || 'N/A'}</span>
-                            </div>
-                            <span class="item-timestamp">${new Date(job.bookingDate).toLocaleDateString()}</span>
-                        </li>`;
-                });
-                activityHtml += '</ul>';
-                recentActivityList.innerHTML = activityHtml;
-            }
-        })
-        .catch(error => {
-            console.error('Error loading recent jobs for admin overview:', error);
-            recentActivityList.innerHTML = '<p class="text-error">Failed to load recent activity.</p>';
-        });
-
-    // Populate Quick Actions
-    // These are static for now, but could be dynamic
-    quickActionsContainer.innerHTML = `
-        <div class="quick-actions-grid">
-            <button class="btn btn-primary quick-action-btn" data-tab-target="jobs" data-sub-action="create">
-                <svg class="icon" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                <span>Create New Job</span>
-            </button>
-            <button class="btn btn-primary quick-action-btn" data-tab-target="users" data-sub-action="add">
-                <svg class="icon" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>
-                <span>Add New User</span>
-            </button>
-            <button class="btn btn-primary quick-action-btn" data-tab-target="services" data-sub-action="add">
-                 <svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-                <span>Manage Services</span>
-            </button>
-             <button class="btn btn-primary quick-action-btn" data-tab-target="inventory" data-sub-action="add">
-                <svg class="icon" viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27,6.96 12,12.01 20.73,6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
-                <span>Add Inventory</span>
-            </button>
-        </div>
-    `;
-    // Add event listeners for these new quick action buttons
-    quickActionsContainer.querySelectorAll('.quick-action-btn').forEach(button => {
-        button.addEventListener('click', () => {
-            const targetTab = button.dataset.tabTarget;
-            const subAction = button.dataset.subAction; // e.g., 'create', 'add'
-
-            // Navigate to the tab
-            const navLink = document.querySelector(`.sidebar-nav .nav-link[data-tab='${targetTab}']`);
-            if (navLink) navLink.click();
-
-            // After tab loads, trigger the sub-action (e.g., open the 'add' modal)
-            // This might need a slight delay or a callback system if tab loading is slow
-            setTimeout(() => {
-                if (targetTab === 'jobs' && subAction === 'create') {
-                    document.getElementById('create-job-btn')?.click();
-                } else if (targetTab === 'users' && subAction === 'add') {
-                    document.getElementById('add-user-btn')?.click();
-                } else if (targetTab === 'services' && subAction === 'add') {
-                    document.getElementById('add-service-btn')?.click();
-                } else if (targetTab === 'inventory' && subAction === 'add') {
-                    document.getElementById('add-inventory-item-btn')?.click();
-                }
-            }, 200); // Small delay to allow tab content to potentially render
-        });
-    });
 }
 
-
-// Global Caches
-let allJobsData = [];
-let allServicesData = [];
-let allInventoryData = [];
-let allUsersData = [];
-let allBranchesData = [];
-let allInvoicesData = [];
-
+function renderOverviewStatusChart(statusCounts) {
+    const ctx = document.getElementById('overview-status-chart');
+    if (window.Chart && ctx) {
+        // Use Chart.js if available
+        const data = {
+            labels: Object.keys(statusCounts),
+            datasets: [{
+                label: 'Jobs',
+                data: Object.values(statusCounts),
+                backgroundColor: [
+                    '#e0f7fa', '#fff3e0', '#e8f5e9', '#fbe9e7', '#ede7f6', '#f3e5f5', '#ffebee', '#e9ecef'
+                ],
+            }]
+        };
+        if (window.overviewStatusChart) window.overviewStatusChart.destroy();
+        window.overviewStatusChart = new Chart(ctx, {
+            type: 'doughnut',
+            data,
+            options: {
+                plugins: { legend: { position: 'bottom' } },
+                cutout: '60%',
+                responsive: true,
+                maintainAspectRatio: false,
+            }
+        });
+    } else if (ctx) {
+        // Fallback: simple SVG bar chart
+        ctx.replaceWith(document.createElement('div'));
+        const container = document.createElement('div');
+        container.style.display = 'flex';
+        container.style.alignItems = 'flex-end';
+        container.style.height = '120px';
+        container.style.gap = '12px';
+        const max = Math.max(...Object.values(statusCounts), 1);
+        for (const [status, count] of Object.entries(statusCounts)) {
+            const bar = document.createElement('div');
+            bar.style.height = `${(count / max) * 100}%`;
+            bar.style.width = '32px';
+            bar.style.background = '#e0f7fa';
+            bar.style.borderRadius = '6px 6px 0 0';
+            bar.title = `${status}: ${count}`;
+            bar.innerHTML = `<span style="font-size:0.8em;display:block;text-align:center;margin-top:4px;">${count}</span>`;
+            container.appendChild(bar);
+        }
+        document.querySelector('.card-body').appendChild(container);
+    }
+}
 
 function loadJobsData(contentArea) {
     fetch('/api/admin/jobs')

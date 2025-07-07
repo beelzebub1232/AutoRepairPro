@@ -9,13 +9,31 @@ public class AdminHandler {
     
     public String handleRequest(String path, String method, String requestBody) {
         try {
-            String[] pathParts = path.split("/");
+            // Strip query string before splitting
+            String cleanPath = path.split("\\?")[0];
+            String[] pathParts = cleanPath.split("/");
             
             if (pathParts.length < 4) {
                 return createErrorResponse("Invalid admin route", 400);
             }
             
             String action = pathParts[3];
+            
+            // New: Overview metrics and recent jobs endpoints
+            if ("overview-metrics".equals(action)) {
+                return getOverviewMetrics();
+            }
+            if ("recent-jobs".equals(action)) {
+                // Support ?limit=5
+                int limit = 5;
+                if (path.contains("?limit=")) {
+                    try {
+                        String[] parts = path.split("\\?limit=");
+                        limit = Integer.parseInt(parts[1].split("&")[0]);
+                    } catch (Exception e) { /* fallback to default */ }
+                }
+                return getRecentJobs(limit);
+            }
             
             switch (action) {
                 case "dashboard":
@@ -718,6 +736,106 @@ public class AdminHandler {
         } finally {
             DatabaseConnector.closeConnection(conn);
     }
+    }
+    
+    // --- Overview Metrics Endpoint ---
+    private String getOverviewMetrics() {
+        Connection conn = null;
+        try {
+            conn = DatabaseConnector.getConnection();
+            // Metrics: total jobs, in progress, completed, total revenue, status counts
+            String jobsSql = "SELECT COUNT(*) as total, " +
+                    "SUM(CASE WHEN status = 'Booked' THEN 1 ELSE 0 END) as booked, " +
+                    "SUM(CASE WHEN status = 'In Progress' THEN 1 ELSE 0 END) as inProgress, " +
+                    "SUM(CASE WHEN status = 'Completed' THEN 1 ELSE 0 END) as completed, " +
+                    "SUM(CASE WHEN status = 'Cancelled' THEN 1 ELSE 0 END) as cancelled " +
+                    "FROM jobs";
+            String revenueSql = "SELECT COALESCE(SUM(total_amount), 0) as totalRevenue FROM invoices WHERE status = 'Paid'";
+
+            int totalJobs = 0, inProgress = 0, completed = 0, booked = 0, cancelled = 0;
+            double totalRevenue = 0;
+            // Status counts for chart
+            Map<String, Integer> statusCounts = new LinkedHashMap<>();
+            statusCounts.put("Booked", 0);
+            statusCounts.put("In Progress", 0);
+            statusCounts.put("Completed", 0);
+            statusCounts.put("Cancelled", 0);
+
+            try (PreparedStatement pstmt = conn.prepareStatement(jobsSql);
+                 ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    totalJobs = rs.getInt("total");
+                    booked = rs.getInt("booked");
+                    inProgress = rs.getInt("inProgress");
+                    completed = rs.getInt("completed");
+                    cancelled = rs.getInt("cancelled");
+                    statusCounts.put("Booked", booked);
+                    statusCounts.put("In Progress", inProgress);
+                    statusCounts.put("Completed", completed);
+                    statusCounts.put("Cancelled", cancelled);
+                }
+            }
+            try (PreparedStatement pstmt = conn.prepareStatement(revenueSql);
+                 ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    totalRevenue = rs.getBigDecimal("totalRevenue").doubleValue();
+                }
+            }
+            StringBuilder json = new StringBuilder();
+            json.append("{");
+            json.append("\"totalJobs\":" + totalJobs + ",");
+            json.append("\"inProgress\":" + inProgress + ",");
+            json.append("\"completed\":" + completed + ",");
+            json.append("\"totalRevenue\":" + totalRevenue + ",");
+            json.append("\"statusCounts\":{");
+            int i = 0;
+            for (Map.Entry<String, Integer> entry : statusCounts.entrySet()) {
+                json.append("\"" + entry.getKey() + "\":" + entry.getValue());
+                if (++i < statusCounts.size()) json.append(",");
+            }
+            json.append("}}");
+            return json.toString();
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return createErrorResponse("Database error fetching overview metrics", 500);
+        } finally {
+            DatabaseConnector.closeConnection(conn);
+        }
+    }
+
+    // --- Recent Jobs Endpoint ---
+    private String getRecentJobs(int limit) {
+        Connection conn = null;
+        try {
+            conn = DatabaseConnector.getConnection();
+            String sql = "SELECT j.id as jobId, u.full_name as customerName, s.service_name as service, j.status, j.booking_date " +
+                    "FROM jobs j " +
+                    "JOIN users u ON j.customer_id = u.id " +
+                    "JOIN services s ON j.service_id = s.id " +
+                    "ORDER BY j.booking_date DESC LIMIT ?";
+            List<Map<String, Object>> jobs = new ArrayList<>();
+            try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+                pstmt.setInt(1, limit);
+                try (ResultSet rs = pstmt.executeQuery()) {
+                    while (rs.next()) {
+                        Map<String, Object> job = new HashMap<>();
+                        job.put("jobId", rs.getInt("jobId"));
+                        job.put("customerName", rs.getString("customerName"));
+                        job.put("service", rs.getString("service"));
+                        job.put("status", rs.getString("status"));
+                        java.sql.Timestamp bookingDate = rs.getTimestamp("booking_date");
+                        job.put("bookingDate", bookingDate != null ? bookingDate.toString() : null);
+                        jobs.add(job);
+                    }
+                }
+            }
+            return convertToJson(jobs);
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return createErrorResponse("Database error fetching recent jobs", 500);
+        } finally {
+            DatabaseConnector.closeConnection(conn);
+        }
     }
     
     // Utility methods
