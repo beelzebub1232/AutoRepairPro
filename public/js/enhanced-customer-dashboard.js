@@ -191,9 +191,7 @@ function updateCustomerMetrics(jobs) {
 function updateRecentJobs(jobs) {
     const recentJobsList = document.getElementById('recent-jobs-list');
     if (!recentJobsList) return;
-    
     const recentJobs = jobs.slice(0, 3);
-    
     if (recentJobs.length === 0) {
         recentJobsList.innerHTML = `
             <div class="no-data">
@@ -202,22 +200,33 @@ function updateRecentJobs(jobs) {
         `;
         return;
     }
-
     recentJobsList.innerHTML = recentJobs.map(job => `
-        <div class="recent-job-item">
-            <div class="job-header">
-                <span class="job-id">#${job.jobId}</span>
-                <span class="status-badge status-${job.status.toLowerCase().replace(' ', '-')}">${job.status}</span>
-            </div>
-            <div class="job-details">
-                <div class="job-vehicle">${job.vehicle}</div>
-                <div class="job-service">${job.service}</div>
-                <div class="job-date">${new Date(job.bookingDate).toLocaleDateString()}</div>
-            </div>
-            <div class="job-actions">
-                <button class="btn btn-sm btn-primary" onclick="showJobDetails(${job.jobId})">
-                    View Details
+        <div class="card recent-job-card animate-fade-in" style="margin-bottom: var(--space-4);">
+            <div class="flex justify-between items-center" style="margin-bottom: var(--space-2);">
+                <div class="flex items-center gap-2">
+                    <span class="job-id font-semibold text-primary" style="font-size: var(--text-lg);">#${job.jobId}</span>
+                    <span class="status-badge status-${job.status.toLowerCase().replace(/ /g, '-')}">${job.status}</span>
+                </div>
+                <button class="btn btn-sm btn-ghost" onclick="showJobDetails(${job.jobId})" title="View Details">
+                    <svg class="icon icon-sm" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/></svg>
                 </button>
+            </div>
+            <div class="flex flex-wrap gap-4 job-details" style="margin-bottom: var(--space-2);">
+                <div class="flex items-center gap-2">
+                    <svg class="icon icon-sm" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="6" rx="3"/><circle cx="7.5" cy="14" r="2.5"/><circle cx="16.5" cy="14" r="2.5"/></svg>
+                    <span class="job-vehicle text-secondary">${job.vehicle}</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <svg class="icon icon-sm" viewBox="0 0 24 24"><path d="M4 7V4a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v3"/><path d="M4 7v13a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7"/><path d="M9 10h6"/></svg>
+                    <span class="job-service text-secondary">${job.service}</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <svg class="icon icon-sm" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h18"/></svg>
+                    <span class="job-date text-secondary">${new Date(job.bookingDate).toLocaleDateString()}</span>
+                </div>
+            </div>
+            <div class="flex justify-end">
+                <span class="font-medium text-success" style="font-size: var(--text-base);">₹${job.totalCost || '--'}</span>
             </div>
         </div>
     `).join('');
@@ -1015,22 +1024,18 @@ async function addVehicle() {
     const urlParams = new URLSearchParams(window.location.search);
     const userId = urlParams.get('id');
     const formData = {
-        customerId: userId,
         make: document.getElementById('vehicle-make').value,
         model: document.getElementById('vehicle-model').value,
         year: parseInt(document.getElementById('vehicle-year').value),
         vin: document.getElementById('vehicle-vin').value
     };
-
     try {
-        const response = await fetch('http://localhost:8080/api/customer/vehicles', {
+        const response = await fetch(`http://localhost:8080/api/customer/vehicles/${userId}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(formData)
         });
-
         const result = await response.json();
-        
         if (response.ok) {
             hideModal(document.getElementById('vehicle-modal'));
             showNotification('Vehicle added successfully!', 'success');

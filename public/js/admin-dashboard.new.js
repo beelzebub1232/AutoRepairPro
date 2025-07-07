@@ -376,7 +376,8 @@ function loadBranchesData(contentArea) {
                                 <p><strong>Hours:</strong> ${branch.hours || 'N/A'}</p>
                             </div>
                             <div class="card-footer">
-                                <button class="btn btn-sm btn-secondary edit-branch-btn" data-branch-id="${branch.id}">Edit</button>
+                                <button class="btn btn-sm btn-secondary edit-branch-btn" data-branch-id="${branch.id}" style="margin-right: 0.5rem;">Edit</button>
+                                <button class="btn btn-sm btn-danger delete-branch-btn" data-branch-id="${branch.id}">Delete</button>
                             </div>
                         </div>`;
                 });
@@ -389,6 +390,14 @@ function loadBranchesData(contentArea) {
             allBranchesData = [];
             contentArea.innerHTML = '<p class="text-error">Failed to load branches data. Please try again.</p>';
         });
+
+    // After rendering, add event listeners for delete buttons
+    document.querySelectorAll('.delete-branch-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const branchId = btn.getAttribute('data-branch-id');
+            showDeleteBranchModal(branchId);
+        });
+    });
 }
 
 function loadUsersData(contentArea) {
@@ -1545,34 +1554,55 @@ function handleAddBranchClick() {
     const title = 'Add New Branch';
     const bodyHtml = `
         <form id="add-branch-form">
-            <div class="form-group">
-                <label for="branch-name" class="form-label">Branch Name</label>
-                <input type="text" id="branch-name" class="form-input" required>
+            <label for="branch-name" class="form-label">Branch Name</label>
+            <input type="text" id="branch-name" class="form-input" required>
+            <label for="branch-address" class="form-label">Address</label>
+            <input type="text" id="branch-address" class="form-input" required>
+            <div style="margin: 0.5rem 0 1rem 0; display: flex; align-items: center; gap: 0.5rem;">
+                <button type="button" id="geocode-btn" class="btn btn-sm btn-secondary">Geocode Address</button>
+                <div id="geocode-loading" style="display:none; margin-left: 0.5rem;">Geocoding...</div>
             </div>
-            <div class="form-group">
-                <label for="branch-address" class="form-label">Address</label>
-                <input type="text" id="branch-address" class="form-input" required>
-            </div>
-            <div class="form-group">
-                <label for="branch-phone" class="form-label">Phone</label>
-                <input type="tel" id="branch-phone" class="form-input">
-            </div>
-            <div class="form-group">
-                <label for="branch-email" class="form-label">Email</label>
-                <input type="email" id="branch-email" class="form-input">
-            </div>
+            <div id="geocode-error" class="text-error" style="display:none; margin-bottom: 0.5rem;"></div>
+            <label for="branch-latitude" class="form-label">Latitude</label>
+            <input type="number" id="branch-latitude" class="form-input" step="any" required>
+            <label for="branch-longitude" class="form-label">Longitude</label>
+            <input type="number" id="branch-longitude" class="form-input" step="any" required>
+            <label for="branch-phone" class="form-label">Phone</label>
+            <input type="tel" id="branch-phone" class="form-input">
+            <label for="branch-email" class="form-label">Email</label>
+            <input type="email" id="branch-email" class="form-input">
             <div id="add-branch-error" class="text-error" style="display:none; margin-bottom: var(--space-3);"></div>
+            <button type="submit" form="add-branch-form" class="btn btn-primary">Add Branch</button>
         </form>
     `;
-    const footerHtml = `
-        <button type="button" class="btn btn-secondary" onclick="closeModal('${modalId}')">Cancel</button>
-        <button type="submit" form="add-branch-form" class="btn btn-primary">Add Branch</button>
-    `;
-    createModal(modalId, title, bodyHtml, footerHtml);
-    document.getElementById('add-branch-form').onsubmit = submitAddBranchForm;
+    createModal(modalId, title, bodyHtml);
     showModal(modalId);
+    document.getElementById('add-branch-form').onsubmit = submitAddBranchForm;
+    document.getElementById('geocode-btn').onclick = async function() {
+        const address = document.getElementById('branch-address').value;
+        const loading = document.getElementById('geocode-loading');
+        const errorDiv = document.getElementById('geocode-error');
+        loading.style.display = 'block';
+        errorDiv.style.display = 'none';
+        try {
+            const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}`;
+            const resp = await fetch(url);
+            const data = await resp.json();
+            if (data && data.length > 0) {
+                document.getElementById('branch-latitude').value = data[0].lat;
+                document.getElementById('branch-longitude').value = data[0].lon;
+            } else {
+                errorDiv.textContent = 'No results found for this address.';
+                errorDiv.style.display = 'block';
+            }
+        } catch (e) {
+            errorDiv.textContent = 'Geocoding failed. Please try again.';
+            errorDiv.style.display = 'block';
+        } finally {
+            loading.style.display = 'none';
+        }
+    };
 }
-
 async function submitAddBranchForm(event) {
     event.preventDefault();
     const modalId = 'addBranchModal';
@@ -1580,32 +1610,33 @@ async function submitAddBranchForm(event) {
     const address = document.getElementById('branch-address').value;
     const phone = document.getElementById('branch-phone').value;
     const email = document.getElementById('branch-email').value;
+    const latitude = document.getElementById('branch-latitude').value;
+    const longitude = document.getElementById('branch-longitude').value;
     const errorDiv = document.getElementById('add-branch-error');
-    errorDiv.style.display = 'none'; errorDiv.textContent = '';
-
-    if (!name || !address) {
-        errorDiv.textContent = 'Branch Name and Address are required.';
+    if (!name || !address || !latitude || !longitude) {
+        errorDiv.textContent = 'Branch Name, Address, Latitude, and Longitude are required.';
         errorDiv.style.display = 'block';
         return;
     }
+    errorDiv.style.display = 'none';
     try {
         const response = await fetch('/api/admin/branches', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name, address, phone, email })
+            body: JSON.stringify({ name, address, phone, email, latitude, longitude })
         });
-        if (!response.ok) {
+        if (response.ok) {
+            showAdminNotification('Branch added successfully!', 'success');
+            closeModal(modalId);
+            loadTabData('branches');
+        } else {
             const errorResult = await response.json().catch(() => ({ message: 'Failed to add branch.' }));
-            throw new Error(errorResult.message);
+            errorDiv.textContent = errorResult.message || 'Failed to add branch.';
+            errorDiv.style.display = 'block';
         }
-        showAdminNotification('Branch added successfully!', 'success');
-        closeModal(modalId);
-        loadTabData('branches');
     } catch (error) {
-        console.error('Error adding branch:', error);
-        errorDiv.textContent = error.message;
+        errorDiv.textContent = error.message || 'Failed to add branch.';
         errorDiv.style.display = 'block';
-        showAdminNotification(`Error adding branch: ${error.message}`, 'error');
     }
 }
 
@@ -1810,6 +1841,8 @@ function initializeGlobalEventDelegation() {
             handleViewInvoiceClick(event.target.dataset.invoiceId);
         } else if (event.target.matches('.edit-invoice-btn')) {
             handleEditInvoiceClick(event.target.dataset.invoiceId);
+        } else if (event.target.matches('.delete-branch-btn')) {
+            showDeleteBranchModal(event.target.dataset.branchId);
         }
     });
 }
@@ -1839,4 +1872,38 @@ function initializeHeaderActionButtons() {
 
     const generateReportBtn = document.getElementById('generate-report-btn');
     if(generateReportBtn) generateReportBtn.addEventListener('click', () => alert('Generate Report functionality (Not implemented yet)'));
+}
+
+// Add showDeleteBranchModal and deleteBranch functions
+function showDeleteBranchModal(branchId) {
+    const modalId = `deleteBranchModal-${branchId}`;
+    const title = 'Delete Branch';
+    const bodyHtml = `<p>Are you sure you want to delete this branch? This action cannot be undone.</p>`;
+    const footerHtml = `
+        <button type="button" class="btn btn-secondary" onclick="closeModal('${modalId}')">Cancel</button>
+        <button type="button" class="btn btn-danger" id="confirm-delete-branch-btn-${branchId}">Delete</button>
+    `;
+    createModal(modalId, title, bodyHtml, footerHtml);
+    showModal(modalId);
+    setTimeout(() => {
+        const confirmBtn = document.getElementById(`confirm-delete-branch-btn-${branchId}`);
+        if (confirmBtn) {
+            confirmBtn.onclick = () => deleteBranch(branchId, modalId);
+        }
+    }, 0);
+}
+async function deleteBranch(branchId, modalId) {
+    try {
+        const response = await fetch(`/api/admin/branches/${branchId}`, { method: 'DELETE' });
+        if (response.ok) {
+            showAdminNotification('Branch deleted successfully!', 'success');
+            closeModal(modalId);
+            loadTabData('branches');
+        } else {
+            const errorResult = await response.json().catch(() => ({ message: 'Failed to delete branch.' }));
+            showAdminNotification(errorResult.message || 'Failed to delete branch.', 'error');
+        }
+    } catch (error) {
+        showAdminNotification(error.message || 'Failed to delete branch.', 'error');
+    }
 }

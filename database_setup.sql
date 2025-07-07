@@ -33,8 +33,8 @@ CREATE TABLE branches (
     address TEXT NOT NULL,
     phone VARCHAR(20),
     email VARCHAR(100),
-    latitude DECIMAL(10, 8),
-    longitude DECIMAL(11, 8),
+    latitude DECIMAL(10, 7),
+    longitude DECIMAL(10, 7),
     rating DECIMAL(3, 2) DEFAULT 0.0,
     is_active BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -323,3 +323,8 @@ INSERT INTO performance_metrics (employee_id, metric_type, metric_value, period_
 
 -- Update job status for paid invoice
 UPDATE jobs SET status = 'Paid' WHERE id = 2;
+
+-- Add latitude and longitude columns to branches table
+ALTER TABLE branches
+ADD COLUMN IF NOT EXISTS latitude DECIMAL(10, 7),
+ADD COLUMN IF NOT EXISTS longitude DECIMAL(10, 7);

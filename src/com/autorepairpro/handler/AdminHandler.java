@@ -4,6 +4,7 @@ import com.autorepairpro.db.DatabaseConnector;
 import java.sql.*;
 import java.util.*;
 import java.io.*;
+import java.math.BigDecimal;
 
 public class AdminHandler {
     
@@ -60,7 +61,7 @@ public class AdminHandler {
                     return handlePerformance(method, requestBody);
                 default:
                     return createErrorResponse("Admin route not found", 404);
-        }
+            }
         } catch (Exception e) {
             e.printStackTrace();
             return createErrorResponse("Internal server error: " + e.getMessage(), 500);
@@ -372,7 +373,7 @@ public class AdminHandler {
         try {
             conn = DatabaseConnector.getConnection();
             if ("GET".equals(method)) {
-                String sql = "SELECT b.id, b.name, b.address, b.phone, b.email, b.latitude, b.longitude, b.rating, " +
+                String selectSql = "SELECT b.id, b.name, b.address, b.phone, b.email, b.latitude, b.longitude, b.rating, " +
                            "b.is_active, " +
                            "GROUP_CONCAT(DISTINCT bh.day_of_week, ': ', " +
                            "CASE WHEN bh.is_closed THEN 'Closed' " +
@@ -383,9 +384,8 @@ public class AdminHandler {
                            "WHERE b.is_active = true " +
                            "GROUP BY b.id " +
                            "ORDER BY b.name";
-                
                 List<Map<String, Object>> branches = new ArrayList<>();
-                try (PreparedStatement pstmt = conn.prepareStatement(sql);
+                try (PreparedStatement pstmt = conn.prepareStatement(selectSql);
                      ResultSet rs = pstmt.executeQuery()) {
                     
                     while (rs.next()) {
@@ -395,26 +395,115 @@ public class AdminHandler {
                         branch.put("address", rs.getString("address"));
                         branch.put("phone", rs.getString("phone"));
                         branch.put("email", rs.getString("email"));
-                        
-                        // Safe decimal handling for coordinates
                         java.math.BigDecimal latitude = rs.getBigDecimal("latitude");
                         branch.put("latitude", latitude);
-                        
                         java.math.BigDecimal longitude = rs.getBigDecimal("longitude");
                         branch.put("longitude", longitude);
-                        
                         java.math.BigDecimal rating = rs.getBigDecimal("rating");
                         branch.put("rating", rating);
-                        
                         branch.put("isActive", rs.getBoolean("is_active"));
                         branch.put("hours", rs.getString("hours"));
                         branches.add(branch);
+                    }
                 }
-            }
-                
                 return convertToJson(branches);
+            } else if ("POST".equals(method)) {
+                // Add branch logic
+                Map<String, Object> data = parseJson(requestBody);
+                if (data == null) {
+                    return createErrorResponse("Invalid JSON body", 400);
+                }
+                String name = (String) data.get("name");
+                String address = (String) data.get("address");
+                String phone = (String) data.getOrDefault("phone", "");
+                String email = (String) data.getOrDefault("email", "");
+                BigDecimal latitude = null, longitude = null;
+                try {
+                    latitude = new BigDecimal(data.get("latitude").toString());
+                    longitude = new BigDecimal(data.get("longitude").toString());
+                } catch (Exception e) {
+                    return createErrorResponse("Invalid or missing latitude/longitude", 400);
+                }
+                if (name == null || name.isEmpty() || address == null || address.isEmpty() || latitude == null || longitude == null) {
+                    return createErrorResponse("Missing required branch fields", 400);
+                }
+                String insertSql = "INSERT INTO branches (name, address, phone, email, latitude, longitude, is_active) VALUES (?, ?, ?, ?, ?, ?, true)";
+                try (PreparedStatement pstmt = conn.prepareStatement(insertSql)) {
+                    pstmt.setString(1, name);
+                    pstmt.setString(2, address);
+                    pstmt.setString(3, phone);
+                    pstmt.setString(4, email);
+                    pstmt.setBigDecimal(5, latitude);
+                    pstmt.setBigDecimal(6, longitude);
+                    int rows = pstmt.executeUpdate();
+                    if (rows > 0) {
+                        return createSuccessResponse("Branch added successfully");
+                    } else {
+                        return createErrorResponse("Failed to add branch", 500);
+                    }
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                    return createErrorResponse("Database error adding branch", 500);
+                }
+            } else if ("PUT".equals(method)) {
+                // Edit branch logic
+                Map<String, Object> data = parseJson(requestBody);
+                if (data == null) {
+                    return createErrorResponse("Invalid JSON body", 400);
+                }
+                Integer id = null;
+                try {
+                    id = Integer.parseInt(data.get("id").toString());
+                } catch (Exception e) {
+                    return createErrorResponse("Invalid or missing branch ID", 400);
+                }
+                String name = (String) data.get("name");
+                String address = (String) data.get("address");
+                String phone = (String) data.getOrDefault("phone", "");
+                String email = (String) data.getOrDefault("email", "");
+                // Optionally support lat/lng update
+                BigDecimal latitude = null, longitude = null;
+                try {
+                    latitude = data.get("latitude") != null ? new BigDecimal(data.get("latitude").toString()) : null;
+                    longitude = data.get("longitude") != null ? new BigDecimal(data.get("longitude").toString()) : null;
+                } catch (Exception e) {
+                    // ignore, allow null
+                }
+                if (id == null || name == null || name.isEmpty() || address == null || address.isEmpty()) {
+                    return createErrorResponse("Missing required branch fields", 400);
+                }
+                String updateSql = "UPDATE branches SET name=?, address=?, phone=?, email=?" +
+                    (latitude != null ? ", latitude=?" : "") +
+                    (longitude != null ? ", longitude=?" : "") +
+                    " WHERE id=?";
+                try (PreparedStatement pstmt = conn.prepareStatement(updateSql)) {
+                    int idx = 1;
+                    pstmt.setString(idx++, name);
+                    pstmt.setString(idx++, address);
+                    pstmt.setString(idx++, phone);
+                    pstmt.setString(idx++, email);
+                    if (latitude != null) pstmt.setBigDecimal(idx++, latitude);
+                    if (longitude != null) pstmt.setBigDecimal(idx++, longitude);
+                    pstmt.setInt(idx, id);
+                    int rows = pstmt.executeUpdate();
+                    if (rows > 0) {
+                        return createSuccessResponse("Branch updated successfully");
+                    } else {
+                        return createErrorResponse("Branch not found or could not be updated", 404);
+                    }
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                    return createErrorResponse("Database error updating branch", 500);
+                }
+            } else if ("DELETE".equals(method)) {
+                // Support DELETE /api/admin/branches/{id}
+                // Parse branch ID from request path (ThreadLocal or static var not available, so use a workaround)
+                String currentPath = Thread.currentThread().getStackTrace()[2].getMethodName(); // Not reliable, so instead:
+                // Instead, require the handler to be called with the full path, so add a new method for DELETE with path param
+                return createErrorResponse("DELETE not supported on this route. Use /api/admin/branches/{id}", 405);
+            } else {
+                return createErrorResponse("Method not allowed", 405);
             }
-            return createErrorResponse("Method not allowed", 405);
         } catch (SQLException e) {
             e.printStackTrace();
             return createErrorResponse("Database error fetching branches", 500);
@@ -868,5 +957,65 @@ public class AdminHandler {
 
     private String createErrorResponse(String message, int statusCode) {
         return "{\"status\":\"error\",\"message\":\"" + message + "\",\"code\":" + statusCode + "}";
+    }
+
+    private Map<String, Object> parseJson(String json) {
+        try {
+            Map<String, Object> map = new HashMap<>();
+            json = json.trim();
+            if (json.startsWith("{") && json.endsWith("}")) {
+                json = json.substring(1, json.length() - 1);
+                String[] pairs = json.split(",");
+                for (String pair : pairs) {
+                    String[] kv = pair.split(":", 2);
+                    if (kv.length == 2) {
+                        String key = kv[0].trim().replaceAll("^\"|\"$", "");
+                        String value = kv[1].trim();
+                        if (value.startsWith("\"") && value.endsWith("\"")) {
+                            value = value.substring(1, value.length() - 1);
+                            map.put(key, value);
+                        } else if (value.matches("-?\\d+")) {
+                            map.put(key, Integer.parseInt(value));
+                        } else {
+                            map.put(key, value);
+                        }
+                    }
+                }
+                return map;
+            }
+        } catch (Exception e) {
+            // Ignore parse errors
+        }
+        return null;
+    }
+
+    // Add a new method to handle DELETE /api/admin/branches/{id}
+    public String handleBranchDelete(String path) {
+        try (Connection conn = DatabaseConnector.getConnection()) {
+            String[] pathParts = path.split("/");
+            if (pathParts.length < 5) {
+                return createErrorResponse("Branch ID not provided", 400);
+            }
+            int branchId;
+            try {
+                branchId = Integer.parseInt(pathParts[4]);
+            } catch (NumberFormatException e) {
+                return createErrorResponse("Invalid branch ID", 400);
+            }
+            // Optionally, check for jobs or dependencies before deleting
+            String deleteSql = "DELETE FROM branches WHERE id = ?";
+            try (PreparedStatement pstmt = conn.prepareStatement(deleteSql)) {
+                pstmt.setInt(1, branchId);
+                int rows = pstmt.executeUpdate();
+                if (rows > 0) {
+                    return createSuccessResponse("Branch deleted successfully");
+                } else {
+                    return createErrorResponse("Branch not found or could not be deleted", 404);
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return createErrorResponse("Database error deleting branch", 500);
+        }
     }
 }

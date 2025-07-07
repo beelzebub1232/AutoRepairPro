@@ -86,237 +86,96 @@ function initializeLogout() {
 }
 
 // Map Integration
-function initializeMapIntegration() {
+async function initializeMapIntegration() {
     const mapContainer = document.getElementById('branch-map-container');
-    if (mapContainer) {
-        mapContainer.innerHTML = createMapInterface();
-        attachMapEventListeners();
+    if (!mapContainer) return;
+    mapContainer.innerHTML = '<div id="leaflet-map" style="height: 350px; width: 100%; margin-bottom: 1rem;"></div><div id="branches-list"></div>';
+    // Check for Leaflet
+    if (typeof L === 'undefined') {
+        document.getElementById('branches-list').innerHTML = '<div class="text-error">Leaflet.js is not loaded. Please include Leaflet CSS/JS in your HTML.</div>';
+        return;
     }
-}
-
-function createMapInterface() {
-    const branches = [
-        {
-            id: 1,
-            name: "RepairHub Pro Downtown",
-            address: "123 Main Street, Downtown",
-            phone: "(555) 123-4567",
-            services: ["Paint Jobs", "Dent Repair", "Collision Repair"],
-            rating: 4.8,
-            hours: "Mon-Fri: 8AM-6PM, Sat: 9AM-4PM"
-        },
-        {
-            id: 2,
-            name: "RepairHub Pro Uptown",
-            address: "456 Oak Avenue, Uptown",
-            phone: "(555) 234-5678",
-            services: ["Paint Jobs", "Dent Repair", "Oil Change"],
-            rating: 4.6,
-            hours: "Mon-Fri: 7AM-7PM, Sat: 8AM-5PM"
-        },
-        {
-            id: 3,
-            name: "RepairHub Pro Westside",
-            address: "789 Pine Road, Westside",
-            phone: "(555) 345-6789",
-            services: ["Collision Repair", "Paint Jobs", "Maintenance"],
-            rating: 4.9,
-            hours: "Mon-Sat: 8AM-6PM"
+    let branches = [];
+    try {
+        const resp = await fetch('/api/customer/branches');
+        branches = await resp.json();
+        if (!Array.isArray(branches)) throw new Error('Invalid branches data');
+    } catch (e) {
+        document.getElementById('branches-list').innerHTML = '<div class="text-error">Failed to load branches. Please try again later.</div>';
+        return;
+    }
+    // Initialize map
+    const map = L.map('leaflet-map').setView([20.5937, 78.9629], 5); // Center on India
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(map);
+    // Add markers
+    branches.forEach(branch => {
+        if (branch.latitude && branch.longitude) {
+            const marker = L.marker([branch.latitude, branch.longitude]).addTo(map);
+            marker.bindPopup(`<strong>${branch.name}</strong><br>${branch.address}`);
+            marker.on('click', () => selectBranch(branch.id, branches));
         }
-    ];
-
-    return `
-        <div class="map-container">
-            <div class="map-header">
-                <h3>
-                    <svg class="icon" viewBox="0 0 24 24">
-                        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
-                        <circle cx="12" cy="10" r="3"/>
-                    </svg>
-                    Select a Branch Location
-                </h3>
-                <button id="detect-location" class="btn btn-sm btn-primary">
-                    <svg class="icon icon-sm" viewBox="0 0 24 24">
-                        <polygon points="3,11 22,2 13,21 11,13 3,11"/>
-                    </svg>
-                    Use My Location
-                </button>
-            </div>
-            <div class="map-view">
-                <div class="branches-list">
-                    ${branches.map(branch => `
-                        <div class="branch-card" data-branch-id="${branch.id}">
-                            <div class="branch-header">
-                                <h4>${branch.name}</h4>
-                                <div class="branch-rating">
-                                    <svg class="icon icon-sm" viewBox="0 0 24 24">
-                                        <polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/>
-                                    </svg>
-                                    ${branch.rating}
-                                </div>
-                            </div>
-                            <div class="branch-details">
-                                <p class="branch-address">
-                                    <svg class="icon icon-sm" viewBox="0 0 24 24">
-                                        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
-                                        <circle cx="12" cy="10" r="3"/>
-                                    </svg>
-                                    ${branch.address}
-                                </p>
-                                <p class="branch-phone">
-                                    <svg class="icon icon-sm" viewBox="0 0 24 24">
-                                        <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
-                                    </svg>
-                                    ${branch.phone}
-                                </p>
-                                <p class="branch-hours">
-                                    <svg class="icon icon-sm" viewBox="0 0 24 24">
-                                        <circle cx="12" cy="12" r="10"/>
-                                        <polyline points="12,6 12,12 16,14"/>
-                                    </svg>
-                                    ${branch.hours}
-                                </p>
-                                <div class="branch-services">
-                                    <strong>Services:</strong>
-                                    <div class="services-tags">
-                                        ${branch.services.map(service => `<span class="service-tag">${service}</span>`).join('')}
-                                    </div>
-                                </div>
-                            </div>
-                            <button class="btn btn-primary select-branch-btn" data-branch-id="${branch.id}">
-                                <svg class="icon icon-sm" viewBox="0 0 24 24">
-                                    <path d="M9 12l2 2 4-4"/>
-                                    <circle cx="12" cy="12" r="9"/>
-                                </svg>
-                                Select This Branch
-                            </button>
-                        </div>
-                    `).join('')}
-                </div>
-                <div class="selected-branch-info" id="selected-branch-info">
-                    <div class="empty-state">
-                        <div class="empty-state-icon">
-                            <svg class="icon icon-xl" viewBox="0 0 24 24">
-                                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
-                                <circle cx="12" cy="10" r="3"/>
-                            </svg>
-                        </div>
-                        <div class="empty-state-title">Select a branch</div>
-                        <div class="empty-state-description">Choose a location to see details</div>
+    });
+    // Render branch list
+    document.getElementById('branches-list').innerHTML = `
+        <div class="branches-list">
+            ${branches.map(branch => `
+                <div class="branch-card" data-branch-id="${branch.id}">
+                    <div class="branch-header"><h4>${branch.name}</h4></div>
+                    <div class="branch-details">
+                        <p class="branch-address">${branch.address}</p>
+                        <p class="branch-phone">${branch.contact?.phone || branch.phone || 'N/A'}</p>
+                        <p class="branch-hours">${branch.hours || 'N/A'}</p>
+                        <div class="branch-services"><strong>Services:</strong> ${(branch.services || []).map(service => `<span class='service-tag'>${service}</span>`).join('')}</div>
                     </div>
+                    <button class="btn btn-primary select-branch-btn" data-branch-id="${branch.id}">Select This Branch</button>
                 </div>
-            </div>
+            `).join('')}
         </div>
+        <div class="selected-branch-info" id="selected-branch-info"></div>
     `;
+    attachMapEventListeners(branches);
 }
 
-function attachMapEventListeners() {
-    // Branch selection
+function attachMapEventListeners(branches) {
     document.querySelectorAll('.select-branch-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
             const branchId = parseInt(e.target.getAttribute('data-branch-id'));
-            selectBranch(branchId);
+            selectBranch(branchId, branches);
         });
     });
-
-    // Location detection
-    const detectBtn = document.getElementById('detect-location');
-    if (detectBtn) {
-        detectBtn.addEventListener('click', detectUserLocation);
-    }
 }
 
-function selectBranch(branchId) {
-    // Update UI to show selection
+function selectBranch(branchId, branches) {
     document.querySelectorAll('.branch-card').forEach(card => {
         card.classList.remove('selected');
     });
-    
     const selectedCard = document.querySelector(`[data-branch-id="${branchId}"]`);
     if (selectedCard) {
         selectedCard.classList.add('selected');
     }
-
-    // Update selected branch info
-    updateSelectedBranchInfo(branchId);
-    
-    // Update booking form
+    updateSelectedBranchInfo(branchId, branches);
     const branchNameElement = document.getElementById('selected-branch-name');
-    if (branchNameElement) {
+    if (branchNameElement && selectedCard) {
         const branchName = selectedCard.querySelector('h4').textContent;
         branchNameElement.textContent = branchName;
         branchNameElement.style.color = 'var(--success-600)';
     }
 }
 
-function updateSelectedBranchInfo(branchId) {
-    const branches = [
-        { id: 1, name: "RepairHub Pro Downtown", address: "123 Main Street, Downtown" },
-        { id: 2, name: "RepairHub Pro Uptown", address: "456 Oak Avenue, Uptown" },
-        { id: 3, name: "RepairHub Pro Westside", address: "789 Pine Road, Westside" }
-    ];
-    
+function updateSelectedBranchInfo(branchId, branches) {
     const branch = branches.find(b => b.id === branchId);
     const infoContainer = document.getElementById('selected-branch-info');
-    
     if (infoContainer && branch) {
         infoContainer.innerHTML = `
             <div class="selected-branch-details">
-                <h4>
-                    <svg class="icon" viewBox="0 0 24 24">
-                        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
-                        <circle cx="12" cy="10" r="3"/>
-                    </svg>
-                    ${branch.name}
-                </h4>
+                <h4>${branch.name}</h4>
                 <p><strong>Address:</strong> ${branch.address}</p>
                 <p><strong>Status:</strong> <span class="text-success">Selected</span></p>
             </div>
         `;
     }
-}
-
-function detectUserLocation() {
-    const detectBtn = document.getElementById('detect-location');
-    
-    if (!navigator.geolocation) {
-        showNotification('Geolocation is not supported by this browser', 'error');
-        return;
-    }
-
-    detectBtn.innerHTML = `
-        <svg class="icon icon-sm animate-spin" viewBox="0 0 24 24">
-            <path d="M21 12a9 9 0 11-6.219-8.56"/>
-        </svg>
-        Detecting...
-    `;
-
-    navigator.geolocation.getCurrentPosition(
-        (position) => {
-            detectBtn.innerHTML = `
-                <svg class="icon icon-sm" viewBox="0 0 24 24">
-                    <path d="M9 12l2 2 4-4"/>
-                    <circle cx="12" cy="12" r="9"/>
-                </svg>
-                Location Detected
-            `;
-            detectBtn.classList.remove('btn-primary');
-            detectBtn.classList.add('btn-success');
-            showNotification('Location detected successfully', 'success');
-        },
-        (error) => {
-            detectBtn.innerHTML = `
-                <svg class="icon icon-sm" viewBox="0 0 24 24">
-                    <line x1="18" y1="6" x2="6" y2="18"/>
-                    <line x1="6" y1="6" x2="18" y2="18"/>
-                </svg>
-                Location Failed
-            `;
-            detectBtn.classList.remove('btn-primary');
-            detectBtn.classList.add('btn-danger');
-            showNotification('Failed to detect location', 'error');
-        }
-    );
 }
 
 // Booking Module

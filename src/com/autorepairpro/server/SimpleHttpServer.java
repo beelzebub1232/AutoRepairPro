@@ -117,8 +117,13 @@ public class SimpleHttpServer {
                 statusCode = responseJson.contains("error") ? 401 : 200;
             } else if (path.startsWith("/api/admin/")) {
                 AdminHandler handler = new AdminHandler();
-                responseJson = handler.handleRequest(path, method, body);
-                statusCode = responseJson.contains("error") ? 500 : 200;
+                if (method.equals("DELETE") && path.matches("/api/admin/branches/\\d+")) {
+                    responseJson = handler.handleBranchDelete(path);
+                    statusCode = responseJson.contains("error") ? 500 : 200;
+                } else {
+                    responseJson = handler.handleRequest(path, method, body);
+                    statusCode = responseJson.contains("error") ? 500 : 200;
+                }
             } else if (path.startsWith("/api/employee/")) {
                 EmployeeHandler handler = new EmployeeHandler();
                 responseJson = handler.handle(method, path, body);

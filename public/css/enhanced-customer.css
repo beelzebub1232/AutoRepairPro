@@ -1746,3 +1746,65 @@
     0% { transform: translate(-50%, -50%) rotate(0deg); }
     100% { transform: translate(-50%, -50%) rotate(360deg); }
 }
+
+/* Modern Recent Jobs Card Styles */
+.recent-job-card {
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-sm);
+    border: 1px solid var(--secondary-200);
+    background: white;
+    padding: var(--space-5) var(--space-6);
+    margin-bottom: var(--space-4);
+    transition: box-shadow var(--transition-fast), transform var(--transition-fast);
+    animation: fadeIn 0.5s;
+}
+.recent-job-card:hover {
+    box-shadow: var(--shadow-md);
+    transform: translateY(-2px) scale(1.01);
+}
+.recent-job-card .job-id {
+    font-size: var(--text-lg);
+    font-weight: 600;
+    color: var(--primary-700);
+}
+.recent-job-card .job-details {
+    margin-top: var(--space-2);
+    gap: var(--space-4);
+}
+.recent-job-card .job-vehicle,
+.recent-job-card .job-service,
+.recent-job-card .job-date {
+    color: var(--secondary-600);
+    font-size: var(--text-sm);
+}
+.recent-job-card .status-badge {
+    margin-left: var(--space-2);
+}
+.recent-job-card .btn-ghost {
+    background: transparent;
+    color: var(--primary-600);
+    border: none;
+    box-shadow: none;
+    padding: var(--space-2);
+    border-radius: var(--radius-full);
+    transition: background var(--transition-fast);
+}
+.recent-job-card .btn-ghost:hover {
+    background: var(--primary-50);
+}
+.recent-job-card .font-medium.text-success {
+    color: var(--success-700);
+}
+.animate-fade-in {
+    opacity: 0;
+    animation: fadeIn 0.5s forwards;
+}
+@media (max-width: 768px) {
+    .recent-job-card {
+        padding: var(--space-4) var(--space-2);
+    }
+    .recent-job-card .job-details {
+        flex-direction: column;
+        gap: var(--space-2);
+    }
+}

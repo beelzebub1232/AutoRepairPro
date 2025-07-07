@@ -144,9 +144,45 @@ public class CustomerHandler {
     }
     
     private String addVehicle(Connection conn, int customerId, String requestBody) throws SQLException {
-        // Parse request body and add vehicle
-        // Implementation would parse JSON and insert into database
-        return createSuccessResponse("Vehicle added successfully");
+        // Parse request body
+        Map<String, Object> data = parseJson(requestBody);
+        if (data == null) {
+            return createErrorResponse("Invalid JSON body", 400);
+        }
+        String make = (String) data.get("make");
+        String model = (String) data.get("model");
+        Integer year = parseIntSafe(data.get("year"));
+        String vin = (String) data.getOrDefault("vin", "");
+        String licensePlate = (String) data.getOrDefault("licensePlate", "");
+        String color = (String) data.getOrDefault("color", "");
+        Integer mileage = parseIntSafe(data.getOrDefault("mileage", null));
+        if (make == null || make.isEmpty() || model == null || model.isEmpty() || year == null) {
+            return createErrorResponse("Missing required vehicle fields", 400);
+        }
+        String sql = "INSERT INTO vehicles (customer_id, make, model, year, vin, license_plate, color, mileage, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())";
+        try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setInt(1, customerId);
+            pstmt.setString(2, make);
+            pstmt.setString(3, model);
+            pstmt.setInt(4, year);
+            pstmt.setString(5, vin);
+            pstmt.setString(6, licensePlate);
+            pstmt.setString(7, color);
+            if (mileage != null) {
+                pstmt.setInt(8, mileage);
+            } else {
+                pstmt.setNull(8, java.sql.Types.INTEGER);
+            }
+            int rows = pstmt.executeUpdate();
+            if (rows > 0) {
+                return createSuccessResponse("Vehicle added successfully");
+            } else {
+                return createErrorResponse("Failed to add vehicle", 500);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return createErrorResponse("Database error adding vehicle", 500);
+        }
     }
     
     private String handleBooking(String method, String requestBody) {
