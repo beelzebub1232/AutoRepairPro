@@ -1808,3 +1808,78 @@
         gap: var(--space-2);
     }
 }
+
+.vehicles-summary-premium-grid {
+  display: flex;
+  gap: 2rem;
+  flex-wrap: wrap;
+  margin-top: 1rem;
+  margin-bottom: 1rem;
+}
+.vehicles-summary-premium-grid.scrollable {
+  overflow-x: auto;
+  flex-wrap: nowrap;
+  padding-bottom: 0.5rem;
+}
+.vehicle-summary-premium-card {
+  background: var(--white, #fff);
+  border-radius: 1.25rem;
+  box-shadow: 0 2px 16px rgba(0,0,0,0.07);
+  padding: 2rem 1.5rem 1.5rem 1.5rem;
+  min-width: 220px;
+  max-width: 260px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transition: box-shadow 0.2s;
+}
+.vehicle-summary-premium-card:hover {
+  box-shadow: 0 4px 24px rgba(37,99,235,0.13);
+}
+.vehicle-icon-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 1rem;
+}
+.vehicle-icon-premium {
+  color: var(--primary-500, #2563eb);
+  width: 48px;
+  height: 48px;
+}
+.vehicle-main-info {
+  text-align: center;
+}
+.vehicle-make-model-premium {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--secondary-900, #222);
+  margin-bottom: 0.25rem;
+}
+.vehicle-meta-premium {
+  font-size: 0.98rem;
+  color: var(--secondary-500, #888);
+  font-weight: 400;
+}
+.vehicle-vin-premium {
+  color: var(--secondary-400, #aaa);
+  font-size: 0.93em;
+}
+
+@media (max-width: 700px) {
+  .vehicles-summary-premium-grid {
+    gap: 1rem;
+  }
+  .vehicle-summary-premium-card {
+    min-width: 170px;
+    max-width: 200px;
+    padding: 1.2rem 0.7rem 1rem 0.7rem;
+  }
+  .vehicle-icon-premium {
+    width: 36px;
+    height: 36px;
+  }
+  .vehicle-make-model-premium {
+    font-size: 1rem;
+  }
+}

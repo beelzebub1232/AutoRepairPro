@@ -227,9 +227,54 @@ public class AdminHandler {
     }
     
     private String updateJob(Connection conn, String requestBody) throws SQLException {
-        // Parse request body and update job
-        // Implementation would parse JSON and update database
-        return createSuccessResponse("Job updated successfully");
+        Map<String, Object> data = parseJson(requestBody);
+        if (data == null) {
+            return createErrorResponse("Invalid JSON body", 400);
+        }
+        Object jobIdObj = data.get("jobId");
+        if (jobIdObj == null) {
+            return createErrorResponse("Missing jobId", 400);
+        }
+        Integer jobId;
+        try {
+            jobId = Integer.parseInt(jobIdObj.toString());
+        } catch (Exception e) {
+            return createErrorResponse("Invalid jobId", 400);
+        }
+        String status = (String) data.getOrDefault("status", null);
+        Object assignedEmployeeIdObj = data.get("assignedEmployeeId");
+        Integer assignedEmployeeId = null;
+        if (assignedEmployeeIdObj != null) {
+            try {
+                assignedEmployeeId = Integer.parseInt(assignedEmployeeIdObj.toString());
+            } catch (Exception e) {
+                assignedEmployeeId = null;
+            }
+        }
+        String bookingDate = (String) data.getOrDefault("bookingDate", null);
+        String notes = (String) data.getOrDefault("notes", null);
+
+        String updateSql = "UPDATE jobs SET status=?, assigned_employee_id=?, booking_date=?, notes=? WHERE id=?";
+        try (PreparedStatement pstmt = conn.prepareStatement(updateSql)) {
+            pstmt.setString(1, status);
+            if (assignedEmployeeId != null) {
+                pstmt.setInt(2, assignedEmployeeId);
+            } else {
+                pstmt.setNull(2, java.sql.Types.INTEGER);
+            }
+            pstmt.setString(3, bookingDate);
+            pstmt.setString(4, notes);
+            pstmt.setInt(5, jobId);
+            int rows = pstmt.executeUpdate();
+            if (rows > 0) {
+                return createSuccessResponse("Job updated successfully");
+            } else {
+                return createErrorResponse("Job not found or could not be updated", 404);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return createErrorResponse("Database error updating job", 500);
+        }
     }
     
     private String handleUsers(String method, String requestBody) {

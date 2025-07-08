@@ -247,20 +247,25 @@ function updateVehiclesSummary(vehicles) {
     }
 
     vehiclesSummary.innerHTML = `
-        <div class="vehicles-summary-grid">
-            ${vehicles.slice(0, 3).map(vehicle => `
-                <div class="vehicle-summary-item">
-                    <div class="vehicle-info">
-                        <div class="vehicle-make-model">${vehicle.make} ${vehicle.model}</div>
-                        <div class="vehicle-year-color">${vehicle.year} • ${vehicle.color}</div>
-            </div>
-                    <button class="btn btn-sm btn-outline" onclick="bookForVehicle(${vehicle.id})">
-                        Book Service
-                    </button>
-            </div>
+        <div class="vehicles-summary-premium-grid${vehicles.length > 3 ? ' scrollable' : ''}">
+            ${vehicles.slice(0, 5).map(vehicle => `
+                <div class="vehicle-summary-premium-card">
+                    <div class="vehicle-icon-wrap">
+                        <svg class="icon icon-xl vehicle-icon-premium" viewBox="0 0 24 24">
+                            <rect x="3" y="11" width="18" height="6" rx="2"/>
+                            <path d="M5 17v2a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-2"/>
+                            <circle cx="7.5" cy="17.5" r="1.5"/>
+                            <circle cx="16.5" cy="17.5" r="1.5"/>
+                        </svg>
+                    </div>
+                    <div class="vehicle-main-info">
+                        <div class="vehicle-make-model-premium">${vehicle.make} ${vehicle.model}</div>
+                        <div class="vehicle-meta-premium">${vehicle.year}${vehicle.vin ? ` &bull; <span class='vehicle-vin-premium'>VIN: ${vehicle.vin}</span>` : ''}</div>
+                    </div>
+                </div>
             `).join('')}
         </div>
-        ${vehicles.length > 3 ? `
+        ${vehicles.length > 5 ? `
             <div class="vehicles-summary-footer">
                 <button class="btn btn-sm btn-primary" onclick="switchToTab('my-vehicles')">
                     View All Vehicles (${vehicles.length})
@@ -1152,7 +1157,7 @@ function populateVehiclesGrid(vehicles) {
                         <line x1="8" y1="2" x2="8" y2="6"/>
                         <line x1="3" y1="10" x2="21" y2="10"/>
                     </svg>
-                    Book Service
+                    Book
                 </button>
             </div>
         </div>
