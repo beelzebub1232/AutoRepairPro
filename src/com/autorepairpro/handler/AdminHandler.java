@@ -450,41 +450,158 @@ public class AdminHandler {
         try {
             conn = DatabaseConnector.getConnection();
             if ("GET".equals(method)) {
-                String sql = "SELECT id, part_name, part_number, quantity, min_quantity, price_per_unit, " +
-                           "category, supplier, location, is_active " +
-                           "FROM inventory WHERE is_active = true ORDER BY part_name";
-                
+                String sql = "SELECT id, part_name, quantity, min_quantity, price_per_unit, category, supplier, location, is_active FROM inventory WHERE is_active = true ORDER BY part_name";
                 List<Map<String, Object>> inventory = new ArrayList<>();
                 try (PreparedStatement pstmt = conn.prepareStatement(sql);
                      ResultSet rs = pstmt.executeQuery()) {
-                    
                     while (rs.next()) {
                         Map<String, Object> item = new HashMap<>();
                         item.put("id", rs.getInt("id"));
+                        item.put("partNumber", rs.getInt("id")); // Use id as partNumber
                         item.put("partName", rs.getString("part_name"));
-                        item.put("partNumber", rs.getString("part_number"));
-                        
-                        // Safe integer handling
                         int quantity = rs.getInt("quantity");
                         item.put("quantity", quantity);
-                        
                         int minQuantity = rs.getInt("min_quantity");
                         item.put("minQuantity", minQuantity);
-                        
-                        // Safe decimal handling
                         java.math.BigDecimal pricePerUnit = rs.getBigDecimal("price_per_unit");
                         item.put("pricePerUnit", pricePerUnit);
-                        
                         item.put("category", rs.getString("category"));
                         item.put("supplier", rs.getString("supplier"));
                         item.put("location", rs.getString("location"));
                         item.put("isActive", rs.getBoolean("is_active"));
                         item.put("lowStock", quantity <= minQuantity);
                         inventory.add(item);
-            }
+                    }
                 }
-                
                 return convertToJson(inventory);
+            } else if ("POST".equals(method)) {
+                // Add new inventory item (id is auto-incremented and used as partNumber)
+                Map<String, Object> data = parseJson(requestBody);
+                if (data == null) {
+                    return createErrorResponse("Invalid JSON body", 400);
+                }
+                String partName = (String) data.get("partName");
+                Object quantityObj = data.get("quantity");
+                Object minQuantityObj = data.get("minQuantity");
+                Object pricePerUnitObj = data.get("pricePerUnit");
+                String category = (String) data.getOrDefault("category", "");
+                String supplier = (String) data.getOrDefault("supplier", "");
+                String location = (String) data.getOrDefault("location", "");
+                if (partName == null || partName.trim().isEmpty() || quantityObj == null || minQuantityObj == null || pricePerUnitObj == null) {
+                    return createErrorResponse("Missing required fields: partName, quantity, minQuantity, pricePerUnit", 400);
+                }
+                int quantity, minQuantity;
+                java.math.BigDecimal pricePerUnit;
+                try {
+                    quantity = Integer.parseInt(quantityObj.toString());
+                    minQuantity = Integer.parseInt(minQuantityObj.toString());
+                    pricePerUnit = new java.math.BigDecimal(pricePerUnitObj.toString());
+                } catch (Exception e) {
+                    return createErrorResponse("Invalid quantity, minQuantity, or pricePerUnit value", 400);
+                }
+                String insertSql = "INSERT INTO inventory (part_name, quantity, min_quantity, price_per_unit, category, supplier, location, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, true)";
+                try (PreparedStatement pstmt = conn.prepareStatement(insertSql)) {
+                    pstmt.setString(1, partName);
+                    pstmt.setInt(2, quantity);
+                    pstmt.setInt(3, minQuantity);
+                    pstmt.setBigDecimal(4, pricePerUnit);
+                    pstmt.setString(5, category);
+                    pstmt.setString(6, supplier);
+                    pstmt.setString(7, location);
+                    int rows = pstmt.executeUpdate();
+                    if (rows > 0) {
+                        return createSuccessResponse("Inventory item added successfully");
+                    } else {
+                        return createErrorResponse("Failed to add inventory item", 500);
+                    }
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                    return createErrorResponse("Database error adding inventory item", 500);
+                }
+            } else if ("PUT".equals(method)) {
+                // Update inventory item (id is used as partNumber)
+                Map<String, Object> data = parseJson(requestBody);
+                if (data == null) {
+                    return createErrorResponse("Invalid JSON body", 400);
+                }
+                Object idObj = data.get("id");
+                if (idObj == null) {
+                    return createErrorResponse("Missing inventory id", 400);
+                }
+                Integer id;
+                try {
+                    id = Integer.parseInt(idObj.toString());
+                } catch (Exception e) {
+                    return createErrorResponse("Invalid inventory id", 400);
+                }
+                String partName = (String) data.get("partName");
+                Object quantityObj = data.get("quantity");
+                Object minQuantityObj = data.get("minQuantity");
+                Object pricePerUnitObj = data.get("pricePerUnit");
+                String category = (String) data.getOrDefault("category", "");
+                String supplier = (String) data.getOrDefault("supplier", "");
+                String location = (String) data.getOrDefault("location", "");
+                if (partName == null || partName.trim().isEmpty() || quantityObj == null || minQuantityObj == null || pricePerUnitObj == null) {
+                    return createErrorResponse("Missing required fields: partName, quantity, minQuantity, pricePerUnit", 400);
+                }
+                int quantity, minQuantity;
+                java.math.BigDecimal pricePerUnit;
+                try {
+                    quantity = Integer.parseInt(quantityObj.toString());
+                    minQuantity = Integer.parseInt(minQuantityObj.toString());
+                    pricePerUnit = new java.math.BigDecimal(pricePerUnitObj.toString());
+                } catch (Exception e) {
+                    return createErrorResponse("Invalid quantity, minQuantity, or pricePerUnit value", 400);
+                }
+                String updateSql = "UPDATE inventory SET part_name=?, quantity=?, min_quantity=?, price_per_unit=?, category=?, supplier=?, location=? WHERE id=?";
+                try (PreparedStatement pstmt = conn.prepareStatement(updateSql)) {
+                    pstmt.setString(1, partName);
+                    pstmt.setInt(2, quantity);
+                    pstmt.setInt(3, minQuantity);
+                    pstmt.setBigDecimal(4, pricePerUnit);
+                    pstmt.setString(5, category);
+                    pstmt.setString(6, supplier);
+                    pstmt.setString(7, location);
+                    pstmt.setInt(8, id);
+                    int rows = pstmt.executeUpdate();
+                    if (rows > 0) {
+                        return createSuccessResponse("Inventory item updated successfully");
+                    } else {
+                        return createErrorResponse("Inventory item not found or could not be updated", 404);
+                    }
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                    return createErrorResponse("Database error updating inventory item", 500);
+                }
+            } else if ("DELETE".equals(method)) {
+                // Hard delete inventory item
+                Map<String, Object> data = parseJson(requestBody);
+                if (data == null) {
+                    return createErrorResponse("Invalid JSON body", 400);
+                }
+                Object idObj = data.get("id");
+                if (idObj == null) {
+                    return createErrorResponse("Missing inventory id", 400);
+                }
+                Integer id;
+                try {
+                    id = Integer.parseInt(idObj.toString());
+                } catch (Exception e) {
+                    return createErrorResponse("Invalid inventory id", 400);
+                }
+                String deleteSql = "DELETE FROM inventory WHERE id=?";
+                try (PreparedStatement pstmt = conn.prepareStatement(deleteSql)) {
+                    pstmt.setInt(1, id);
+                    int rows = pstmt.executeUpdate();
+                    if (rows > 0) {
+                        return createSuccessResponse("Inventory item deleted successfully");
+                    } else {
+                        return createErrorResponse("Inventory item not found or could not be deleted", 404);
+                    }
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                    return createErrorResponse("Database error deleting inventory item", 500);
+                }
             }
             return createErrorResponse("Method not allowed", 405);
         } catch (SQLException e) {
@@ -753,13 +870,13 @@ public class AdminHandler {
     }
     
     private String handleReports(String[] pathParts, String method) {
-        if (pathParts.length < 4) {
+        // Debug log for path parts
+        System.out.println("handleReports pathParts: " + java.util.Arrays.toString(pathParts));
+        if (pathParts.length < 5) {
             return createErrorResponse("Report type not specified", 400);
         }
-        
-        String reportType = pathParts[3];
+        String reportType = pathParts[4];
         Connection conn = null;
-            
         try {
             conn = DatabaseConnector.getConnection();
             switch (reportType) {

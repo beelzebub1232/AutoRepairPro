@@ -251,20 +251,59 @@
 }
 
 
-/* Role Badges */
+/* Role Badges - unified with status-badge */
 .role-badge {
-    padding: var(--space-1) var(--space-2_5);
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+    padding: var(--space-1) var(--space-3);
     border-radius: var(--radius-full);
     font-size: var(--text-xs);
-    font-weight: 500;
-    text-transform: capitalize;
-    display: inline-block;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    background: none;
+    border: none;
+    box-shadow: none;
+    position: relative;
     line-height: 1.2;
 }
-.role-badge.role-admin { background-color: var(--error-100); color: var(--error-700); }
-.role-badge.role-employee { background-color: var(--warning-100); color: var(--warning-700); }
-.role-badge.role-customer { background-color: var(--success-100); color: var(--success-700); }
-.role-badge.role-unknown { background-color: var(--secondary-100); color: var(--secondary-600); }
+.role-badge .role-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: var(--radius-full);
+    display: inline-block;
+    margin-right: 0.4em;
+    background: var(--secondary-400);
+}
+.role-badge.role-admin {
+    background-color: var(--error-100);
+    color: var(--error-700);
+}
+.role-badge.role-admin .role-dot {
+    background: var(--error-500);
+}
+.role-badge.role-employee {
+    background-color: var(--warning-100);
+    color: var(--warning-700);
+}
+.role-badge.role-employee .role-dot {
+    background: var(--warning-500);
+}
+.role-badge.role-customer {
+    background-color: var(--success-100);
+    color: var(--success-700);
+}
+.role-badge.role-customer .role-dot {
+    background: var(--success-500);
+}
+.role-badge.role-unknown {
+    background-color: var(--secondary-100);
+    color: var(--secondary-600);
+}
+.role-badge.role-unknown .role-dot {
+    background: var(--secondary-400);
+}
 
 
 /* Forms - basic styling for now */

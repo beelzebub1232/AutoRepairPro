@@ -439,22 +439,21 @@ function populateVehiclesGrid(vehicles) {
     }
 
     vehiclesGrid.innerHTML = vehicles.map(vehicle => `
-        <div class="vehicle-card">
-            <div class="vehicle-info">
-                <h3>
-                    <svg class="icon" viewBox="0 0 24 24">
-                        <path d="M7 17m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0"/>
-                        <path d="M17 17m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0"/>
-                        <path d="M5 17h-2v-6l2-5h9l4 5h1a2 2 0 0 1 2 2v4h-2"/>
-                        <path d="M9 17v-6h8"/>
-                        <path d="M2 6h15"/>
-                    </svg>
-                    ${vehicle.make} ${vehicle.model}
-                </h3>
-                <p class="vehicle-year">Year: ${vehicle.year}</p>
-                ${vehicle.vin ? `<p class="vehicle-vin">VIN: ${vehicle.vin}</p>` : ''}
+        <div class="vehicle-card modern-card">
+            <div class="vehicle-card-header">
+                <svg class="icon icon-lg" viewBox="0 0 24 24">
+                    <rect x="3" y="11" width="18" height="6" rx="2"/>
+                    <path d="M5 17v2a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-2"/>
+                    <circle cx="7.5" cy="17.5" r="1.5"/>
+                    <circle cx="16.5" cy="17.5" r="1.5"/>
+                </svg>
+                <div class="vehicle-title">${vehicle.make} ${vehicle.model}</div>
             </div>
-            <div class="vehicle-actions">
+            <div class="vehicle-card-body">
+                <div class="vehicle-detail"><span class="vehicle-label">Year:</span> ${vehicle.year}</div>
+                ${vehicle.vin ? `<div class="vehicle-detail"><span class="vehicle-label">VIN:</span> ${vehicle.vin}</div>` : ''}
+            </div>
+            <div class="vehicle-card-actions">
                 <button class="btn btn-sm btn-primary" onclick="bookForVehicle(${vehicle.id})">
                     <svg class="icon icon-sm" viewBox="0 0 24 24">
                         <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
@@ -463,6 +462,22 @@ function populateVehiclesGrid(vehicles) {
                         <line x1="3" y1="10" x2="21" y2="10"/>
                     </svg>
                     Book Service
+                </button>
+                <button class="btn btn-sm btn-secondary" onclick="editVehicle(${vehicle.id})">
+                    <svg class="icon icon-sm" viewBox="0 0 24 24">
+                        <path d="M12 20h9"/>
+                        <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19.5 3 21l1.5-4L16.5 3.5z"/>
+                    </svg>
+                    Edit
+                </button>
+                <button class="btn btn-sm btn-danger" onclick="deleteVehicle(${vehicle.id})">
+                    <svg class="icon icon-sm" viewBox="0 0 24 24">
+                        <polyline points="3 6 5 6 21 6"/>
+                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                        <line x1="10" y1="11" x2="10" y2="17"/>
+                        <line x1="14" y1="11" x2="14" y2="17"/>
+                    </svg>
+                    Delete
                 </button>
             </div>
         </div>

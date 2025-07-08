@@ -323,7 +323,7 @@ function loadInventoryData(contentArea) {
             if (!Array.isArray(inventoryItems)) throw new Error("Inventory data is not an array");
             allInventoryData = inventoryItems;
             let tableHtml = `<div class="table-container"><table class="table"><thead><tr>
-                                <th>ID</th><th>Part Name</th><th>Quantity</th><th>Min. Quantity</th>
+                                <th>Part Number</th><th>Part Name</th><th>Quantity</th><th>Min. Quantity</th>
                                 <th>Price/Unit</th><th>Category</th><th>Actions</th>
                              </tr></thead><tbody id="admin-inventory-table-body">`;
             if (inventoryItems.length === 0) {
@@ -414,12 +414,13 @@ function loadUsersData(contentArea) {
                 tableHtml += `<tr><td colspan="7" class="text-center">No users found.</td></tr>`;
             } else {
                 users.forEach(user => {
+                    const role = (user.role || 'unknown').toLowerCase();
                     tableHtml += `<tr>
                             <td>#${user.id}</td>
                             <td>${user.username || 'N/A'}</td>
                             <td>${user.fullName || 'N/A'}</td>
                             <td>${user.email || 'N/A'}</td>
-                            <td><span class="role-badge role-${(user.role || 'unknown').toLowerCase()}">${user.role || 'Unknown'}</span></td>
+                            <td><span class="role-badge role-${role}"><span class="role-dot"></span>${user.role || 'Unknown'}</span></td>
                             <td>${user.isActive ? 'Yes' : 'No'}</td>
                             <td>
                                 <button class="btn btn-sm btn-secondary edit-user-btn" data-user-id="${user.id}">Edit</button>
@@ -479,120 +480,141 @@ function loadInvoicesData(contentArea) {
 }
 
 async function loadReportsData(contentArea) {
-    contentArea.innerHTML = `<h3>Reports & Analytics</h3>
-        <p>Summary data fetched from the backend.</p>
+    contentArea.innerHTML = `
+        <div class="page-header">
+            <div>
+                <h1 class="page-title">Reports & Analytics</h1>
+                <p class="page-subtitle">Business insights and performance metrics.</p>
+            </div>
+        </div>
+        <div class="metrics-grid" id="reports-metrics-grid">
+            <div class="metric-card" id="metric-total-revenue"><div class="metric-title">Total Revenue (6mo)</div><div class="metric-value loading-skeleton">--</div></div>
+            <div class="metric-card" id="metric-total-jobs"><div class="metric-title">Total Jobs (6mo)</div><div class="metric-value loading-skeleton">--</div></div>
+            <div class="metric-card" id="metric-top-employee"><div class="metric-title">Top Employee</div><div class="metric-value loading-skeleton">--</div></div>
+            <div class="metric-card" id="metric-new-customers"><div class="metric-title">New Customers (6mo)</div><div class="metric-value loading-skeleton">--</div></div>
+        </div>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div class="card" id="revenue-report-card">
-                <div class="card-header"><h4 class="card-title">Monthly Revenue (Last 6 Months)</h4></div>
-                <div class="card-body"><p>Loading revenue data...</p></div>
+            <div class="card">
+                <div class="card-header"><h4 class="card-title">Revenue Trend (Last 6 Months)</h4></div>
+                <div class="card-body"><canvas id="revenue-trend-chart" height="120"></canvas></div>
             </div>
-            <div class="card" id="part-usage-report-card">
-                <div class="card-header"><h4 class="card-title">Top 10 Part Usage</h4></div>
-                <div class="card-body"><p>Loading part usage data...</p></div>
-            </div>
-            <div class="card" id="employee-performance-card">
+            <div class="card">
                 <div class="card-header"><h4 class="card-title">Employee Performance</h4></div>
-                <div class="card-body"><p>Loading employee performance...</p></div>
+                <div class="card-body"><canvas id="employee-performance-chart" height="120"></canvas></div>
             </div>
-             <div class="card" id="customer-activity-card">
-                <div class="card-header"><h4 class="card-title">New Customer Activity (Last 6 Months)</h4></div>
-                <div class="card-body"><p>Loading customer activity...</p></div>
+            <div class="card">
+                <div class="card-header"><h4 class="card-title">New Customer Activity</h4></div>
+                <div class="card-body"><canvas id="customer-activity-chart" height="120"></canvas></div>
             </div>
-        </div>`;
+        </div>
+    `;
+
+    await new Promise(r => setTimeout(r, 0));
+
+    const setMetric = (id, value) => {
+        const el = document.querySelector(id);
+        if (el && el.querySelector('.metric-value')) {
+            const valueEl = el.querySelector('.metric-value');
+            valueEl.textContent = value;
+            valueEl.classList.remove('loading-skeleton');
+        }
+    };
+    setMetric('#metric-total-revenue', '--');
+    setMetric('#metric-total-jobs', '--');
+    setMetric('#metric-top-employee', '--');
+    setMetric('#metric-new-customers', '--');
 
     try {
-        // Revenue Report
+        // Revenue
         const revenueResponse = await fetch('/api/admin/reports/revenue');
         const revenueData = await revenueResponse.json();
-        const revenueCardBody = document.querySelector('#revenue-report-card .card-body');
+        let totalRevenue = 0;
+        let totalJobs = 0;
+        let months = [];
+        let revenueVals = [];
         if (revenueResponse.ok && Array.isArray(revenueData)) {
-            let revenueHtml = '<ul>';
-            revenueData.forEach(r => {
-                revenueHtml += `<li>Month: ${r.month}, Revenue: ₹${parseFloat(r.totalRevenue || 0).toFixed(2)}</li>`;
-            });
-            revenueHtml += '</ul>';
-            revenueCardBody.innerHTML = revenueData.length > 0 ? revenueHtml : '<p>No revenue data available.</p>';
-        } else {
-            revenueCardBody.innerHTML = '<p class="text-error">Could not load revenue data.</p>';
+            months = revenueData.map(r => r.month);
+            revenueVals = revenueData.map(r => parseFloat(r.totalRevenue || 0));
+            totalRevenue = revenueVals.reduce((a, b) => a + b, 0);
+            totalJobs = revenueData.reduce((a, b) => a + (b.totalJobs || 0), 0);
         }
-
-        // Part Usage Report
-        const partUsageResponse = await fetch('/api/admin/reports/part-usage');
-        const partUsageData = await partUsageResponse.json();
-        const partUsageCardBody = document.querySelector('#part-usage-report-card .card-body');
-        if (partUsageResponse.ok && Array.isArray(partUsageData)) {
-            let partUsageHtml = '<ul>';
-            partUsageData.forEach(p => {
-                partUsageHtml += `<li>Part: ${p.partName}, Used: ${p.totalUsed} times</li>`;
-            });
-            partUsageHtml += '</ul>';
-            partUsageCardBody.innerHTML = partUsageData.length > 0 ? partUsageHtml : '<p>No part usage data available.</p>';
-        } else {
-            partUsageCardBody.innerHTML = '<p class="text-error">Could not load part usage data.</p>';
-        }
+        setMetric('#metric-total-revenue', `₹${totalRevenue.toLocaleString()}`);
+        setMetric('#metric-total-jobs', totalJobs ? totalJobs : '--');
 
         // Employee Performance
         const empPerfResponse = await fetch('/api/admin/reports/employee-performance');
         const empPerfData = await empPerfResponse.json();
-        const empPerfCardBody = document.querySelector('#employee-performance-card .card-body');
-        if (empPerfResponse.ok && Array.isArray(empPerfData)) {
-            let empPerfHtml = '<ul>';
-            empPerfData.forEach(e => {
-                empPerfHtml += `<li>${e.employeeName}: ${e.jobsCompleted} jobs completed, Avg Rating: ${parseFloat(e.avgRating || 0).toFixed(1)}⭐</li>`;
-            });
-            empPerfHtml += '</ul>';
-            empPerfCardBody.innerHTML = empPerfData.length > 0 ? empPerfHtml : '<p>No employee performance data.</p>';
-        } else {
-            empPerfCardBody.innerHTML = '<p class="text-error">Could not load employee performance.</p>';
+        let topEmployee = '--';
+        let empNames = [];
+        let empJobs = [];
+        if (empPerfResponse.ok && Array.isArray(empPerfData) && empPerfData.length > 0) {
+            empNames = empPerfData.map(e => e.employeeName);
+            empJobs = empPerfData.map(e => e.jobsCompleted);
+            topEmployee = empPerfData[0].employeeName;
         }
+        setMetric('#metric-top-employee', topEmployee);
 
         // Customer Activity
         const custActivityResponse = await fetch('/api/admin/reports/customer-activity');
         const custActivityData = await custActivityResponse.json();
-        const custActivityCardBody = document.querySelector('#customer-activity-card .card-body');
+        let custMonths = [];
+        let custCounts = [];
+        let totalNewCustomers = 0;
         if (custActivityResponse.ok && Array.isArray(custActivityData)) {
-            let custActHtml = '<ul>';
-            custActivityData.forEach(c => {
-                custActHtml += `<li>Month: ${c.month}, New Customers: ${c.newCustomers}</li>`;
-            });
-            custActHtml += '</ul>';
-            custActivityCardBody.innerHTML = custActivityData.length > 0 ? custActHtml : '<p>No customer activity data.</p>';
-        } else {
-            custActivityCardBody.innerHTML = '<p class="text-error">Could not load customer activity.</p>';
+            custMonths = custActivityData.map(c => c.month);
+            custCounts = custActivityData.map(c => c.newCustomers);
+            totalNewCustomers = custCounts.reduce((a, b) => a + b, 0);
         }
+        setMetric('#metric-new-customers', totalNewCustomers);
 
+        // Render charts
+        renderRevenueTrendChart(months, revenueVals);
+        renderEmployeePerformanceChart(empNames, empJobs);
+        renderCustomerActivityChart(custMonths, custCounts);
     } catch (error) {
-        console.error('Error loading one or more reports:', error);
+        setMetric('#metric-total-revenue', '--');
+        setMetric('#metric-total-jobs', '--');
+        setMetric('#metric-top-employee', '--');
+        setMetric('#metric-new-customers', '--');
         showAdminNotification('Failed to load some report data.', 'error');
     }
 }
 
-
 function loadSettingsData(contentArea) {
+    contentArea.innerHTML = `<div class="card" id="settings-card">
+        <div class="card-header">
+            <h3 class="card-title">System Settings</h3>
+            <p class="page-subtitle">Configure application settings.</p>
+        </div>
+        <div class="card-body" id="settings-card-body">
+            <div class="loading-skeleton" style="height: 80px;"></div>
+        </div>
+    </div>`;
+    const cardBody = document.getElementById('settings-card-body');
     fetch('/api/admin/settings')
         .then(response => response.json())
         .then(settings => {
             if (!Array.isArray(settings)) throw new Error("Settings data is not an array");
-            let formHtml = '<h3>System Settings</h3><form id="settings-form">';
             if (settings.length === 0) {
-                formHtml = `<p>No settings available for configuration.</p>`;
-            } else {
-                settings.filter(s => s.isPublic).forEach(setting => {
-                    formHtml += `<div class="form-group">
-                            <label for="setting-${setting.key}" class="form-label">${setting.description || setting.key}</label>
-                            <input type="${setting.type === 'boolean' ? 'checkbox' : (setting.type === 'number' ? 'number' : 'text')}"
-                                   id="setting-${setting.key}"
-                                   name="${setting.key}"
-                                   value="${setting.type !== 'boolean' ? setting.value : 'true'}"
-                                   class="form-${setting.type === 'boolean' ? 'checkbox' : 'input'}"
-                                   ${setting.type === 'boolean' && setting.value === 'true' ? 'checked' : ''}>
-                        </div>`;
-                });
-                formHtml += `<div class="form-actions"><button type="submit" class="btn btn-primary">Save Settings</button></div>`;
+                cardBody.innerHTML = `<p>No settings available for configuration.</p>`;
+                return;
             }
+            let formHtml = '<form id="settings-form">';
+            settings.filter(s => s.isPublic).forEach(setting => {
+                // Only render currency if not a currency changer
+                if (setting.key.toLowerCase().includes('currency')) return;
+                formHtml += `<div class="form-group">
+                    <label for="setting-${setting.key}" class="form-label">${setting.description || setting.key}</label>
+                    ${setting.type === 'boolean' ?
+                        `<input type="checkbox" id="setting-${setting.key}" name="${setting.key}" class="form-checkbox" ${setting.value === 'true' ? 'checked' : ''}>`
+                        :
+                        `<input type="${setting.type === 'number' ? 'number' : 'text'}" id="setting-${setting.key}" name="${setting.key}" value="${setting.value}" class="form-input">`
+                    }
+                </div>`;
+            });
+            formHtml += `<div class="form-actions"><button type="submit" class="btn btn-primary">Save Settings</button></div>`;
             formHtml += '</form>';
-            contentArea.innerHTML = formHtml;
-
+            cardBody.innerHTML = formHtml;
             const settingsForm = document.getElementById('settings-form');
             if (settingsForm) {
                 settingsForm.addEventListener('submit', submitSettingsForm);
@@ -600,7 +622,7 @@ function loadSettingsData(contentArea) {
         })
         .catch(error => {
             console.error('Error loading settings data:', error);
-            contentArea.innerHTML = '<p class="text-error">Failed to load settings data. Please try again.</p>';
+            cardBody.innerHTML = '<p class="text-error">Failed to load settings data. Please try again.</p>';
         });
 }
 
@@ -618,12 +640,10 @@ async function submitSettingsForm(event) {
         }
         settingsPayload.push({ key, value });
     });
-
     if (settingsPayload.length === 0) {
         showAdminNotification('No settings to save.', 'info');
         return;
     }
-
     try {
         const response = await fetch('/api/admin/settings', {
             method: 'PUT',
@@ -635,6 +655,9 @@ async function submitSettingsForm(event) {
             throw new Error(errorResult.message);
         }
         showAdminNotification('Settings saved successfully!', 'success');
+        // Reload settings to reflect changes
+        const contentArea = document.getElementById('settings-content');
+        if (contentArea) loadSettingsData(contentArea);
     } catch (error) {
         console.error('Error saving settings:', error);
         showAdminNotification(`Error saving settings: ${error.message}`, 'error');
@@ -1197,26 +1220,29 @@ function handleEditInventoryItemClick(itemId) {
     const title = `Edit Inventory Item (ID: #${itemId})`;
     const bodyHtml = `
         <form id="edit-inventory-form-${itemId}">
-            <input type="hidden" value="${itemData.id}">
             <div class="form-group">
-                <label for="edit-inv-partName-${itemId}" class="form-label">Part Name</label>
-                <input type="text" id="edit-inv-partName-${itemId}" class="form-input" value="${itemData.partName || ''}" required>
+                <label class="form-label">Part Number</label>
+                <input type="text" class="form-input" value="${itemData.id}" readonly>
             </div>
             <div class="form-group">
-                <label for="edit-inv-quantity-${itemId}" class="form-label">Quantity</label>
-                <input type="number" id="edit-inv-quantity-${itemId}" class="form-input" value="${itemData.quantity || 0}" min="0" required>
+                <label for="edit-partName-${itemId}" class="form-label">Part Name</label>
+                <input type="text" id="edit-partName-${itemId}" class="form-input" value="${itemData.partName || ''}" required>
             </div>
             <div class="form-group">
-                <label for="edit-inv-minQuantity-${itemId}" class="form-label">Minimum Quantity</label>
-                <input type="number" id="edit-inv-minQuantity-${itemId}" class="form-input" value="${itemData.minQuantity || 0}" min="0" required>
+                <label for="edit-quantity-${itemId}" class="form-label">Quantity</label>
+                <input type="number" id="edit-quantity-${itemId}" class="form-input" min="0" value="${itemData.quantity || 0}" required>
             </div>
             <div class="form-group">
-                <label for="edit-inv-pricePerUnit-${itemId}" class="form-label">Price Per Unit</label>
-                <input type="number" id="edit-inv-pricePerUnit-${itemId}" class="form-input" value="${itemData.pricePerUnit || 0}" step="0.01" min="0" required>
+                <label for="edit-minQuantity-${itemId}" class="form-label">Minimum Quantity</label>
+                <input type="number" id="edit-minQuantity-${itemId}" class="form-input" min="0" value="${itemData.minQuantity || 0}" required>
             </div>
             <div class="form-group">
-                <label for="edit-inv-category-${itemId}" class="form-label">Category</label>
-                <input type="text" id="edit-inv-category-${itemId}" class="form-input" value="${itemData.category || ''}">
+                <label for="edit-pricePerUnit-${itemId}" class="form-label">Price Per Unit</label>
+                <input type="number" id="edit-pricePerUnit-${itemId}" class="form-input" step="0.01" min="0" value="${itemData.pricePerUnit || 0}" required>
+            </div>
+            <div class="form-group">
+                <label for="edit-category-${itemId}" class="form-label">Category</label>
+                <input type="text" id="edit-category-${itemId}" class="form-input" value="${itemData.category || ''}">
             </div>
             <div id="edit-inventory-error-${itemId}" class="text-error" style="display:none; margin-bottom: var(--space-3);"></div>
         </form>
@@ -1236,11 +1262,11 @@ async function submitEditInventoryItemForm(event) {
     const itemId = form.querySelector('input[type="hidden"]').value;
     const modalId = `editInventoryModal-${itemId}`;
 
-    const partName = form.querySelector(`#edit-inv-partName-${itemId}`).value;
-    const quantity = form.querySelector(`#edit-inv-quantity-${itemId}`).value;
-    const minQuantity = form.querySelector(`#edit-inv-minQuantity-${itemId}`).value;
-    const pricePerUnit = form.querySelector(`#edit-inv-pricePerUnit-${itemId}`).value;
-    const category = form.querySelector(`#edit-inv-category-${itemId}`).value;
+    const partName = form.querySelector(`#edit-partName-${itemId}`).value;
+    const quantity = form.querySelector(`#edit-quantity-${itemId}`).value;
+    const minQuantity = form.querySelector(`#edit-minQuantity-${itemId}`).value;
+    const pricePerUnit = form.querySelector(`#edit-pricePerUnit-${itemId}`).value;
+    const category = form.querySelector(`#edit-category-${itemId}`).value;
     const errorDiv = form.querySelector(`#edit-inventory-error-${itemId}`);
     errorDiv.style.display = 'none'; errorDiv.textContent = '';
 
@@ -1441,7 +1467,7 @@ function handleEditUserClick(userId) {
             <input type="hidden" value="${userData.id}">
             <div class="form-group">
                 <label for="edit-user-username-${userId}" class="form-label">Username</label>
-                <input type="text" id="edit-user-username-${userId}" class="form-input" value="${userData.username || ''}" required>
+                <input type="text" id="edit-user-username-${userId}" class="form-input" value="${userData.username || ''}" required readonly>
             </div>
             <div class="form-group">
                 <label for="edit-user-fullName-${userId}" class="form-label">Full Name</label>
@@ -1457,11 +1483,7 @@ function handleEditUserClick(userId) {
             </div>
             <div class="form-group">
                 <label for="edit-user-role-${userId}" class="form-label">Role</label>
-                <select id="edit-user-role-${userId}" class="form-input" required>${roleOptions}</select>
-            </div>
-            <div class="form-group">
-                <label for="edit-user-password-${userId}" class="form-label">New Password (Optional)</label>
-                <input type="password" id="edit-user-password-${userId}" class="form-input" placeholder="Leave blank to keep current password">
+                <select id="edit-user-role-${userId}" class="form-input" required disabled>${roleOptions}</select>
             </div>
             <div id="edit-user-error-${userId}" class="text-error" style="display:none; margin-bottom: var(--space-3);"></div>
         </form>
@@ -1481,25 +1503,19 @@ async function submitEditUserForm(event) {
     const userId = form.querySelector('input[type="hidden"]').value;
     const modalId = `editUserModal-${userId}`;
 
-    const username = form.querySelector(`#edit-user-username-${userId}`).value;
     const fullName = form.querySelector(`#edit-user-fullName-${userId}`).value;
     const email = form.querySelector(`#edit-user-email-${userId}`).value;
     const phone = form.querySelector(`#edit-user-phone-${userId}`).value;
-    const role = form.querySelector(`#edit-user-role-${userId}`).value;
-    const password = form.querySelector(`#edit-user-password-${userId}`).value;
     const errorDiv = form.querySelector(`#edit-user-error-${userId}`);
     errorDiv.style.display = 'none'; errorDiv.textContent = '';
 
-    if (!username || !fullName || !email || !role) {
-        errorDiv.textContent = 'Username, Full Name, Email, and Role are required.';
+    if (!fullName || !email) {
+        errorDiv.textContent = 'Full Name and Email are required.';
         errorDiv.style.display = 'block';
         return;
     }
 
-    const payload = { id: parseInt(userId), username, fullName, email, phone, role };
-    if (password) {
-        payload.password = password;
-    }
+    const payload = { id: parseInt(userId), fullName, email, phone };
 
     try {
         const response = await fetch(`/api/admin/users`, {
@@ -1906,4 +1922,98 @@ async function deleteBranch(branchId, modalId) {
     } catch (error) {
         showAdminNotification(error.message || 'Failed to delete branch.', 'error');
     }
+}
+
+// --- Reports Chart Rendering ---
+function getColorPalette(count) {
+    // Vibrant color palette
+    const palette = [
+        '#2563eb', '#10b981', '#f59e42', '#ef4444', '#a21caf', '#eab308', '#0ea5e9', '#f472b6', '#22d3ee', '#6366f1',
+        '#84cc16', '#f43f5e', '#facc15', '#14b8a6', '#8b5cf6', '#e11d48', '#f97316', '#4ade80', '#7c3aed', '#fbbf24'
+    ];
+    // Repeat if not enough colors
+    return Array.from({length: count}, (_, i) => palette[i % palette.length]);
+}
+
+function renderRevenueTrendChart(labels, data) {
+    const ctx = document.getElementById('revenue-trend-chart');
+    if (!ctx || !window.Chart) return;
+    if (window.revenueTrendChart) window.revenueTrendChart.destroy();
+    const gradient = ctx.getContext('2d').createLinearGradient(0, 0, 0, 200);
+    gradient.addColorStop(0, '#2563eb');
+    gradient.addColorStop(1, 'rgba(37,99,235,0.05)');
+    window.revenueTrendChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels,
+            datasets: [{
+                label: 'Revenue',
+                data,
+                borderColor: '#2563eb',
+                backgroundColor: gradient,
+                fill: true,
+                tension: 0.4,
+                pointRadius: 5,
+                pointBackgroundColor: '#2563eb',
+                pointBorderWidth: 2,
+                pointBorderColor: '#fff',
+            }]
+        },
+        options: {
+            plugins: { legend: { display: true }, tooltip: { enabled: true } },
+            animation: { duration: 1200, easing: 'easeOutQuart' },
+            scales: { y: { beginAtZero: true, ticks: { callback: v => '₹' + v } } }
+        }
+    });
+}
+
+function renderEmployeePerformanceChart(labels, data) {
+    const ctx = document.getElementById('employee-performance-chart');
+    if (!ctx || !window.Chart) return;
+    if (window.employeePerformanceChart) window.employeePerformanceChart.destroy();
+    window.employeePerformanceChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels,
+            datasets: [{
+                label: 'Jobs Completed',
+                data,
+                backgroundColor: getColorPalette(labels.length),
+                borderRadius: 8,
+                borderSkipped: false,
+            }]
+        },
+        options: {
+            plugins: { legend: { display: false }, tooltip: { enabled: true } },
+            animation: { duration: 1200, easing: 'easeOutQuart' },
+            scales: { y: { beginAtZero: true } }
+        }
+    });
+}
+
+function renderCustomerActivityChart(labels, data) {
+    const ctx = document.getElementById('customer-activity-chart');
+    if (!ctx || !window.Chart) return;
+    if (window.customerActivityChart) window.customerActivityChart.destroy();
+    const gradient = ctx.getContext('2d').createLinearGradient(0, 0, 0, 200);
+    gradient.addColorStop(0, '#10b981');
+    gradient.addColorStop(1, 'rgba(16,185,129,0.05)');
+    window.customerActivityChart = new Chart(ctx, {
+        type: 'bar', // Use histogram style (bar) for new customers
+        data: {
+            labels,
+            datasets: [{
+                label: 'New Customers',
+                data,
+                backgroundColor: gradient,
+                borderRadius: 8,
+                borderSkipped: false,
+            }]
+        },
+        options: {
+            plugins: { legend: { display: false }, tooltip: { enabled: true } },
+            animation: { duration: 1200, easing: 'easeOutQuart' },
+            scales: { y: { beginAtZero: true } }
+        }
+    });
 }
