@@ -93,9 +93,9 @@ public class SimpleHttpServer {
                 }
             }
 
-            // Read the request body if it's a POST/PUT request.
+            // Read the request body if it's a POST/PUT/DELETE request.
             StringBuilder bodyBuilder = new StringBuilder();
-            if ((method.equals("POST") || method.equals("PUT")) && contentLength > 0) {
+            if ((method.equals("POST") || method.equals("PUT") || method.equals("DELETE")) && contentLength > 0) {
                 char[] bodyChars = new char[contentLength];
                 in.read(bodyChars, 0, contentLength);
                 bodyBuilder.append(bodyChars);

@@ -308,6 +308,133 @@ public class AdminHandler {
                 }
                 
                 return convertToJson(services);
+            } else if ("POST".equals(method)) {
+                // Add new service
+                Map<String, Object> data = parseJson(requestBody);
+                if (data == null) {
+                    return createErrorResponse("Invalid JSON body", 400);
+                }
+                String serviceName = (String) data.get("serviceName");
+                Object priceObj = data.get("price");
+                String description = (String) data.getOrDefault("description", "");
+                Object estimatedDurationObj = data.get("estimatedDuration");
+                String category = (String) data.getOrDefault("category", "");
+                
+                if (serviceName == null || serviceName.trim().isEmpty() || priceObj == null) {
+                    return createErrorResponse("Missing required fields: serviceName, price", 400);
+                }
+                java.math.BigDecimal price;
+                try {
+                    price = new java.math.BigDecimal(priceObj.toString());
+                } catch (Exception e) {
+                    return createErrorResponse("Invalid price value", 400);
+                }
+                Integer estimatedDuration = null;
+                if (estimatedDurationObj != null) {
+                    try {
+                        estimatedDuration = Integer.parseInt(estimatedDurationObj.toString());
+                    } catch (Exception e) {
+                        return createErrorResponse("Invalid estimatedDuration value", 400);
+                    }
+                }
+                String insertSql = "INSERT INTO services (service_name, price, description, estimated_duration, category, is_active) VALUES (?, ?, ?, ?, ?, true)";
+                try (PreparedStatement pstmt = conn.prepareStatement(insertSql)) {
+                    pstmt.setString(1, serviceName);
+                    pstmt.setBigDecimal(2, price);
+                    pstmt.setString(3, description);
+                    if (estimatedDuration != null) {
+                        pstmt.setInt(4, estimatedDuration);
+                    } else {
+                        pstmt.setNull(4, java.sql.Types.INTEGER);
+                    }
+                    pstmt.setString(5, category);
+                    int rows = pstmt.executeUpdate();
+                    if (rows > 0) {
+                        return createSuccessResponse("Service added successfully");
+                    } else {
+                        return createErrorResponse("Failed to add service", 500);
+                    }
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                    return createErrorResponse("Database error adding service", 500);
+                }
+            } else if ("PUT".equals(method)) {
+                // Update existing service
+                Map<String, Object> data = parseJson(requestBody);
+                if (data == null) {
+                    return createErrorResponse("Invalid JSON body", 400);
+                }
+                Object idObj = data.get("id");
+                if (idObj == null) {
+                    return createErrorResponse("Missing service id", 400);
+                }
+                Integer id;
+                try {
+                    id = Integer.parseInt(idObj.toString());
+                } catch (Exception e) {
+                    return createErrorResponse("Invalid service id", 400);
+                }
+                String serviceName = (String) data.get("serviceName");
+                Object priceObj = data.get("price");
+                String description = (String) data.getOrDefault("description", "");
+                Object estimatedDurationObj = data.get("estimatedDuration");
+                String category = (String) data.getOrDefault("category", "");
+                
+                String updateSql = "UPDATE services SET service_name=?, price=?, description=?, estimated_duration=?, category=? WHERE id=?";
+                try (PreparedStatement pstmt = conn.prepareStatement(updateSql)) {
+                    pstmt.setString(1, serviceName);
+                    if (priceObj != null) {
+                        pstmt.setBigDecimal(2, new java.math.BigDecimal(priceObj.toString()));
+                    } else {
+                        pstmt.setNull(2, java.sql.Types.DECIMAL);
+                    }
+                    pstmt.setString(3, description);
+                    if (estimatedDurationObj != null) {
+                        pstmt.setInt(4, Integer.parseInt(estimatedDurationObj.toString()));
+                    } else {
+                        pstmt.setNull(4, java.sql.Types.INTEGER);
+                    }
+                    pstmt.setString(5, category);
+                    pstmt.setInt(6, id);
+                    int rows = pstmt.executeUpdate();
+                    if (rows > 0) {
+                        return createSuccessResponse("Service updated successfully");
+                    } else {
+                        return createErrorResponse("Service not found or could not be updated", 404);
+                    }
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                    return createErrorResponse("Database error updating service", 500);
+                }
+            } else if ("DELETE".equals(method)) {
+                // Hard delete service
+                Map<String, Object> data = parseJson(requestBody);
+                if (data == null) {
+                    return createErrorResponse("Invalid JSON body", 400);
+                }
+                Object idObj = data.get("id");
+                if (idObj == null) {
+                    return createErrorResponse("Missing service id", 400);
+                }
+                Integer id;
+                try {
+                    id = Integer.parseInt(idObj.toString());
+                } catch (Exception e) {
+                    return createErrorResponse("Invalid service id", 400);
+                }
+                String deleteSql = "DELETE FROM services WHERE id=?";
+                try (PreparedStatement pstmt = conn.prepareStatement(deleteSql)) {
+                    pstmt.setInt(1, id);
+                    int rows = pstmt.executeUpdate();
+                    if (rows > 0) {
+                        return createSuccessResponse("Service deleted successfully");
+                    } else {
+                        return createErrorResponse("Service not found or could not be deleted", 404);
+                    }
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                    return createErrorResponse("Database error deleting service", 500);
+                }
             }
             return createErrorResponse("Method not allowed", 405);
         } catch (SQLException e) {

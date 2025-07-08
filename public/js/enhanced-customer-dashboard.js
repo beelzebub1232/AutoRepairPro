@@ -333,12 +333,14 @@ function createMapInterface(branches) {
                     </svg>
                     Select a Branch Location
                 </h3>
-                <button id="detect-location" class="btn btn-sm btn-primary">
-                    <svg class="icon icon-sm" viewBox="0 0 24 24">
-                        <polygon points="3,11 22,2 13,21 11,13 3,11"/>
-                    </svg>
-                    Use My Location
-                </button>
+                <div class="map-header-actions">
+                    <button id="detect-location" class="btn btn-sm btn-primary">
+                        <svg class="icon icon-sm" viewBox="0 0 24 24">
+                            <polygon points="3,11 22,2 13,21 11,13 3,11"/>
+                        </svg>
+                        Use My Location
+                    </button>
+                </div>
             </div>
             <div id="leaflet-map" style="height: 400px; width: 100%; margin-top: 20px; border-radius: 12px; overflow: hidden;"></div>
             <div class="section-divider"></div>
@@ -429,8 +431,8 @@ function initializeLeafletMap() {
     try {
         // Initialize map with proper options
         map = L.map('leaflet-map', {
-            center: [40.7128, -74.0060], // Default to NYC
-            zoom: 12,
+            center: [10.0168, 76.3118], // Center on Edappally, Kochi, India
+            zoom: 13,
             zoomControl: true,
             attributionControl: false, // Remove attribution
             scrollWheelZoom: true,
@@ -583,7 +585,13 @@ function selectBranch(branchId) {
         }
     }
 
-    showNotification(`Selected ${selectedCard.querySelector('h4').textContent}`, 'success');
+    // Show success notification only if branch was found
+    if (selectedCard) {
+        const branchName = selectedCard.querySelector('h4').textContent;
+        showNotification(`Selected ${branchName}`, 'success');
+    } else {
+        showNotification('Branch selection failed', 'error');
+    }
 }
 
 function updateSelectedBranchInfo(branchId) {
@@ -689,22 +697,35 @@ function detectUserLocation() {
             detectBtn.classList.add('btn-success');
 
             // Calculate distances and sort branches
-            const branchesWithDistance = branchMarkers.map(branch => ({
-                ...branch,
-                distance: calculateDistance(userLocation.lat, userLocation.lng, branch.getLatLng().lat, branch.getLatLng().lng)
-            })).sort((a, b) => a.distance - b.distance);
+            const branchesWithDistance = branchMarkers.map((marker, index) => {
+                const latLng = marker.getLatLng();
+                const distance = calculateDistance(userLocation.lat, userLocation.lng, latLng.lat, latLng.lng);
+                // Extract branch ID from marker popup content
+                const popupContent = marker.getPopup().getContent();
+                const branchIdMatch = popupContent.match(/selectBranchFromMap\((\d+)\)/);
+                const branchId = branchIdMatch ? parseInt(branchIdMatch[1]) : null;
+                
+                return {
+                    marker,
+                    branchId,
+                    distance,
+                    latLng
+                };
+            }).sort((a, b) => a.distance - b.distance);
 
             // Update distance displays
             branchesWithDistance.forEach(branch => {
-                const distanceElement = document.getElementById(`distance-${branch.id}`);
-                if (distanceElement) {
-                    distanceElement.innerHTML = `
-                        <svg class="icon icon-sm" viewBox="0 0 24 24">
-                            <polygon points="3,11 22,2 13,21 11,13 3,11"/>
-                        </svg>
-                        ${branch.distance.toFixed(1)} km away
-                    `;
-                    distanceElement.style.display = 'flex';
+                if (branch.branchId) {
+                    const distanceElement = document.getElementById(`distance-${branch.branchId}`);
+                    if (distanceElement) {
+                        distanceElement.innerHTML = `
+                            <svg class="icon icon-sm" viewBox="0 0 24 24">
+                                <polygon points="3,11 22,2 13,21 11,13 3,11"/>
+                            </svg>
+                            ${branch.distance.toFixed(1)} km away
+                        `;
+                        distanceElement.style.display = 'flex';
+                    }
                 }
             });
 
@@ -725,7 +746,9 @@ function detectUserLocation() {
 
             // Show quick select for nearest branch
             const nearestBranch = branchesWithDistance[0];
-            showQuickSelectNearest(nearestBranch);
+            if (nearestBranch && nearestBranch.branchId) {
+                showQuickSelectNearest(nearestBranch);
+            }
 
             showNotification('Location detected successfully', 'success');
         },
@@ -776,8 +799,8 @@ function calculateDistance(lat1, lng1, lat2, lng2) {
 }
 
 function showQuickSelectNearest(nearestBranch) {
-    const mapHeader = document.querySelector('.map-header');
-    if (mapHeader && !document.getElementById('quick-select-nearest')) {
+    const mapHeaderActions = document.querySelector('.map-header-actions');
+    if (mapHeaderActions && !document.getElementById('quick-select-nearest')) {
         const quickSelectBtn = document.createElement('button');
         quickSelectBtn.id = 'quick-select-nearest';
         quickSelectBtn.className = 'btn btn-sm btn-success quick-select-btn';
@@ -789,10 +812,10 @@ function showQuickSelectNearest(nearestBranch) {
             Select Nearest (${nearestBranch.distance.toFixed(1)}km)
         `;
         quickSelectBtn.addEventListener('click', () => {
-            selectBranch(nearestBranch.id);
+            selectBranch(nearestBranch.branchId);
             quickSelectBtn.remove();
         });
-        mapHeader.appendChild(quickSelectBtn);
+        mapHeaderActions.appendChild(quickSelectBtn);
     }
 }
 
