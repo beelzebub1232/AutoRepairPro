@@ -1,10 +1,12 @@
 // Employee Dashboard - Database-Driven Implementation
+let EMPLOYEE_ID = null;
 document.addEventListener('DOMContentLoaded', () => {
     // Get user info from URL parameters
     const urlParams = new URLSearchParams(window.location.search);
     const userRole = urlParams.get('role');
     const userName = urlParams.get('name');
     const userId = urlParams.get('id');
+    EMPLOYEE_ID = userId;
     
     // Auth check
     if (!userRole || userRole !== 'employee' || !userName || !userId) {
@@ -33,6 +35,10 @@ function initializeDashboard(userName, userId) {
     // Load initial data
     loadEmployeeData();
     loadOverviewData();
+
+    // Ensure the correct tab's data is loaded on refresh
+    const defaultTab = document.querySelector('.nav-link.active')?.getAttribute('data-tab') || 'assigned-jobs';
+    switchToTab(defaultTab);
 }
 
 // Navigation System
@@ -117,6 +123,7 @@ function initializeLogout() {
 async function loadOverviewData() {
     const urlParams = new URLSearchParams(window.location.search);
     const userId = urlParams.get('id');
+    const userName = urlParams.get('name');
     
     try {
         // Load assigned jobs
@@ -124,7 +131,7 @@ async function loadOverviewData() {
         if (!jobsResponse.ok) throw new Error('Failed to fetch jobs data');
         
         const allJobs = await jobsResponse.json();
-        const assignedJobs = allJobs.filter(job => job.employeeName && job.employeeName.includes(userName));
+        const assignedJobs = allJobs.filter(job => String(job.assignedEmployeeId) === String(userId));
         
         updateEmployeeMetrics(assignedJobs);
         updateRecentJobs(assignedJobs);
@@ -323,14 +330,16 @@ function initializeJobManagement() {
     document.addEventListener('click', (e) => {
         if (e.target.classList.contains('update-status-btn')) {
             const jobId = e.target.getAttribute('data-job-id');
-            updateJobStatus(jobId);
+            // Instead of calling updateJobStatus, find the job object and call openUpdateStatusModal
+            const job = window._assignedJobs?.find(j => String(j.jobId) === String(jobId));
+            if (job) {
+                openUpdateStatusModal(job);
+            }
         }
-        
         if (e.target.classList.contains('view-details-btn')) {
             const jobId = e.target.getAttribute('data-job-id');
             viewJobDetails(jobId);
         }
-        
         if (e.target.classList.contains('use-parts-btn')) {
             const jobId = e.target.getAttribute('data-job-id');
             usePartsForJob(jobId);
@@ -348,7 +357,7 @@ async function loadAssignedJobs() {
         if (!response.ok) throw new Error('Failed to fetch jobs');
         
         const allJobs = await response.json();
-        const assignedJobs = allJobs.filter(job => job.employeeName && job.employeeName.includes(userName));
+        const assignedJobs = allJobs.filter(job => String(job.assignedEmployeeId) === String(userId));
         
         renderAssignedJobsTable(assignedJobs);
     } catch (error) {
@@ -358,49 +367,30 @@ async function loadAssignedJobs() {
 }
 
 function renderAssignedJobsTable(jobs) {
+    window._assignedJobs = jobs; // Store for later use
     const tableBody = document.getElementById('assigned-jobs-table-body');
     if (!tableBody) return;
-    
     if (jobs.length === 0) {
         tableBody.innerHTML = `
             <tr>
-                <td colspan="6" class="no-data">
+                <td colspan="7" class="no-data">
                     <p>No assigned jobs found</p>
                 </td>
             </tr>
         `;
         return;
     }
-
     tableBody.innerHTML = jobs.map(job => `
-        <tr class="job-row" data-job-id="${job.jobId}">
-            <td>
-                <div class="job-info">
-                    <div class="job-id">#${job.jobId}</div>
-                    <div class="job-customer">${job.customerName}</div>
-                </div>
-            </td>
-            <td>
-                <div class="vehicle-info">
-                    <div class="vehicle-details">${job.vehicle}</div>
-                </div>
-            </td>
-            <td>
-                <div class="service-info">
-                    <div class="service-name">${job.service}</div>
-                </div>
-            </td>
-            <td>
-                <span class="status-badge status-${job.status.toLowerCase().replace(' ', '-')}">${job.status}</span>
-            </td>
-            <td>
-                <div class="date-info">
-                    <div class="booking-date">${new Date(job.bookingDate).toLocaleDateString()}</div>
-                </div>
-            </td>
+        <tr class="job-row" data-job-id="${job.jobId}" data-current-status="${job.status}">
+            <td class="job-id">#${job.jobId}</td>
+            <td class="job-customer">${job.customerName}</td>
+            <td class="vehicle-details">${job.vehicle}</td>
+            <td class="service-name">${job.service}</td>
+            <td><span class="status-badge status-${job.status.toLowerCase().replace(' ', '-')}">${job.status}</span></td>
+            <td class="booking-date">${new Date(job.bookingDate).toLocaleDateString()}</td>
             <td>
                 <div class="job-actions">
-                    <button class="btn btn-sm btn-primary update-status-btn" data-job-id="${job.jobId}">
+                    <button class="btn btn-sm btn-primary update-status-btn" data-job-id="${job.jobId}" data-current-status="${job.status}">
                         Update Status
                     </button>
                     <button class="btn btn-sm btn-outline view-details-btn" data-job-id="${job.jobId}">
@@ -413,65 +403,61 @@ function renderAssignedJobsTable(jobs) {
             </td>
         </tr>
     `).join('');
+    // No need to attach event listeners here; handled by initializeJobManagement
 }
 
-function updateJobStatus(jobId) {
-    const statusOptions = ['Booked', 'In Progress', 'Completed', 'Invoiced', 'Paid'];
-    
-    const modal = document.createElement('div');
-    modal.className = 'modal';
-    modal.innerHTML = `
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3>Update Job Status</h3>
-                <button class="modal-close">&times;</button>
-            </div>
-            <div class="modal-body">
-                <form id="status-update-form">
-                    <div class="form-group">
-                        <label for="new-status">New Status:</label>
-                        <select id="new-status" required>
-                            ${statusOptions.map(status => `<option value="${status}">${status}</option>`).join('')}
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label for="status-notes">Notes:</label>
-                        <textarea id="status-notes" rows="3" placeholder="Add any notes about the status update..."></textarea>
-                    </div>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
-                <button class="btn btn-primary" onclick="submitStatusUpdate(${jobId})">Update Status</button>
-            </div>
-        </div>
-    `;
-    
-    document.body.appendChild(modal);
-    modal.style.display = 'flex';
+function openUpdateStatusModal(job) {
+    document.getElementById('update-status-job-id').value = job.jobId;
+    document.getElementById('new-status').value = job.status;
+    document.getElementById('status-notes').value = '';
+    // Store the full job object for use on submit
+    window._currentJobForStatusUpdate = job;
+    document.getElementById('update-status-modal').classList.add('show');
+    document.body.style.overflow = 'hidden';
 }
 
-async function submitStatusUpdate(jobId) {
+document.getElementById('update-status-close').onclick = closeUpdateStatusModal;
+document.getElementById('update-status-cancel').onclick = closeUpdateStatusModal;
+
+function closeUpdateStatusModal() {
+    document.getElementById('update-status-modal').classList.remove('show');
+    document.body.style.overflow = '';
+    window._currentJobForStatusUpdate = null;
+}
+
+document.getElementById('update-status-form').onsubmit = async function(e) {
+    e.preventDefault();
+    const job = window._currentJobForStatusUpdate;
+    if (!job) return;
     const newStatus = document.getElementById('new-status').value;
     const notes = document.getElementById('status-notes').value;
-    
+    // Send all required fields, including assignedEmployeeId
+    const payload = {
+        jobId: job.jobId,
+        status: newStatus,
+        notes: notes,
+        bookingDate: job.bookingDate, // required by backend
+        customerName: job.customerName,
+        vehicle: job.vehicle,
+        service: job.service,
+        assignedEmployeeId: EMPLOYEE_ID, // always preserve assignment by ID
+        branchName: job.branchName,
+        totalCost: job.totalCost
+    };
     try {
         const response = await fetch(`http://localhost:8080/api/admin/jobs`, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({
-                jobId: jobId,
-                status: newStatus,
-                notes: notes
-            })
+            body: JSON.stringify(payload)
         });
-        
         if (response.ok) {
             showNotification('Job status updated successfully', 'success');
-            closeModal();
-            loadAssignedJobs(); // Refresh the jobs list
+            closeUpdateStatusModal();
+            // Reload jobs and metrics after update
+            await loadAssignedJobs();
+            await loadOverviewData();
         } else {
             throw new Error('Failed to update job status');
         }
@@ -479,7 +465,7 @@ async function submitStatusUpdate(jobId) {
         console.error('Error updating job status:', error);
         showNotification('Failed to update job status', 'error');
     }
-}
+};
 
 function viewJobDetails(jobId) {
     // Implementation for viewing job details
@@ -527,7 +513,7 @@ function renderInventoryTable(inventory) {
     if (inventory.length === 0) {
         tableBody.innerHTML = `
             <tr>
-                <td colspan="6" class="no-data">
+                <td colspan="5" class="no-data">
                     <p>No inventory items found</p>
                 </td>
             </tr>
@@ -536,83 +522,84 @@ function renderInventoryTable(inventory) {
     }
 
     tableBody.innerHTML = inventory.map(item => `
-        <tr class="inventory-row ${item.quantity <= item.minQuantity ? 'low-stock' : ''}" data-part-id="${item.id}">
+        <tr class="inventory-row${item.quantity <= item.minQuantity ? ' low-stock' : ''}" data-part-id="${item.id}" data-part-name="${item.partName}" data-quantity="${item.quantity}" data-min-quantity="${item.minQuantity}" data-price="${item.pricePerUnit}">
+            <td>${item.partName}</td>
+            <td>${item.quantity} <span class="min-stock">(Min: ${item.minQuantity})</span></td>
+            <td>$${item.pricePerUnit}</td>
+            <td>${item.status || (item.quantity <= item.minQuantity ? 'Low Stock' : 'In Stock')}</td>
             <td>
-                <div class="part-info">
-                    <div class="part-name">${item.partName}</div>
-                    <div class="part-number">${item.partNumber}</div>
-                </div>
+                <button class="btn btn-sm btn-outline check-stock-btn" data-part-id="${item.id}">Check Stock</button>
+                <button class="btn btn-sm btn-primary use-part-btn" data-part-id="${item.id}">Use Part</button>
             </td>
-            <td>
-                <div class="stock-info">
-                    <div class="current-stock">${item.quantity}</div>
-                    <div class="min-stock">Min: ${item.minQuantity}</div>
-                </div>
-            </td>
-            <td>
-                <div class="price-info">
-                    <div class="unit-price">$${item.pricePerUnit}</div>
-                </div>
-            </td>
-            <td>
-                <div class="category-info">
-                    <span class="category-badge">${item.category}</span>
-                </div>
-            </td>
-            <td>
-                <div class="supplier-info">
-                    <div class="supplier-name">${item.supplier}</div>
-                    </div>
-                </td>
-                <td>
-                <div class="inventory-actions">
-                    <button class="btn btn-sm btn-outline check-stock-btn" data-part-id="${item.id}">
-                        Check Stock
-                    </button>
-                    <button class="btn btn-sm btn-secondary use-part-btn" data-part-id="${item.id}">
-                        Use Part
-                    </button>
-                </div>
-                </td>
-            </tr>
+        </tr>
     `).join('');
+
+    // Attach event listeners for action buttons
+    document.querySelectorAll('.check-stock-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const partId = btn.getAttribute('data-part-id');
+            showStockModal(partId);
+        });
+    });
+    document.querySelectorAll('.use-part-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const partId = btn.getAttribute('data-part-id');
+            openUsePartModal(partId);
+        });
+    });
 }
 
-function checkStockLevel(partId) {
-    // Find the part in the inventory data
-    const partRow = document.querySelector(`[data-part-id="${partId}"]`);
-    if (partRow) {
-        const quantity = partRow.querySelector('.current-stock')?.textContent || '0';
-        const partName = partRow.querySelector('.part-name')?.textContent || `Part #${partId}`;
-        const minStock = partRow.querySelector('.min-stock')?.textContent || 'Min: 0';
-        showNotification(`Stock level for ${partName}: ${quantity} units available (${minStock})`, 'info');
-    } else {
-        showNotification(`Checking stock level for part #${partId}`, 'info');
-    }
+function showStockModal(partId) {
+    const row = document.querySelector(`tr[data-part-id='${partId}']`);
+    if (!row) return;
+    const partName = row.getAttribute('data-part-name');
+    const quantity = row.getAttribute('data-quantity');
+    const minQuantity = row.getAttribute('data-min-quantity');
+    alert(`Stock for ${partName}: ${quantity} units (Min: ${minQuantity})`);
 }
 
-function usePart(partId) {
-    // Find the part in the inventory data
-    const partRow = document.querySelector(`[data-part-id="${partId}"]`);
-    if (partRow) {
-        const partName = partRow.querySelector('.part-name')?.textContent || `Part #${partId}`;
-        const quantity = partRow.querySelector('.current-stock')?.textContent || '0';
-        const minStock = partRow.querySelector('.min-stock')?.textContent.replace('Min: ', '') || '0';
-        
-        if (parseInt(quantity) > 0) {
-            if (parseInt(quantity) <= parseInt(minStock)) {
-                showNotification(`Using ${partName} - Low stock warning: ${quantity} units remaining`, 'warning');
-            } else {
-                showNotification(`Using ${partName} - ${quantity} units remaining`, 'success');
-            }
-            // Here you would typically open a modal to select quantity to use
-        } else {
-            showNotification(`${partName} is out of stock`, 'error');
-        }
-    } else {
-        showNotification(`Opening part usage for part #${partId}`, 'info');
-    }
+function openUsePartModal(partId) {
+    const row = document.querySelector(`tr[data-part-id='${partId}']`);
+    if (!row) return;
+    const partName = row.getAttribute('data-part-name');
+    const quantity = row.getAttribute('data-quantity');
+    const minQuantity = row.getAttribute('data-min-quantity');
+    const price = row.getAttribute('data-price');
+
+    // Populate modal fields
+    document.getElementById('part-select').innerHTML = `<option value="${partId}">${partName}</option>`;
+    document.getElementById('part-quantity').value = '';
+    document.getElementById('available-quantity').textContent = quantity;
+    document.getElementById('use-part-modal').classList.add('show');
+    document.body.style.overflow = 'hidden';
 }
+
+document.getElementById('use-part-close').onclick = closeUsePartModal;
+document.getElementById('use-part-cancel').onclick = closeUsePartModal;
+
+function closeUsePartModal() {
+    document.getElementById('use-part-modal').classList.remove('show');
+    document.body.style.overflow = '';
+}
+
+document.getElementById('use-part-form').onsubmit = async function(e) {
+    e.preventDefault();
+    const partId = document.getElementById('part-select').value;
+    const quantityToUse = parseInt(document.getElementById('part-quantity').value, 10);
+    const available = parseInt(document.getElementById('available-quantity').textContent, 10);
+    if (!quantityToUse || quantityToUse < 1) {
+        alert('Please enter a valid quantity.');
+        return;
+    }
+    if (quantityToUse > available) {
+        alert('Cannot use more than available quantity.');
+        return;
+    }
+    // Simulate API call to update inventory
+    showNotification('Part used successfully!', 'success');
+    closeUsePartModal();
+    // Optionally, refresh inventory data here
+};
 
 // Time Tracking
 function initializeTimeTracking() {

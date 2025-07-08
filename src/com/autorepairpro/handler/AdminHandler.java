@@ -174,7 +174,8 @@ public class AdminHandler {
         String sql = "SELECT j.id as jobId, j.status, j.booking_date, j.total_cost, j.notes, " +
                     "u.full_name as customerName, v.make, v.model, v.year, " +
                     "s.service_name, b.name as branchName, " +
-                    "e.full_name as employeeName " +
+                    "e.full_name as employeeName, " +
+                    "j.assigned_employee_id " +
                     "FROM jobs j " +
                     "JOIN users u ON j.customer_id = u.id " +
                     "JOIN vehicles v ON j.vehicle_id = v.id " +
@@ -213,6 +214,7 @@ public class AdminHandler {
                 job.put("service", rs.getString("service_name"));
                 job.put("branchName", rs.getString("branchName"));
                 job.put("employeeName", rs.getString("employeeName"));
+                job.put("assignedEmployeeId", rs.getObject("assigned_employee_id"));
                 jobs.add(job);
         }
         }

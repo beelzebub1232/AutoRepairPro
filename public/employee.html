@@ -128,25 +128,23 @@
                     </div>
                 </div>
                 
-                <div class="card">
-                    <div class="table-container">
-                        <table class="table" id="assigned-jobs-table">
-                            <thead>
-                                <tr>
-                                    <th>Job ID</th>
-                                    <th>Customer</th>
-                                    <th>Vehicle</th>
-                                    <th>Service</th>
-                                    <th>Status</th>
-                                    <th>Booking Date</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody id="assigned-jobs-table-body">
-                                <!-- Job rows will be inserted here by JS -->
-                            </tbody>
-                        </table>
-                    </div>
+                <div class="table-container">
+                    <table class="table" id="assigned-jobs-table">
+                        <thead>
+                            <tr>
+                                <th>Job ID</th>
+                                <th>Customer</th>
+                                <th>Vehicle</th>
+                                <th>Service</th>
+                                <th>Status</th>
+                                <th>Booking Date</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="assigned-jobs-table-body">
+                            <!-- Job rows will be inserted here by JS -->
+                        </tbody>
+                    </table>
                 </div>
             </div>
 
@@ -172,22 +170,20 @@
                     </div>
                 </div>
                 
-                <div class="card">
-                    <div class="table-container">
-                        <table class="table" id="inventory-table">
-                            <thead>
-                                <tr>
-                                    <th>Part Name</th>
-                                    <th>Available Quantity</th>
-                                    <th>Price per Unit</th>
-                                    <th>Status</th>
-                                </tr>
-                            </thead>
-                            <tbody id="inventory-table-body">
-                                <!-- Inventory rows will be inserted here by JS -->
-                            </tbody>
-                        </table>
-                    </div>
+                <div class="table-container">
+                    <table class="table" id="inventory-table">
+                        <thead>
+                            <tr>
+                                <th>Part Name</th>
+                                <th>Available Quantity</th>
+                                <th>Price per Unit</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="inventory-table-body">
+                            <!-- Inventory rows will be inserted here by JS -->
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </main>
@@ -195,6 +191,56 @@
 
     <!-- Notification Container -->
     <div class="notification-container" id="notification-container"></div>
+
+    <!-- Update Status Modal -->
+    <div id="update-status-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">
+                    <svg class="icon" viewBox="0 0 24 24">
+                        <polyline points="16,17 21,12 16,7"/>
+                        <line x1="21" y1="12" x2="9" y2="12"/>
+                    </svg>
+                    Update Job Status
+                </h3>
+                <button class="modal-close" id="update-status-close">
+                    <svg class="icon" viewBox="0 0 24 24">
+                        <line x1="18" y1="6" x2="6" y2="18"/>
+                        <line x1="6" y1="6" x2="18" y2="18"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="update-status-form">
+                    <input type="hidden" id="update-status-job-id">
+                    <div class="form-group">
+                        <label for="new-status" class="form-label">New Status</label>
+                        <select id="new-status" class="form-input" required>
+                            <option value="Booked">Booked</option>
+                            <option value="In Progress">In Progress</option>
+                            <option value="Completed">Completed</option>
+                            <option value="Invoiced">Invoiced</option>
+                            <option value="Paid">Paid</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="status-notes" class="form-label">Notes</label>
+                        <textarea id="status-notes" class="form-input" rows="3" placeholder="Add any notes about the status update..."></textarea>
+                    </div>
+                    <div class="form-actions">
+                        <button type="button" id="update-status-cancel" class="btn btn-secondary">Cancel</button>
+                        <button type="submit" class="btn btn-primary">
+                            <svg class="icon icon-sm" viewBox="0 0 24 24">
+                                <path d="M9 12l2 2 4-4"/>
+                                <circle cx="12" cy="12" r="9"/>
+                            </svg>
+                            Update Status
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
 
     <!-- Job Details Modal -->
     <div id="job-details-modal" class="modal">

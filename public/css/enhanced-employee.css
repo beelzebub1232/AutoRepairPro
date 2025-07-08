@@ -80,65 +80,58 @@
     margin: 0;
 }
 
-/* Enhanced Table Styling */
+/* Tables - unified with customer dashboard */
 .table-container {
     background: white;
     border-radius: var(--radius-xl);
     overflow: hidden;
     box-shadow: var(--shadow-sm);
     border: 1px solid var(--secondary-200);
-    animation: slideInUp 0.6s ease forwards;
-    opacity: 0;
-    transform: translateY(30px);
 }
 
 .table {
     width: 100%;
     border-collapse: collapse;
-    background: white;
 }
 
-.table thead {
-    background: var(--secondary-50);
+.table th,
+.table td {
+    padding: var(--space-4) var(--space-6);
+    text-align: left;
+    border-bottom: 1px solid var(--secondary-200);
 }
 
 .table th {
-    padding: var(--space-4);
-    text-align: left;
+    background: var(--secondary-50);
     font-weight: 600;
-    color: var(--secondary-900);
-    border-bottom: 2px solid var(--secondary-200);
-    font-size: var(--text-sm);
-}
-
-.table td {
-    padding: var(--space-4);
-    border-bottom: 1px solid var(--secondary-100);
     color: var(--secondary-700);
     font-size: var(--text-sm);
-    transition: all var(--transition-fast);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    position: sticky;
+    top: 0;
+    z-index: 10;
 }
 
 .table tbody tr {
-    transition: all var(--transition-normal);
-    animation: slideInRight 0.5s ease forwards;
-    opacity: 0;
-    transform: translateX(30px);
+    transition: background-color var(--transition-fast);
 }
-
-.table tbody tr:nth-child(1) { animation-delay: 0.1s; }
-.table tbody tr:nth-child(2) { animation-delay: 0.2s; }
-.table tbody tr:nth-child(3) { animation-delay: 0.3s; }
-.table tbody tr:nth-child(4) { animation-delay: 0.4s; }
-.table tbody tr:nth-child(5) { animation-delay: 0.5s; }
 
 .table tbody tr:hover {
-    background: var(--primary-50);
-    transform: translateX(0);
+    background: var(--secondary-50);
 }
 
-.table tbody tr:hover td {
-    color: var(--secondary-900);
+.table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.table .actions {
+    white-space: nowrap;
+}
+
+.table .actions .btn {
+    margin-right: var(--space-2);
+    margin-bottom: var(--space-1);
 }
 
 /* Status Badges with Animations */
