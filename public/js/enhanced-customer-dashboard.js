@@ -1189,13 +1189,12 @@ function initializeJobsModule() {
 async function loadMyJobs() {
     const urlParams = new URLSearchParams(window.location.search);
     const userId = urlParams.get('id');
-    
     try {
         const response = await fetch(`http://localhost:8080/api/customer/jobs/${userId}`);
         if (!response.ok) throw new Error('Failed to fetch jobs');
-        
         const jobs = await response.json();
-        populateJobsTable(jobs.filter(job => job.status !== 'Paid'));
+        // Show all jobs except Cancelled (or filter as needed)
+        populateJobsTable(jobs.filter(job => job.status !== 'Cancelled'));
     } catch (error) {
         console.error('Error loading jobs:', error);
         showNotification('Failed to load jobs', 'error');
@@ -1205,7 +1204,6 @@ async function loadMyJobs() {
 function populateJobsTable(jobs) {
     const tableBody = document.getElementById('my-jobs-table-body');
     if (!tableBody) return;
-    
     if (jobs.length === 0) {
         tableBody.innerHTML = `
             <tr>
@@ -1222,15 +1220,14 @@ function populateJobsTable(jobs) {
         `;
         return;
     }
-
     tableBody.innerHTML = jobs.map((job, index) => `
         <tr class="job-row" data-status="${job.status.toLowerCase().replace(' ', '-')}" style="animation-delay: ${index * 0.05}s;">
             <td><strong>#${job.jobId}</strong></td>
             <td>${job.vehicle}</td>
             <td>${job.service}</td>
-            <td><span class="status-badge status-${job.status.toLowerCase().replace(' ', '-')}">${job.status}</span></td>
+            <td><span class="status-badge status-${job.status.toLowerCase().replace(' ', '-')}">${job.status === 'Paid' ? 'Paid' : job.status}</span></td>
             <td>${new Date(job.bookingDate).toLocaleDateString()}</td>
-            <td>${job.totalCost ? '₹' + job.totalCost : '<span class="text-secondary">Pending</span>'}</td>
+            <td>${job.totalCost ? '\u20b9' + job.totalCost : '<span class="text-secondary">Pending</span>'}</td>
             <td class="actions">
                 <button class="btn btn-sm btn-primary" onclick="showJobDetails(${job.jobId})">
                     <svg class="icon icon-sm" viewBox="0 0 24 24">

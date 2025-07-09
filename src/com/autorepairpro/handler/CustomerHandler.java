@@ -28,6 +28,30 @@ public class CustomerHandler {
                     return handleBookings(method, requestBody);
                 case "pay":
                     return handlePayment(method, requestBody);
+                case "payment":
+                    // Support /api/customer/payment/{jobId}
+                    if (pathParts.length >= 5 && method.equals("POST")) {
+                        // Inject jobId into request body for payment logic
+                        String jobId = pathParts[4];
+                        Map<String, Object> data = parseJson(requestBody);
+                        if (data == null) data = new HashMap<>();
+                        data.put("jobId", jobId);
+                        String newBody = "{";
+                        int i = 0;
+                        for (Map.Entry<String, Object> entry : data.entrySet()) {
+                            if (i > 0) newBody += ",";
+                            newBody += "\"" + entry.getKey() + "\":";
+                            if (entry.getValue() instanceof String) {
+                                newBody += "\"" + entry.getValue() + "\"";
+                            } else {
+                                newBody += entry.getValue();
+                            }
+                            i++;
+                        }
+                        newBody += "}";
+                        return handlePayment(method, newBody);
+                    }
+                    return createErrorResponse("Invalid payment route or method", 404);
                 case "invoice":
                     return handleInvoice(pathParts, method);
                 case "branches":
@@ -52,7 +76,7 @@ public class CustomerHandler {
             int customerId = Integer.parseInt(pathParts[4]);
             
             try (Connection conn = DatabaseConnector.getConnection()) {
-                String sql = "SELECT j.id as jobId, j.status, j.booking_date, j.total_cost, j.notes, " +
+                String sql = "SELECT j.id as jobId, j.status, j.booking_date, j.completion_date, j.total_cost, j.notes, " +
                            "v.make, v.model, v.year, v.color, " +
                            "s.service_name, s.price, " +
                            "b.name as branchName, b.address as branchAddress, " +
@@ -75,6 +99,7 @@ public class CustomerHandler {
                         job.put("jobId", rs.getInt("jobId"));
                         job.put("status", rs.getString("status"));
                         job.put("bookingDate", rs.getTimestamp("booking_date").toString());
+                        job.put("completionDate", rs.getTimestamp("completion_date") != null ? rs.getTimestamp("completion_date").toString() : null);
                         job.put("totalCost", rs.getBigDecimal("total_cost"));
                         job.put("notes", rs.getString("notes"));
                         job.put("vehicle", rs.getString("make") + " " + rs.getString("model") + " (" + rs.getInt("year") + ")");
@@ -224,13 +249,15 @@ public class CustomerHandler {
                 return createErrorResponse("Invalid jobId", 400);
             }
             // Find the invoice for this job
-            String findInvoiceSql = "SELECT id FROM invoices WHERE job_id = ?";
+            String findInvoiceSql = "SELECT id, total_amount FROM invoices WHERE job_id = ?";
             Integer invoiceId = null;
+            double invoiceAmount = 0.0;
             try (PreparedStatement findStmt = conn.prepareStatement(findInvoiceSql)) {
                 findStmt.setInt(1, jobId);
                 ResultSet rs = findStmt.executeQuery();
                 if (rs.next()) {
                     invoiceId = rs.getInt("id");
+                    invoiceAmount = rs.getDouble("total_amount");
                 } else {
                     return createErrorResponse("Invoice not found for job", 404);
                 }
@@ -242,13 +269,14 @@ public class CustomerHandler {
                 updateStmt.executeUpdate();
             }
             // Optionally, record payment in a payments table (if exists)
-            // Optionally, update job status to 'Paid'
-            String updateJobSql = "UPDATE jobs SET status = 'Paid' WHERE id = ?";
+            // Optionally, update job status to 'Paid' and set completion_date
+            String updateJobSql = "UPDATE jobs SET status = 'Paid', completion_date = NOW() WHERE id = ?";
             try (PreparedStatement updateJobStmt = conn.prepareStatement(updateJobSql)) {
                 updateJobStmt.setInt(1, jobId);
                 updateJobStmt.executeUpdate();
             }
-            return createSuccessResponse("Payment processed successfully");
+            // Optionally, return the amount paid in the response
+            return createSuccessResponse("Payment processed successfully. Amount paid: " + invoiceAmount);
         } catch (SQLException e) {
             e.printStackTrace();
             return createErrorResponse("Database error processing payment", 500);

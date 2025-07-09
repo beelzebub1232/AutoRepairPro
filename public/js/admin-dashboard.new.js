@@ -885,7 +885,8 @@ async function handleEditJobClick(jobId) {
         });
     } catch (error) { console.error("Failed to load employees for edit job form:", error); employeeOptions = '<option value="">Error loading employees</option>'; }
 
-    const jobStatuses = ['Booked', 'In Progress', 'Hold', 'Awaiting Parts', 'Completed', 'Invoiced', 'Cancelled'];
+    // Restore all possible statuses for admin
+    const jobStatuses = ['Booked', 'In Progress', 'Hold', 'Awaiting Parts', 'Completed', 'Invoiced', 'Paid', 'Cancelled'];
     let statusOptions = '';
     jobStatuses.forEach(status => {
         statusOptions += `<option value="${status}" ${jobData.status === status ? 'selected' : ''}>${status}</option>`;

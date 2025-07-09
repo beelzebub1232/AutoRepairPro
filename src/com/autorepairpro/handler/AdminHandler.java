@@ -299,6 +299,12 @@ public class AdminHandler {
                         checkStmt.setInt(1, jobId);
                         ResultSet rs = checkStmt.executeQuery();
                         if (!rs.next()) {
+                            // Recalculate and update jobs.total_cost = service price + parts cost
+                            String updateTotalCostSql = "UPDATE jobs j JOIN services s ON j.service_id = s.id SET j.total_cost = COALESCE((SELECT SUM(total_price) FROM job_inventory WHERE job_id = j.id), 0) + s.price WHERE j.id = ?";
+                            try (PreparedStatement totalCostStmt = conn.prepareStatement(updateTotalCostSql)) {
+                                totalCostStmt.setInt(1, jobId);
+                                totalCostStmt.executeUpdate();
+                            }
                             // Calculate total parts cost
                             String partsSql = "SELECT SUM(total_price) FROM job_inventory WHERE job_id = ?";
                             double partsCost = 0.0;
@@ -310,7 +316,7 @@ public class AdminHandler {
                                     if (partsRs.wasNull()) partsCost = 0.0;
                                 }
                             }
-                            // Get job total_cost (labor/service)
+                            // Get updated job total_cost (labor/service + parts)
                             String jobSql = "SELECT total_cost FROM jobs WHERE id = ?";
                             double jobCost = 0.0;
                             try (PreparedStatement jobStmt = conn.prepareStatement(jobSql)) {
@@ -324,7 +330,7 @@ public class AdminHandler {
                                     }
                                 }
                             }
-                            double totalAmount = partsCost + jobCost;
+                            double totalAmount = jobCost;
                             // Insert invoice
                             String insertInvoiceSql = "INSERT INTO invoices (job_id, invoice_number, amount, tax_amount, total_amount, status, due_date) VALUES (?, ?, ?, ?, ?, ?, DATE_ADD(NOW(), INTERVAL 14 DAY))";
                             String invoiceNumber = "INV-" + System.currentTimeMillis();

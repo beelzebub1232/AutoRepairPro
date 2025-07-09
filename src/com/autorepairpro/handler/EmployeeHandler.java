@@ -294,6 +294,13 @@ public class EmployeeHandler {
                     updateJobStmt.setInt(2, jobId);
                     updateJobStmt.executeUpdate();
                 }
+
+                // Update total_cost = service price + parts cost
+                String totalCostSql = "UPDATE jobs j JOIN services s ON j.service_id = s.id SET j.total_cost = COALESCE((SELECT SUM(total_price) FROM job_inventory WHERE job_id = j.id), 0) + s.price WHERE j.id = ?";
+                try (PreparedStatement totalCostStmt = conn.prepareStatement(totalCostSql)) {
+                    totalCostStmt.setInt(1, jobId);
+                    totalCostStmt.executeUpdate();
+                }
                 
                 conn.commit();
                 return "{\"message\":\"Inventory used successfully\", \"quantityUsed\":" + quantityUsed + "}";
