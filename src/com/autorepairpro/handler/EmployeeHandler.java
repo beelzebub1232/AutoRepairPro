@@ -157,7 +157,6 @@ public class EmployeeHandler {
                 jsonBuilder.append("\"actualCompletionDate\":").append(rs.getTimestamp("actual_completion_date") != null ? "\"" + rs.getTimestamp("actual_completion_date") + "\"" : "null").append(",");
                 jsonBuilder.append("\"totalCost\":").append(rs.getBigDecimal("total_cost") != null ? rs.getBigDecimal("total_cost") : "null").append(",");
                 jsonBuilder.append("\"laborCost\":").append(rs.getBigDecimal("labor_cost") != null ? rs.getBigDecimal("labor_cost") : "null").append(",");
-                jsonBuilder.append("\"partsCost\":").append(rs.getBigDecimal("parts_cost") != null ? rs.getBigDecimal("parts_cost") : "null").append(",");
                 jsonBuilder.append("\"notes\":\"").append(rs.getString("notes") != null ? rs.getString("notes") : "").append("\",");
                 jsonBuilder.append("\"customerNotes\":\"").append(rs.getString("customer_notes") != null ? rs.getString("customer_notes") : "").append("\",");
                 jsonBuilder.append("\"branchName\":\"").append(rs.getString("branch_name") != null ? rs.getString("branch_name") : "").append("\",");
@@ -319,19 +318,22 @@ public class EmployeeHandler {
                      "v.make, v.model, v.year, v.vin, v.color, v.license_plate, " +
                      "s.service_name, s.description as service_description, " +
                      "b.name as branch_name, b.address as branch_address " +
-                       "FROM jobs j " +
-                       "JOIN users u ON j.customer_id = u.id " +
-                       "JOIN vehicles v ON j.vehicle_id = v.id " +
-                       "JOIN services s ON j.service_id = s.id " +
+                     "FROM jobs j " +
+                     "JOIN users u ON j.customer_id = u.id " +
+                     "JOIN vehicles v ON j.vehicle_id = v.id " +
+                     "JOIN services s ON j.service_id = s.id " +
                      "LEFT JOIN branches b ON j.branch_id = b.id " +
-                       "WHERE j.id = ?";
-        
+                     "WHERE j.id = ?";
+        String partsSql = "SELECT ji.quantity_used, ji.unit_price, ji.total_price, i.part_name, i.price_per_unit " +
+                          "FROM job_inventory ji " +
+                          "JOIN inventory i ON ji.inventory_id = i.id " +
+                          "WHERE ji.job_id = ?";
         try (Connection conn = DatabaseConnector.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+             PreparedStatement pstmt = conn.prepareStatement(sql);
+             PreparedStatement partsStmt = conn.prepareStatement(partsSql)) {
 
             pstmt.setInt(1, jobId);
             ResultSet rs = pstmt.executeQuery();
-            
             if (rs.next()) {
                 StringBuilder jsonBuilder = new StringBuilder();
                 jsonBuilder.append("{");
@@ -346,21 +348,41 @@ public class EmployeeHandler {
                 jsonBuilder.append("\"serviceDescription\":\"").append(rs.getString("service_description") != null ? rs.getString("service_description") : "").append("\",");
                 jsonBuilder.append("\"status\":\"").append(rs.getString("status")).append("\",");
                 jsonBuilder.append("\"bookingDate\":\"").append(rs.getTimestamp("booking_date")).append("\",");
-                jsonBuilder.append("\"estimatedCompletionDate\":").append(rs.getTimestamp("estimated_completion_date") != null ? "\"" + rs.getTimestamp("estimated_completion_date") + "\"" : "null").append(",");
-                jsonBuilder.append("\"actualCompletionDate\":").append(rs.getTimestamp("actual_completion_date") != null ? "\"" + rs.getTimestamp("actual_completion_date") + "\"" : "null").append(",");
+                // Remove estimatedCompletionDate and actualCompletionDate (not in schema)
+                // jsonBuilder.append("\"estimatedCompletionDate\":").append(rs.getTimestamp("estimated_completion_date") != null ? "\"" + rs.getTimestamp("estimated_completion_date") + "\"" : "null").append(",");
+                // jsonBuilder.append("\"actualCompletionDate\":").append(rs.getTimestamp("actual_completion_date") != null ? "\"" + rs.getTimestamp("actual_completion_date") + "\"" : "null").append(",");
+                // Instead, use completion_date
+                jsonBuilder.append("\"completionDate\":").append(rs.getTimestamp("completion_date") != null ? "\"" + rs.getTimestamp("completion_date") + "\"" : "null").append(",");
                 jsonBuilder.append("\"totalCost\":").append(rs.getBigDecimal("total_cost") != null ? rs.getBigDecimal("total_cost") : "null").append(",");
-                jsonBuilder.append("\"laborCost\":").append(rs.getBigDecimal("labor_cost") != null ? rs.getBigDecimal("labor_cost") : "null").append(",");
-                jsonBuilder.append("\"partsCost\":").append(rs.getBigDecimal("parts_cost") != null ? rs.getBigDecimal("parts_cost") : "null").append(",");
+                // Remove laborCost (not in schema)
+                // jsonBuilder.append("\"laborCost\":").append(rs.getBigDecimal("labor_cost") != null ? rs.getBigDecimal("labor_cost") : "null").append(",");
                 jsonBuilder.append("\"notes\":\"").append(rs.getString("notes") != null ? rs.getString("notes") : "").append("\",");
-                jsonBuilder.append("\"customerNotes\":\"").append(rs.getString("customer_notes") != null ? rs.getString("customer_notes") : "").append("\",");
+                // Remove customerNotes (not in schema)
+                // jsonBuilder.append("\"customerNotes\":\"").append(rs.getString("customer_notes") != null ? rs.getString("customer_notes") : "").append("\",");
                 jsonBuilder.append("\"branchName\":\"").append(rs.getString("branch_name") != null ? rs.getString("branch_name") : "").append("\",");
-                jsonBuilder.append("\"branchAddress\":\"").append(rs.getString("branch_address") != null ? rs.getString("branch_address") : "").append("\"");
+                jsonBuilder.append("\"branchAddress\":\"").append(rs.getString("branch_address") != null ? rs.getString("branch_address") : "").append("\",");
+                // Fetch used parts
+                partsStmt.setInt(1, jobId);
+                ResultSet partsRs = partsStmt.executeQuery();
+                jsonBuilder.append("\"usedParts\":[");
+                boolean firstPart = true;
+                while (partsRs.next()) {
+                    if (!firstPart) jsonBuilder.append(",");
+                    jsonBuilder.append("{");
+                    jsonBuilder.append("\"partName\":\"").append(partsRs.getString("part_name")).append("\",");
+                    jsonBuilder.append("\"quantityUsed\":").append(partsRs.getInt("quantity_used")).append(",");
+                    jsonBuilder.append("\"unitPrice\":").append(partsRs.getBigDecimal("unit_price") != null ? partsRs.getBigDecimal("unit_price") : "null").append(",");
+                    jsonBuilder.append("\"totalPrice\":").append(partsRs.getBigDecimal("total_price") != null ? partsRs.getBigDecimal("total_price") : "null").append(",");
+                    jsonBuilder.append("\"pricePerUnit\":").append(partsRs.getBigDecimal("price_per_unit") != null ? partsRs.getBigDecimal("price_per_unit") : "null");
+                    jsonBuilder.append("}");
+                    firstPart = false;
+                }
+                jsonBuilder.append("]");
                 jsonBuilder.append("}");
-                
                 return jsonBuilder.toString();
             } else {
-                    return "{\"error\":\"Job not found\"}";
-                }
+                return "{\"error\":\"Job not found\"}";
+            }
         } catch (SQLException e) {
             e.printStackTrace();
             return "{\"error\":\"Database error fetching job details\"}";

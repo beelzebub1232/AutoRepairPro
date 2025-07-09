@@ -336,8 +336,11 @@ function initializeJobManagement() {
                 openUpdateStatusModal(job);
             }
         }
-        if (e.target.classList.contains('view-details-btn')) {
-            const jobId = e.target.getAttribute('data-job-id');
+        // Fix: Use closest for details button
+        const detailsBtn = e.target.closest('.view-details-btn');
+        if (detailsBtn) {
+            const jobId = detailsBtn.getAttribute('data-job-id');
+            console.log('Details button clicked', jobId);
             viewJobDetails(jobId);
         }
         if (e.target.classList.contains('use-parts-btn')) {
@@ -468,14 +471,108 @@ document.getElementById('update-status-form').onsubmit = async function(e) {
 };
 
 function viewJobDetails(jobId) {
-    // Implementation for viewing job details
-    showNotification(`Viewing details for job #${jobId}`, 'info');
+    fetch(`/api/employee/jobs/${jobId}/details`)
+        .then(response => response.json())
+        .then(data => {
+            console.log('Job Details API response:', data);
+            if (data.error) {
+                showNotification(data.error, 'error');
+                return;
+            }
+            // Populate modal fields
+            document.getElementById('detail-job-id').textContent = data.jobId || '';
+            document.getElementById('detail-customer').textContent = data.customerName || '';
+            document.getElementById('detail-vehicle').textContent = data.vehicle || '';
+            document.getElementById('detail-vin').textContent = data.vin || '';
+            document.getElementById('detail-service').textContent = data.service || '';
+            document.getElementById('detail-service-description').textContent = data.serviceDescription || '';
+            document.getElementById('detail-service-price').textContent = data.totalCost !== undefined && data.totalCost !== null ? `₹${data.totalCost}` : '';
+            document.getElementById('detail-status').textContent = data.status || '';
+            document.getElementById('detail-booking-date').textContent = data.bookingDate ? new Date(data.bookingDate).toLocaleString() : '';
+            document.getElementById('detail-notes').textContent = data.notes || '';
+
+            // Populate used parts table
+            const partsBody = document.getElementById('used-parts-table-body');
+            let totalPartsCost = 0;
+            if (Array.isArray(data.usedParts) && data.usedParts.length > 0) {
+                partsBody.innerHTML = data.usedParts.map(part => {
+                    totalPartsCost += part.totalPrice ? parseFloat(part.totalPrice) : 0;
+                    return `<tr>
+                        <td>${part.partName || ''}</td>
+                        <td>${part.quantityUsed || 0}</td>
+                        <td>₹${part.unitPrice !== undefined && part.unitPrice !== null ? part.unitPrice : ''}</td>
+                        <td>₹${part.totalPrice !== undefined && part.totalPrice !== null ? part.totalPrice : ''}</td>
+                    </tr>`;
+                }).join('');
+            } else {
+                partsBody.innerHTML = `<tr><td colspan="4">No parts used for this job</td></tr>`;
+            }
+            document.getElementById('total-parts-cost').textContent = totalPartsCost.toFixed(2);
+
+            // Hide any other modals that might be open, except the one we're about to show
+            const modal = document.getElementById('job-details-modal');
+            document.querySelectorAll('.admin-modal.show, .modal.show').forEach(m => {
+                if (m !== modal) m.classList.remove('show');
+            });
+            document.body.style.overflow = '';
+
+            // Show the job details modal
+            if (modal) {
+                modal.classList.add('show');
+                document.body.style.overflow = 'hidden';
+            } else {
+                showNotification('Job details modal not found in DOM', 'error');
+            }
+        })
+        .catch(err => {
+            showNotification('Failed to load job details', 'error');
+            console.error('Error fetching job details:', err);
+        });
 }
 
+// Modal close logic
+['job-details-close', 'job-details-close-footer'].forEach(id => {
+    const btn = document.getElementById(id);
+    if (btn) {
+        btn.onclick = () => {
+            const modal = document.getElementById('job-details-modal');
+            if (modal) {
+                modal.classList.remove('show');
+                modal.style.display = '';
+            }
+            document.body.style.overflow = '';
+        };
+    }
+});
+
 function usePartsForJob(jobId) {
-    // Implementation for using parts in a job
-    showNotification(`Opening parts usage for job #${jobId}`, 'info');
+    document.getElementById('use-part-job-id').value = jobId;
+    document.getElementById('part-quantity').value = '';
+    document.getElementById('available-quantity').textContent = '0';
+
+    // Fetch available parts from backend
+    fetch('http://localhost:8080/api/admin/inventory')
+        .then(response => response.json())
+        .then(parts => {
+            const partSelect = document.getElementById('part-select');
+            partSelect.innerHTML = '<option value="">Choose a part...</option>';
+            parts.forEach(part => {
+                partSelect.innerHTML += `<option value="${part.id}" data-quantity="${part.quantity}">${part.partName} (Available: ${part.quantity})</option>`;
+            });
+        });
+
+    // Show the modal
+    document.getElementById('use-part-modal').classList.add('show');
+    document.body.style.overflow = 'hidden';
 }
+
+// Update available quantity when a part is selected
+// (Place this after the function definitions to ensure it runs after DOM is ready)
+document.getElementById('part-select').onchange = function() {
+    const selected = this.options[this.selectedIndex];
+    const available = selected.getAttribute('data-quantity') || '0';
+    document.getElementById('available-quantity').textContent = available;
+};
 
 // Inventory Management
 function initializeInventoryModule() {
@@ -584,6 +681,7 @@ function closeUsePartModal() {
 
 document.getElementById('use-part-form').onsubmit = async function(e) {
     e.preventDefault();
+    const jobId = document.getElementById('use-part-job-id').value;
     const partId = document.getElementById('part-select').value;
     const quantityToUse = parseInt(document.getElementById('part-quantity').value, 10);
     const available = parseInt(document.getElementById('available-quantity').textContent, 10);
@@ -595,10 +693,29 @@ document.getElementById('use-part-form').onsubmit = async function(e) {
         alert('Cannot use more than available quantity.');
         return;
     }
-    // Simulate API call to update inventory
-    showNotification('Part used successfully!', 'success');
-    closeUsePartModal();
-    // Optionally, refresh inventory data here
+
+    // Actual API call to update inventory for the job
+    try {
+        const response = await fetch(`/api/employee/jobs/${jobId}/inventory`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                inventoryId: partId,
+                quantityUsed: quantityToUse
+            })
+        });
+        if (response.ok) {
+            showNotification('Part used successfully!', 'success');
+            closeUsePartModal();
+            // Refresh inventory data
+            loadInventoryData();
+        } else {
+            const error = await response.json();
+            showNotification(error.error || 'Failed to use part', 'error');
+        }
+    } catch (err) {
+        showNotification('Failed to use part', 'error');
+    }
 };
 
 // Time Tracking

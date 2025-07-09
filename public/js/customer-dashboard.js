@@ -675,22 +675,40 @@ function populateJobDetailsModal(job) {
 
 async function showPaymentModal(jobId) {
     const userId = sessionStorage.getItem('userId');
-    
     try {
+        // Fetch job details as before
         const response = await fetch(`http://localhost:8080/api/customer/jobs/${userId}`);
         if (!response.ok) throw new Error('Failed to fetch job details');
-        
         const jobs = await response.json();
         const job = jobs.find(j => j.jobId === jobId);
-        
         if (job && job.status === 'Invoiced') {
+            // Fetch invoice details for this job
+            let invoice = null;
+            try {
+                const invResp = await fetch(`http://localhost:8080/api/customer/invoice/${jobId}`);
+                if (invResp.ok) {
+                    const invData = await invResp.json();
+                    invoice = Array.isArray(invData) ? invData[0] : invData;
+                }
+            } catch (e) { /* ignore, fallback below */ }
+            // Populate modal fields
             document.getElementById('payment-job-id').textContent = job.jobId;
             document.getElementById('payment-service').textContent = job.service;
-            document.getElementById('payment-amount').textContent = '₹' + job.totalCost;
-            
+            // Show invoice details if available
+            if (invoice) {
+                document.getElementById('payment-amount').textContent = '₹' + (invoice.totalAmount ?? invoice.amount ?? job.totalCost);
+                // Optionally show invoice number, tax, etc. if you add fields in the modal
+                if (document.getElementById('payment-invoice-number')) {
+                    document.getElementById('payment-invoice-number').textContent = invoice.invoiceNumber || '';
+                }
+                if (document.getElementById('payment-tax-amount')) {
+                    document.getElementById('payment-tax-amount').textContent = invoice.taxAmount ? '₹' + invoice.taxAmount : '';
+                }
+            } else {
+                document.getElementById('payment-amount').textContent = '₹' + job.totalCost;
+            }
             // Store job ID for payment processing
             document.getElementById('process-payment-btn').setAttribute('data-job-id', jobId);
-            
             showModal(document.getElementById('payment-modal'));
         } else {
             showNotification('Job is not ready for payment', 'error');

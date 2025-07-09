@@ -291,6 +291,56 @@ public class AdminHandler {
             pstmt.setInt(5, jobId);
             int rows = pstmt.executeUpdate();
             if (rows > 0) {
+                // --- INVOICE CREATION LOGIC ---
+                if ("Invoiced".equalsIgnoreCase(status)) {
+                    // Check if invoice already exists for this job
+                    String checkInvoiceSql = "SELECT id FROM invoices WHERE job_id = ?";
+                    try (PreparedStatement checkStmt = conn.prepareStatement(checkInvoiceSql)) {
+                        checkStmt.setInt(1, jobId);
+                        ResultSet rs = checkStmt.executeQuery();
+                        if (!rs.next()) {
+                            // Calculate total parts cost
+                            String partsSql = "SELECT SUM(total_price) FROM job_inventory WHERE job_id = ?";
+                            double partsCost = 0.0;
+                            try (PreparedStatement partsStmt = conn.prepareStatement(partsSql)) {
+                                partsStmt.setInt(1, jobId);
+                                ResultSet partsRs = partsStmt.executeQuery();
+                                if (partsRs.next()) {
+                                    partsCost = partsRs.getDouble(1);
+                                    if (partsRs.wasNull()) partsCost = 0.0;
+                                }
+                            }
+                            // Get job total_cost (labor/service)
+                            String jobSql = "SELECT total_cost FROM jobs WHERE id = ?";
+                            double jobCost = 0.0;
+                            try (PreparedStatement jobStmt = conn.prepareStatement(jobSql)) {
+                                jobStmt.setInt(1, jobId);
+                                ResultSet jobRs = jobStmt.executeQuery();
+                                if (jobRs.next()) {
+                                    jobCost = jobRs.getDouble(1);
+                                    if (jobRs.wasNull()) {
+                                        System.err.println("Warning: total_cost is NULL for job id " + jobId + ". Setting to 0.0 for invoice.");
+                                        jobCost = 0.0;
+                                    }
+                                }
+                            }
+                            double totalAmount = partsCost + jobCost;
+                            // Insert invoice
+                            String insertInvoiceSql = "INSERT INTO invoices (job_id, invoice_number, amount, tax_amount, total_amount, status, due_date) VALUES (?, ?, ?, ?, ?, ?, DATE_ADD(NOW(), INTERVAL 14 DAY))";
+                            String invoiceNumber = "INV-" + System.currentTimeMillis();
+                            try (PreparedStatement invStmt = conn.prepareStatement(insertInvoiceSql)) {
+                                invStmt.setInt(1, jobId);
+                                invStmt.setString(2, invoiceNumber);
+                                invStmt.setDouble(3, totalAmount); // amount
+                                invStmt.setDouble(4, 0); // tax_amount (set to 0 for now)
+                                invStmt.setDouble(5, totalAmount); // total_amount
+                                invStmt.setString(6, "Sent"); // status
+                                invStmt.executeUpdate();
+                            }
+                        }
+                    }
+                }
+                // --- END INVOICE CREATION LOGIC ---
                 return createSuccessResponse("Job updated successfully");
             } else {
                 return createErrorResponse("Job not found or could not be updated", 404);

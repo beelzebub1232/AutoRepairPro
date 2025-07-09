@@ -373,6 +373,43 @@
     color: var(--secondary-900);
 }
 
+/* Ensure all admin modals are hidden by default */
+.admin-modal {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0,0,0,0.4);
+  z-index: 1000;
+  align-items: center;
+  justify-content: center;
+  overflow-y: auto;
+}
+
+/* Show modal when .show class is present */
+.admin-modal.show {
+  display: flex;
+}
+
+/* Modal content styling for centering and appearance */
+.admin-modal-content {
+  background: #fff;
+  border-radius: 18px;
+  max-width: 700px;
+  width: 100%;
+  margin: 40px auto;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.25);
+  padding: 0;
+  position: relative;
+}
+
+/* Optional: prevent background scroll when modal is open */
+body.modal-open {
+  overflow: hidden;
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
     .modal-content {

@@ -28,6 +28,8 @@ public class CustomerHandler {
                     return handleBookings(method, requestBody);
                 case "pay":
                     return handlePayment(method, requestBody);
+                case "invoice":
+                    return handleInvoice(pathParts, method);
                 case "branches":
                     return getBranches();
                 case "profile":
@@ -204,10 +206,48 @@ public class CustomerHandler {
         if (!"POST".equals(method)) {
             return createErrorResponse("Method not allowed", 405);
         }
-        
         try (Connection conn = DatabaseConnector.getConnection()) {
             // Parse request body and process payment
-            // Implementation would parse JSON and insert into database
+            Map<String, Object> data = parseJson(requestBody);
+            if (data == null) {
+                return createErrorResponse("Invalid JSON body", 400);
+            }
+            Object jobIdObj = data.get("jobId");
+            String paymentMethod = (String) data.getOrDefault("paymentMethod", "");
+            if (jobIdObj == null) {
+                return createErrorResponse("Missing jobId", 400);
+            }
+            Integer jobId;
+            try {
+                jobId = Integer.parseInt(jobIdObj.toString());
+            } catch (Exception e) {
+                return createErrorResponse("Invalid jobId", 400);
+            }
+            // Find the invoice for this job
+            String findInvoiceSql = "SELECT id FROM invoices WHERE job_id = ?";
+            Integer invoiceId = null;
+            try (PreparedStatement findStmt = conn.prepareStatement(findInvoiceSql)) {
+                findStmt.setInt(1, jobId);
+                ResultSet rs = findStmt.executeQuery();
+                if (rs.next()) {
+                    invoiceId = rs.getInt("id");
+                } else {
+                    return createErrorResponse("Invoice not found for job", 404);
+                }
+            }
+            // Update invoice status to 'Paid'
+            String updateInvoiceSql = "UPDATE invoices SET status = 'Paid' WHERE id = ?";
+            try (PreparedStatement updateStmt = conn.prepareStatement(updateInvoiceSql)) {
+                updateStmt.setInt(1, invoiceId);
+                updateStmt.executeUpdate();
+            }
+            // Optionally, record payment in a payments table (if exists)
+            // Optionally, update job status to 'Paid'
+            String updateJobSql = "UPDATE jobs SET status = 'Paid' WHERE id = ?";
+            try (PreparedStatement updateJobStmt = conn.prepareStatement(updateJobSql)) {
+                updateJobStmt.setInt(1, jobId);
+                updateJobStmt.executeUpdate();
+            }
             return createSuccessResponse("Payment processed successfully");
         } catch (SQLException e) {
             e.printStackTrace();
@@ -439,6 +479,46 @@ public class CustomerHandler {
         } catch (SQLException e) {
             e.printStackTrace();
             return createErrorResponse("Database error booking appointment", 500);
+        }
+    }
+
+    // --- NEW: Fetch invoice details for a job ---
+    private String handleInvoice(String[] pathParts, String method) {
+        if (!"GET".equals(method)) {
+            return createErrorResponse("Method not allowed", 405);
+        }
+        if (pathParts.length < 5) {
+            return createErrorResponse("Job ID not provided", 400);
+        }
+        int jobId;
+        try {
+            jobId = Integer.parseInt(pathParts[4]);
+        } catch (NumberFormatException e) {
+            return createErrorResponse("Invalid job ID format", 400);
+        }
+        try (Connection conn = DatabaseConnector.getConnection()) {
+            String sql = "SELECT id, invoice_number, amount, tax_amount, total_amount, status, due_date, created_at FROM invoices WHERE job_id = ?";
+            try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+                pstmt.setInt(1, jobId);
+                ResultSet rs = pstmt.executeQuery();
+                if (rs.next()) {
+                    Map<String, Object> invoice = new HashMap<>();
+                    invoice.put("id", rs.getInt("id"));
+                    invoice.put("invoiceNumber", rs.getString("invoice_number"));
+                    invoice.put("amount", rs.getBigDecimal("amount"));
+                    invoice.put("taxAmount", rs.getBigDecimal("tax_amount"));
+                    invoice.put("totalAmount", rs.getBigDecimal("total_amount"));
+                    invoice.put("status", rs.getString("status"));
+                    invoice.put("dueDate", rs.getTimestamp("due_date") != null ? rs.getTimestamp("due_date").toString() : null);
+                    invoice.put("createdAt", rs.getTimestamp("created_at") != null ? rs.getTimestamp("created_at").toString() : null);
+                    return convertToJson(Collections.singletonList(invoice));
+                } else {
+                    return createErrorResponse("Invoice not found for job", 404);
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return createErrorResponse("Database error fetching invoice", 500);
         }
     }
 
