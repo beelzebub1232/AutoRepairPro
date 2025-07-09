@@ -197,6 +197,17 @@ CREATE TABLE performance_metrics (
     FOREIGN KEY (employee_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
+-- Table for tracking parts used in each job
+CREATE TABLE IF NOT EXISTS used_parts (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    job_id INT NOT NULL,
+    part_id INT NOT NULL,
+    quantity_used INT NOT NULL,
+    -- Optionally, add a timestamp or notes field
+    FOREIGN KEY (job_id) REFERENCES jobs(id) ON DELETE CASCADE,
+    FOREIGN KEY (part_id) REFERENCES parts(id) ON DELETE CASCADE
+);
+
 -- Insert essential system settings
 INSERT INTO system_settings (setting_key, setting_value, setting_type, description, is_public) VALUES
 ('company_name', 'RepairHub Pro', 'string', 'Company name displayed throughout the application', true),

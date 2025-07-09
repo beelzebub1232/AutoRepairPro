@@ -172,8 +172,8 @@ public class AdminHandler {
     
     private String getAllJobs(Connection conn) throws SQLException {
         String sql = "SELECT j.id as jobId, j.status, j.booking_date, j.total_cost, j.notes, " +
-                    "u.full_name as customerName, v.make, v.model, v.year, " +
-                    "s.service_name, b.name as branchName, " +
+                    "u.full_name as customerName, v.make, v.model, v.year, v.vin, " +
+                    "s.service_name, s.description as serviceDescription, b.name as branchName, " +
                     "e.full_name as employeeName, " +
                     "j.assigned_employee_id " +
                     "FROM jobs j " +
@@ -211,12 +211,34 @@ public class AdminHandler {
                 String vehicle = (make != null ? make : "") + " " + (model != null ? model : "") + " (" + year + ")";
                 job.put("vehicle", vehicle.trim());
                 
+                job.put("vin", rs.getString("vin"));
+                
                 job.put("service", rs.getString("service_name"));
+                job.put("serviceDescription", rs.getString("serviceDescription"));
                 job.put("branchName", rs.getString("branchName"));
                 job.put("employeeName", rs.getString("employeeName"));
                 job.put("assignedEmployeeId", rs.getObject("assigned_employee_id"));
+                // Fetch used parts for this job
+                List<Map<String, Object>> parts = new ArrayList<>();
+                String partsSql = "SELECT p.part_name, up.quantity_used, p.price_per_unit " +
+                                 "FROM used_parts up " +
+                                 "JOIN parts p ON up.part_id = p.id " +
+                                 "WHERE up.job_id = ?";
+                try (PreparedStatement partsStmt = conn.prepareStatement(partsSql)) {
+                    partsStmt.setInt(1, rs.getInt("jobId"));
+                    try (ResultSet prs = partsStmt.executeQuery()) {
+                        while (prs.next()) {
+                            Map<String, Object> part = new HashMap<>();
+                            part.put("partName", prs.getString("part_name"));
+                            part.put("quantityUsed", prs.getInt("quantity_used"));
+                            part.put("pricePerUnit", prs.getBigDecimal("price_per_unit"));
+                            parts.add(part);
+                        }
+                    }
+                }
+                job.put("parts", parts);
                 jobs.add(job);
-        }
+            }
         }
         
         return convertToJson(jobs);

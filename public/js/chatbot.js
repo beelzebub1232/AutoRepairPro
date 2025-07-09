@@ -320,7 +320,7 @@ class ModernChatbot {
             
             let servicesList = "Here are our available services:\n\n";
             services.slice(0, 5).forEach(service => {
-                servicesList += `• ${service.serviceName} - $${service.price}\n`;
+                servicesList += `• ${service.serviceName} - ₹${service.price}\n`;
             });
             
             if (services.length > 5) {
