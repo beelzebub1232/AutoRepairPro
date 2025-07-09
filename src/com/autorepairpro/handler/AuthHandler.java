@@ -74,9 +74,15 @@ public class AuthHandler {
         String username = params.get("username");
         String password = params.get("password");
         String fullName = params.get("fullName");
+        String email = params.get("email");
+        String role = params.get("role");
         
-        if (username == null || password == null || fullName == null) {
-            return "{\"error\":\"Username, password, and full name are required\"}";
+        if (username == null || password == null || fullName == null || email == null || role == null) {
+            return "{\"error\":\"Username, password, full name, email, and role are required\"}";
+        }
+        // Validate role
+        if (!role.equals("customer") && !role.equals("employee")) {
+            return "{\"error\":\"Invalid role. Must be 'customer' or 'employee'.\"}";
         }
         
         // Check if username already exists
@@ -95,14 +101,16 @@ public class AuthHandler {
             return "{\"error\":\"Database error checking username\"}";
         }
         
-        // Insert new customer
-        String sql = "INSERT INTO users (username, password, full_name, role) VALUES (?, ?, ?, 'customer')";
+        // Insert new user with dynamic role
+        String sql = "INSERT INTO users (username, password, full_name, email, role) VALUES (?, ?, ?, ?, ?)";
         try (Connection conn = DatabaseConnector.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             
             pstmt.setString(1, username);
             pstmt.setString(2, password); // In production, hash this password
             pstmt.setString(3, fullName);
+            pstmt.setString(4, email);
+            pstmt.setString(5, role);
             
             int affectedRows = pstmt.executeUpdate();
             if (affectedRows > 0) {
@@ -110,8 +118,8 @@ public class AuthHandler {
                 if (generatedKeys.next()) {
                     int userId = generatedKeys.getInt(1);
                     return String.format(
-                        "{\"message\":\"Registration successful\", \"userId\":%d, \"role\":\"customer\", \"fullName\":\"%s\"}",
-                        userId, fullName);
+                        "{\"message\":\"Registration successful\", \"userId\":%d, \"role\":\"%s\", \"fullName\":\"%s\"}",
+                        userId, role, fullName);
                 }
             }
             return "{\"error\":\"Failed to register user\"}";

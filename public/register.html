@@ -73,6 +73,18 @@
                             <input type="text" id="fullname" name="fullname" class="form-input" required placeholder="Enter your full name">
                         </div>
                     </div>
+                    <div class="form-group">
+                        <label for="email" class="form-label">Email</label>
+                        <div class="input-group">
+                            <div class="input-icon">
+                                <svg class="icon" viewBox="0 0 24 24">
+                                    <rect x="2" y="5" width="20" height="14" rx="2"/>
+                                    <polyline points="2,7 12,13 22,7"/>
+                                </svg>
+                            </div>
+                            <input type="email" id="email" name="email" class="form-input" required placeholder="Enter your email address">
+                        </div>
+                    </div>
                     
                     <div class="form-group">
                         <label for="username" class="form-label">Username</label>
@@ -113,6 +125,23 @@
                                 </svg>
                             </div>
                             <input type="password" id="confirm-password" name="confirm-password" class="form-input" required placeholder="Confirm your password">
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="role" class="form-label">Register as</label>
+                        <div class="input-group">
+                            <div class="input-icon">
+                                <svg class="icon" viewBox="0 0 24 24">
+                                    <circle cx="12" cy="12" r="10"/>
+                                    <path d="M12 16v-4"/>
+                                    <path d="M12 8h.01"/>
+                                </svg>
+                            </div>
+                            <select id="role" name="role" class="form-input" required>
+                                <option value="customer">Customer</option>
+                                <option value="employee">Employee</option>
+                            </select>
                         </div>
                     </div>
                     

@@ -111,9 +111,21 @@
     box-shadow: var(--shadow-2xl);
     width: 100%;
     max-width: 400px;
+    max-height: 90vh;
+    overflow-y: auto;
+    margin: var(--space-4) 0;
     backdrop-filter: blur(10px);
     border: 1px solid rgba(255, 255, 255, 0.2);
     animation: slideUp 0.6s ease;
+    /* Hide scrollbar for Chrome, Safari and Opera */
+}
+.auth-container::-webkit-scrollbar {
+    display: none;
+}
+/* Hide scrollbar for Firefox */
+.auth-container {
+    scrollbar-width: none;
+    -ms-overflow-style: none; /* IE and Edge */
 }
 
 .auth-header {
@@ -281,6 +293,17 @@
     
     .auth-container {
         padding: var(--space-6);
+        max-height: 90vh;
+        overflow-y: auto;
+        margin: var(--space-2) 0;
+        /* Hide scrollbar for Chrome, Safari and Opera */
+    }
+    .auth-container::-webkit-scrollbar {
+        display: none;
+    }
+    .auth-container {
+        scrollbar-width: none;
+        -ms-overflow-style: none;
     }
     
     .brand-logo h1 {

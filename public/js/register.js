@@ -10,13 +10,22 @@ document.addEventListener('DOMContentLoaded', () => {
         errorMessage.textContent = '';
 
         const fullName = registerForm.fullname.value.trim();
+        const email = registerForm.email.value.trim();
         const username = registerForm.username.value.trim();
         const password = registerForm.password.value;
         const confirmPassword = registerForm['confirm-password'].value;
+        const role = registerForm.role.value;
 
         // Client-side validation
-        if (!fullName || !username || !password) {
+        if (!fullName || !email || !username || !password) {
             showError('All fields are required.');
+            return;
+        }
+
+        // Email format validation
+        const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailPattern.test(email)) {
+            showError('Please enter a valid email address.');
             return;
         }
 
@@ -44,8 +53,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 },
                 body: JSON.stringify({ 
                     fullName: fullName,
+                    email: email,
                     username: username, 
-                    password: password 
+                    password: password,
+                    role: role
                 }),
             });
 
