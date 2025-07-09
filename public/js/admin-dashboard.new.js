@@ -126,9 +126,7 @@ function loadTabData(tab) {
         case 'invoices':
             loadInvoicesData(contentArea);
             break;
-        case 'reports':
-            loadReportsData(contentArea);
-            break;
+
         case 'settings':
             loadSettingsData(contentArea);
             break;
@@ -204,7 +202,7 @@ function renderOverviewStatusChart(statusCounts) {
                 label: 'Jobs',
                 data: Object.values(statusCounts),
                 backgroundColor: [
-                    '#e0f7fa', '#fff3e0', '#e8f5e9', '#fbe9e7', '#ede7f6', '#f3e5f5', '#ffebee', '#e9ecef'
+                    '#3B82F6', '#F59E0B', '#10B981', '#EF4444', '#8B5CF6', '#EC4899', '#06B6D4', '#84CC16'
                 ],
             }]
         };
@@ -479,106 +477,7 @@ function loadInvoicesData(contentArea) {
         });
 }
 
-async function loadReportsData(contentArea) {
-    contentArea.innerHTML = `
-        <div class="page-header">
-            <div>
-                <h1 class="page-title">Reports & Analytics</h1>
-                <p class="page-subtitle">Business insights and performance metrics.</p>
-            </div>
-        </div>
-        <div class="metrics-grid" id="reports-metrics-grid">
-            <div class="metric-card" id="metric-total-revenue"><div class="metric-title">Total Revenue (6mo)</div><div class="metric-value loading-skeleton">--</div></div>
-            <div class="metric-card" id="metric-total-jobs"><div class="metric-title">Total Jobs (6mo)</div><div class="metric-value loading-skeleton">--</div></div>
-            <div class="metric-card" id="metric-top-employee"><div class="metric-title">Top Employee</div><div class="metric-value loading-skeleton">--</div></div>
-            <div class="metric-card" id="metric-new-customers"><div class="metric-title">New Customers (6mo)</div><div class="metric-value loading-skeleton">--</div></div>
-        </div>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div class="card">
-                <div class="card-header"><h4 class="card-title">Revenue Trend (Last 6 Months)</h4></div>
-                <div class="card-body"><canvas id="revenue-trend-chart" height="120"></canvas></div>
-            </div>
-            <div class="card">
-                <div class="card-header"><h4 class="card-title">Employee Performance</h4></div>
-                <div class="card-body"><canvas id="employee-performance-chart" height="120"></canvas></div>
-            </div>
-            <div class="card">
-                <div class="card-header"><h4 class="card-title">New Customer Activity</h4></div>
-                <div class="card-body"><canvas id="customer-activity-chart" height="120"></canvas></div>
-            </div>
-        </div>
-    `;
 
-    await new Promise(r => setTimeout(r, 0));
-
-    const setMetric = (id, value) => {
-        const el = document.querySelector(id);
-        if (el && el.querySelector('.metric-value')) {
-            const valueEl = el.querySelector('.metric-value');
-            valueEl.textContent = value;
-            valueEl.classList.remove('loading-skeleton');
-        }
-    };
-    setMetric('#metric-total-revenue', '--');
-    setMetric('#metric-total-jobs', '--');
-    setMetric('#metric-top-employee', '--');
-    setMetric('#metric-new-customers', '--');
-
-    try {
-        // Revenue
-        const revenueResponse = await fetch('/api/admin/reports/revenue');
-        const revenueData = await revenueResponse.json();
-        let totalRevenue = 0;
-        let totalJobs = 0;
-        let months = [];
-        let revenueVals = [];
-        if (revenueResponse.ok && Array.isArray(revenueData)) {
-            months = revenueData.map(r => r.month);
-            revenueVals = revenueData.map(r => parseFloat(r.totalRevenue || 0));
-            totalRevenue = revenueVals.reduce((a, b) => a + b, 0);
-            totalJobs = revenueData.reduce((a, b) => a + (b.totalJobs || 0), 0);
-        }
-        setMetric('#metric-total-revenue', `₹${totalRevenue.toLocaleString()}`);
-        setMetric('#metric-total-jobs', totalJobs ? totalJobs : '--');
-
-        // Employee Performance
-        const empPerfResponse = await fetch('/api/admin/reports/employee-performance');
-        const empPerfData = await empPerfResponse.json();
-        let topEmployee = '--';
-        let empNames = [];
-        let empJobs = [];
-        if (empPerfResponse.ok && Array.isArray(empPerfData) && empPerfData.length > 0) {
-            empNames = empPerfData.map(e => e.employeeName);
-            empJobs = empPerfData.map(e => e.jobsCompleted);
-            topEmployee = empPerfData[0].employeeName;
-        }
-        setMetric('#metric-top-employee', topEmployee);
-
-        // Customer Activity
-        const custActivityResponse = await fetch('/api/admin/reports/customer-activity');
-        const custActivityData = await custActivityResponse.json();
-        let custMonths = [];
-        let custCounts = [];
-        let totalNewCustomers = 0;
-        if (custActivityResponse.ok && Array.isArray(custActivityData)) {
-            custMonths = custActivityData.map(c => c.month);
-            custCounts = custActivityData.map(c => c.newCustomers);
-            totalNewCustomers = custCounts.reduce((a, b) => a + b, 0);
-        }
-        setMetric('#metric-new-customers', totalNewCustomers);
-
-        // Render charts
-        renderRevenueTrendChart(months, revenueVals);
-        renderEmployeePerformanceChart(empNames, empJobs);
-        renderCustomerActivityChart(custMonths, custCounts);
-    } catch (error) {
-        setMetric('#metric-total-revenue', '--');
-        setMetric('#metric-total-jobs', '--');
-        setMetric('#metric-top-employee', '--');
-        setMetric('#metric-new-customers', '--');
-        showAdminNotification('Failed to load some report data.', 'error');
-    }
-}
 
 function loadSettingsData(contentArea) {
     contentArea.innerHTML = `<div class="card" id="settings-card">
@@ -1925,96 +1824,4 @@ async function deleteBranch(branchId, modalId) {
     }
 }
 
-// --- Reports Chart Rendering ---
-function getColorPalette(count) {
-    // Vibrant color palette
-    const palette = [
-        '#2563eb', '#10b981', '#f59e42', '#ef4444', '#a21caf', '#eab308', '#0ea5e9', '#f472b6', '#22d3ee', '#6366f1',
-        '#84cc16', '#f43f5e', '#facc15', '#14b8a6', '#8b5cf6', '#e11d48', '#f97316', '#4ade80', '#7c3aed', '#fbbf24'
-    ];
-    // Repeat if not enough colors
-    return Array.from({length: count}, (_, i) => palette[i % palette.length]);
-}
 
-function renderRevenueTrendChart(labels, data) {
-    const ctx = document.getElementById('revenue-trend-chart');
-    if (!ctx || !window.Chart) return;
-    if (window.revenueTrendChart) window.revenueTrendChart.destroy();
-    const gradient = ctx.getContext('2d').createLinearGradient(0, 0, 0, 200);
-    gradient.addColorStop(0, '#2563eb');
-    gradient.addColorStop(1, 'rgba(37,99,235,0.05)');
-    window.revenueTrendChart = new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels,
-            datasets: [{
-                label: 'Revenue',
-                data,
-                borderColor: '#2563eb',
-                backgroundColor: gradient,
-                fill: true,
-                tension: 0.4,
-                pointRadius: 5,
-                pointBackgroundColor: '#2563eb',
-                pointBorderWidth: 2,
-                pointBorderColor: '#fff',
-            }]
-        },
-        options: {
-            plugins: { legend: { display: true }, tooltip: { enabled: true } },
-            animation: { duration: 1200, easing: 'easeOutQuart' },
-            scales: { y: { beginAtZero: true, ticks: { callback: v => '₹' + v } } }
-        }
-    });
-}
-
-function renderEmployeePerformanceChart(labels, data) {
-    const ctx = document.getElementById('employee-performance-chart');
-    if (!ctx || !window.Chart) return;
-    if (window.employeePerformanceChart) window.employeePerformanceChart.destroy();
-    window.employeePerformanceChart = new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels,
-            datasets: [{
-                label: 'Jobs Completed',
-                data,
-                backgroundColor: getColorPalette(labels.length),
-                borderRadius: 8,
-                borderSkipped: false,
-            }]
-        },
-        options: {
-            plugins: { legend: { display: false }, tooltip: { enabled: true } },
-            animation: { duration: 1200, easing: 'easeOutQuart' },
-            scales: { y: { beginAtZero: true } }
-        }
-    });
-}
-
-function renderCustomerActivityChart(labels, data) {
-    const ctx = document.getElementById('customer-activity-chart');
-    if (!ctx || !window.Chart) return;
-    if (window.customerActivityChart) window.customerActivityChart.destroy();
-    const gradient = ctx.getContext('2d').createLinearGradient(0, 0, 0, 200);
-    gradient.addColorStop(0, '#10b981');
-    gradient.addColorStop(1, 'rgba(16,185,129,0.05)');
-    window.customerActivityChart = new Chart(ctx, {
-        type: 'bar', // Use histogram style (bar) for new customers
-        data: {
-            labels,
-            datasets: [{
-                label: 'New Customers',
-                data,
-                backgroundColor: gradient,
-                borderRadius: 8,
-                borderSkipped: false,
-            }]
-        },
-        options: {
-            plugins: { legend: { display: false }, tooltip: { enabled: true } },
-            animation: { duration: 1200, easing: 'easeOutQuart' },
-            scales: { y: { beginAtZero: true } }
-        }
-    });
-}

@@ -53,8 +53,7 @@ public class AdminHandler {
                     return handleInvoices(method, requestBody);
                 case "payments":
                     return handlePayments(method, requestBody);
-                case "reports":
-                    return handleReports(pathParts, method);
+
                 case "settings":
                     return handleSettings(method, requestBody);
                 case "performance":
@@ -1006,135 +1005,7 @@ public class AdminHandler {
         }
     }
     
-    private String handleReports(String[] pathParts, String method) {
-        // Debug log for path parts
-        System.out.println("handleReports pathParts: " + java.util.Arrays.toString(pathParts));
-        if (pathParts.length < 5) {
-            return createErrorResponse("Report type not specified", 400);
-        }
-        String reportType = pathParts[4];
-        Connection conn = null;
-        try {
-            conn = DatabaseConnector.getConnection();
-            switch (reportType) {
-                case "revenue":
-                    return getRevenueReport(conn);
-                case "part-usage":
-                    return getPartUsageReport(conn);
-                case "employee-performance":
-                    return getEmployeePerformanceReport(conn);
-                case "customer-activity":
-                    return getCustomerActivityReport(conn);
-                default:
-                    return createErrorResponse("Report type not found", 404);
-            }
-        } catch (SQLException e) {
-            e.printStackTrace();
-            return createErrorResponse("Database error generating report", 500);
-        } finally {
-            DatabaseConnector.closeConnection(conn);
-        }
-    }
-    
-    private String getRevenueReport(Connection conn) throws SQLException {
-        String sql = "SELECT DATE_FORMAT(i.created_at, '%Y-%m') as month, " +
-                    "COALESCE(SUM(i.total_amount), 0) as totalRevenue " +
-                    "FROM invoices i " +
-                    "WHERE i.status = 'Paid' " +
-                    "AND i.created_at >= DATE_SUB(NOW(), INTERVAL 6 MONTH) " +
-                    "GROUP BY DATE_FORMAT(i.created_at, '%Y-%m') " +
-                    "ORDER BY month";
-        
-        List<Map<String, Object>> revenue = new ArrayList<>();
-        try (PreparedStatement pstmt = conn.prepareStatement(sql);
-             ResultSet rs = pstmt.executeQuery()) {
-            
-            while (rs.next()) {
-                Map<String, Object> month = new HashMap<>();
-                month.put("month", rs.getString("month"));
-                month.put("totalRevenue", rs.getBigDecimal("totalRevenue"));
-                revenue.add(month);
-            }
-        }
-        
-        return convertToJson(revenue);
-    }
-    
-    private String getPartUsageReport(Connection conn) throws SQLException {
-        String sql = "SELECT i.part_name, COALESCE(SUM(ji.quantity_used), 0) as totalUsed " +
-                    "FROM inventory i " +
-                    "LEFT JOIN job_inventory ji ON i.id = ji.inventory_id " +
-                    "WHERE i.is_active = true " +
-                    "GROUP BY i.id, i.part_name " +
-                    "ORDER BY totalUsed DESC " +
-                    "LIMIT 10";
-        
-        List<Map<String, Object>> usage = new ArrayList<>();
-        try (PreparedStatement pstmt = conn.prepareStatement(sql);
-             ResultSet rs = pstmt.executeQuery()) {
-            
-            while (rs.next()) {
-                Map<String, Object> part = new HashMap<>();
-                part.put("partName", rs.getString("part_name"));
-                part.put("totalUsed", rs.getInt("totalUsed"));
-                usage.add(part);
-            }
-        }
-        
-        return convertToJson(usage);
-    }
-    
-    private String getEmployeePerformanceReport(Connection conn) throws SQLException {
-        String sql = "SELECT u.full_name, " +
-                    "COUNT(j.id) as jobsCompleted, " +
-                    "COALESCE(AVG(pm.metric_value), 0) as avgRating " +
-                    "FROM users u " +
-                    "LEFT JOIN jobs j ON u.id = j.assigned_employee_id AND j.status = 'Completed' " +
-                    "LEFT JOIN performance_metrics pm ON u.id = pm.employee_id AND pm.metric_type = 'customer_rating' " +
-                    "WHERE u.role = 'employee' AND u.is_active = true " +
-                    "GROUP BY u.id, u.full_name " +
-                    "ORDER BY jobsCompleted DESC";
-        
-        List<Map<String, Object>> performance = new ArrayList<>();
-        try (PreparedStatement pstmt = conn.prepareStatement(sql);
-             ResultSet rs = pstmt.executeQuery()) {
-            
-            while (rs.next()) {
-                Map<String, Object> employee = new HashMap<>();
-                employee.put("employeeName", rs.getString("full_name"));
-                employee.put("jobsCompleted", rs.getInt("jobsCompleted"));
-                employee.put("avgRating", rs.getBigDecimal("avgRating"));
-                performance.add(employee);
-            }
-        }
-        
-        return convertToJson(performance);
-                }
-    
-    private String getCustomerActivityReport(Connection conn) throws SQLException {
-        String sql = "SELECT DATE_FORMAT(u.created_at, '%Y-%m') as month, " +
-                    "COUNT(*) as newCustomers " +
-                    "FROM users u " +
-                    "WHERE u.role = 'customer' " +
-                    "AND u.created_at >= DATE_SUB(NOW(), INTERVAL 6 MONTH) " +
-                    "GROUP BY DATE_FORMAT(u.created_at, '%Y-%m') " +
-                    "ORDER BY month";
-        
-        List<Map<String, Object>> activity = new ArrayList<>();
-        try (PreparedStatement pstmt = conn.prepareStatement(sql);
-             ResultSet rs = pstmt.executeQuery()) {
-            
-            while (rs.next()) {
-                Map<String, Object> month = new HashMap<>();
-                month.put("month", rs.getString("month"));
-                month.put("newCustomers", rs.getInt("newCustomers"));
-                month.put("returningCustomers", 0); // Would need more complex logic for returning customers
-                activity.add(month);
-            }
-        }
-        
-        return convertToJson(activity);
-    }
+
     
     private String handleSettings(String method, String requestBody) {
         Connection conn = null;

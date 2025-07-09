@@ -454,7 +454,7 @@ public class EmployeeHandler {
     private String getEmployeeStats(int employeeId) {
         String sql = "SELECT " +
                      "COUNT(*) as totalJobs, " +
-                     "SUM(CASE WHEN status = 'Completed' THEN 1 ELSE 0 END) as completedJobs, " +
+                     "SUM(CASE WHEN status IN ('Completed', 'Invoiced', 'Paid') THEN 1 ELSE 0 END) as completedJobs, " +
                      "SUM(CASE WHEN status = 'In Progress' THEN 1 ELSE 0 END) as activeJobs, " +
                      "SUM(CASE WHEN status = 'Booked' THEN 1 ELSE 0 END) as bookedJobs, " +
                      "AVG(CASE WHEN actual_completion_date IS NOT NULL THEN TIMESTAMPDIFF(MINUTE, booking_date, actual_completion_date) END) as avgCompletionTime " +

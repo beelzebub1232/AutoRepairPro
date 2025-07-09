@@ -176,6 +176,11 @@ function initializeJobManagement() {
             // Instead of calling updateJobStatus, find the job object and call openUpdateStatusModal
             const job = window._assignedJobs?.find(j => String(j.jobId) === String(jobId));
             if (job) {
+                // Safety check: prevent updating paid jobs
+                if (job.status === 'Paid') {
+                    showNotification('Cannot update status for paid jobs', 'error');
+                    return;
+                }
                 openUpdateStatusModal(job);
             }
         }
@@ -226,7 +231,17 @@ function renderAssignedJobsTable(jobs) {
         `;
         return;
     }
-    tableBody.innerHTML = jobs.map(job => `
+    tableBody.innerHTML = jobs.map(job => {
+        const isPaid = job.status === 'Paid';
+        const updateStatusButton = isPaid 
+            ? `<button class="btn btn-sm btn-secondary" disabled title="Status cannot be changed for paid jobs">
+                   Status Locked
+               </button>`
+            : `<button class="btn btn-sm btn-primary update-status-btn" data-job-id="${job.jobId}" data-current-status="${job.status}">
+                   Update Status
+               </button>`;
+        
+        return `
         <tr class="job-row" data-job-id="${job.jobId}" data-current-status="${job.status}">
             <td class="job-id">#${job.jobId}</td>
             <td class="job-customer">${job.customerName}</td>
@@ -236,9 +251,7 @@ function renderAssignedJobsTable(jobs) {
             <td class="booking-date">${new Date(job.bookingDate).toLocaleDateString()}</td>
             <td>
                 <div class="job-actions">
-                    <button class="btn btn-sm btn-primary update-status-btn" data-job-id="${job.jobId}" data-current-status="${job.status}">
-                        Update Status
-                    </button>
+                    ${updateStatusButton}
                     <button class="btn btn-sm btn-outline view-details-btn" data-job-id="${job.jobId}">
                     Details
                     </button>
@@ -248,11 +261,17 @@ function renderAssignedJobsTable(jobs) {
                 </div>
             </td>
         </tr>
-    `).join('');
+    `}).join('');
     // No need to attach event listeners here; handled by initializeJobManagement
 }
 
 function openUpdateStatusModal(job) {
+    // Safety check: prevent updating paid jobs
+    if (job.status === 'Paid') {
+        showNotification('Cannot update status for paid jobs', 'error');
+        return;
+    }
+    
     document.getElementById('update-status-job-id').value = job.jobId;
     // Restrict status dropdown to only 'In Progress' and 'Completed'
     const statusSelect = document.getElementById('new-status');
