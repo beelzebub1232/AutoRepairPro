@@ -460,8 +460,20 @@ public class CustomerHandler {
             if (customerId == null || vehicleId == null || serviceId == null || branchId == null || bookingDate == null || bookingDate.isEmpty()) {
                 return createErrorResponse("Missing required booking fields", 400);
             }
-            // Insert new job (appointment)
-            String sql = "INSERT INTO jobs (customer_id, vehicle_id, service_id, branch_id, status, booking_date, notes) VALUES (?, ?, ?, ?, 'Booked', ?, ?)";
+            // Fetch service price
+            String priceSql = "SELECT price FROM services WHERE id = ?";
+            java.math.BigDecimal servicePrice = null;
+            try (PreparedStatement priceStmt = conn.prepareStatement(priceSql)) {
+                priceStmt.setInt(1, serviceId);
+                ResultSet priceRs = priceStmt.executeQuery();
+                if (priceRs.next()) {
+                    servicePrice = priceRs.getBigDecimal("price");
+                } else {
+                    return createErrorResponse("Service not found", 404);
+                }
+            }
+            // Insert new job (appointment) with total_cost set to service price
+            String sql = "INSERT INTO jobs (customer_id, vehicle_id, service_id, branch_id, status, booking_date, notes, total_cost) VALUES (?, ?, ?, ?, 'Booked', ?, ?, ?)";
             try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
                 pstmt.setInt(1, customerId);
                 pstmt.setInt(2, vehicleId);
@@ -469,6 +481,7 @@ public class CustomerHandler {
                 pstmt.setInt(4, branchId);
                 pstmt.setString(5, bookingDate.replace('T', ' ')); // Accept both 'YYYY-MM-DD HH:MM' and 'YYYY-MM-DDTHH:MM'
                 pstmt.setString(6, notes);
+                pstmt.setBigDecimal(7, servicePrice);
                 int rows = pstmt.executeUpdate();
                 if (rows > 0) {
                     return createSuccessResponse("Appointment booked successfully");

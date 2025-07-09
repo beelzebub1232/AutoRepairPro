@@ -484,9 +484,8 @@ function viewJobDetails(jobId) {
             document.getElementById('detail-customer').textContent = data.customerName || '';
             document.getElementById('detail-vehicle').textContent = data.vehicle || '';
             document.getElementById('detail-vin').textContent = data.vin || '';
-            document.getElementById('detail-service').textContent = data.service || '';
-            document.getElementById('detail-service-description').textContent = data.serviceDescription || '';
-            document.getElementById('detail-service-price').textContent = data.totalCost !== undefined && data.totalCost !== null ? `₹${data.totalCost}` : '';
+            document.getElementById('detail-service').textContent = data.service || '--';
+            document.getElementById('detail-service-price').textContent = (data.servicePrice !== undefined && data.servicePrice !== null) ? `₹${data.servicePrice}` : '--';
             document.getElementById('detail-status').textContent = data.status || '';
             document.getElementById('detail-booking-date').textContent = data.bookingDate ? new Date(data.bookingDate).toLocaleString() : '';
             document.getElementById('detail-notes').textContent = data.notes || '';
@@ -622,7 +621,7 @@ function renderInventoryTable(inventory) {
         <tr class="inventory-row${item.quantity <= item.minQuantity ? ' low-stock' : ''}" data-part-id="${item.id}" data-part-name="${item.partName}" data-quantity="${item.quantity}" data-min-quantity="${item.minQuantity}" data-price="${item.pricePerUnit}">
             <td>${item.partName}</td>
             <td>${item.quantity} <span class="min-stock">(Min: ${item.minQuantity})</span></td>
-            <td>$${item.pricePerUnit}</td>
+            <td>₹${item.pricePerUnit}</td>
             <td>${item.status || (item.quantity <= item.minQuantity ? 'Low Stock' : 'In Stock')}</td>
             <td>
                 <button class="btn btn-sm btn-outline check-stock-btn" data-part-id="${item.id}">Check Stock</button>

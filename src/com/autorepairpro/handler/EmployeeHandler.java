@@ -316,7 +316,7 @@ public class EmployeeHandler {
     private String getJobDetails(int jobId) {
         String sql = "SELECT j.*, u.full_name as customer_name, u.phone as customer_phone, " +
                      "v.make, v.model, v.year, v.vin, v.color, v.license_plate, " +
-                     "s.service_name, s.description as service_description, " +
+                     "s.service_name, s.description as service_description, s.price as service_price, " +
                      "b.name as branch_name, b.address as branch_address " +
                      "FROM jobs j " +
                      "JOIN users u ON j.customer_id = u.id " +
@@ -346,6 +346,7 @@ public class EmployeeHandler {
                 jsonBuilder.append("\"vin\":\"").append(rs.getString("vin") != null ? rs.getString("vin") : "").append("\",");
                 jsonBuilder.append("\"service\":\"").append(rs.getString("service_name")).append("\",");
                 jsonBuilder.append("\"serviceDescription\":\"").append(rs.getString("service_description") != null ? rs.getString("service_description") : "").append("\",");
+                jsonBuilder.append("\"servicePrice\":").append(rs.getBigDecimal("service_price") != null ? rs.getBigDecimal("service_price") : "null").append(",");
                 jsonBuilder.append("\"status\":\"").append(rs.getString("status")).append("\",");
                 jsonBuilder.append("\"bookingDate\":\"").append(rs.getTimestamp("booking_date")).append("\",");
                 // Remove estimatedCompletionDate and actualCompletionDate (not in schema)

@@ -882,7 +882,7 @@ public class AdminHandler {
             if ("GET".equals(method)) {
                 String sql = "SELECT i.id, i.invoice_number, i.amount, i.tax_amount, i.total_amount, " +
                            "i.status, i.due_date, i.created_at, " +
-                           "j.id as jobId, u.full_name as customerName, s.service_name " +
+                           "j.id as jobId, u.full_name as customerName, s.service_name, j.total_cost as service_cost " +
                            "FROM invoices i " +
                            "JOIN jobs j ON i.job_id = j.id " +
                            "JOIN users u ON j.customer_id = u.id " +
@@ -921,6 +921,18 @@ public class AdminHandler {
                         invoice.put("jobId", rs.getInt("jobId"));
                         invoice.put("customerName", rs.getString("customerName"));
                         invoice.put("serviceName", rs.getString("service_name"));
+                        invoice.put("serviceCost", rs.getBigDecimal("service_cost"));
+                        // Fetch parts cost for this job
+                        BigDecimal partsCost = BigDecimal.ZERO;
+                        try (PreparedStatement partsStmt = conn.prepareStatement("SELECT SUM(total_price) FROM job_inventory WHERE job_id = ?")) {
+                            partsStmt.setInt(1, rs.getInt("jobId"));
+                            ResultSet partsRs = partsStmt.executeQuery();
+                            if (partsRs.next()) {
+                                partsCost = partsRs.getBigDecimal(1);
+                                if (partsCost == null) partsCost = BigDecimal.ZERO;
+                            }
+                        }
+                        invoice.put("partsCost", partsCost);
                         invoices.add(invoice);
                     }
                 }

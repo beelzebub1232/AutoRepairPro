@@ -697,15 +697,16 @@ async function showPaymentModal(jobId) {
             // Show invoice details if available
             if (invoice) {
                 document.getElementById('payment-amount').textContent = '₹' + (invoice.totalAmount ?? invoice.amount ?? job.totalCost);
+                // Show service and parts cost breakdown if possible
+                let serviceCost = invoice.serviceCost ?? job.totalCost ?? 0;
+                let partsCost = invoice.partsCost ?? 0;
+                document.getElementById('payment-service-cost').textContent = '₹' + serviceCost;
+                document.getElementById('payment-parts-cost').textContent = '₹' + partsCost;
                 // Optionally show invoice number, tax, etc. if you add fields in the modal
                 if (document.getElementById('payment-invoice-number')) {
                     document.getElementById('payment-invoice-number').textContent = invoice.invoiceNumber || '';
                 }
-                if (document.getElementById('payment-tax-amount')) {
-                    document.getElementById('payment-tax-amount').textContent = invoice.taxAmount ? '₹' + invoice.taxAmount : '';
-                }
-            } else {
-                document.getElementById('payment-amount').textContent = '₹' + job.totalCost;
+                document.getElementById('payment-tax-amount').textContent = invoice.taxAmount ? '₹' + invoice.taxAmount : '';
             }
             // Store job ID for payment processing
             document.getElementById('process-payment-btn').setAttribute('data-job-id', jobId);
