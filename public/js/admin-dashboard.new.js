@@ -1120,6 +1120,7 @@ function handleEditInventoryItemClick(itemId) {
     const title = `Edit Inventory Item (ID: #${itemId})`;
     const bodyHtml = `
         <form id="edit-inventory-form-${itemId}">
+            <input type="hidden" id="edit-itemId-${itemId}" value="${itemData.id}">
             <div class="form-group">
                 <label class="form-label">Part Number</label>
                 <input type="text" class="form-input" value="${itemData.id}" readonly>
@@ -1159,6 +1160,7 @@ function handleEditInventoryItemClick(itemId) {
 async function submitEditInventoryItemForm(event) {
     event.preventDefault();
     const form = event.target;
+    // Get the itemId from the hidden input
     const itemId = form.querySelector('input[type="hidden"]').value;
     const modalId = `editInventoryModal-${itemId}`;
 
