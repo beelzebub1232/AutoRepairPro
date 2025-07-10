@@ -192,7 +192,12 @@ public class CustomerHandler {
             pstmt.setString(2, make);
             pstmt.setString(3, model);
             pstmt.setInt(4, year);
-            pstmt.setString(5, vin);
+            // VIN: insert NULL if empty or blank
+            if (vin == null || vin.trim().isEmpty()) {
+                pstmt.setNull(5, java.sql.Types.VARCHAR);
+            } else {
+                pstmt.setString(5, vin);
+            }
             pstmt.setString(6, licensePlate);
             pstmt.setString(7, color);
             if (mileage != null) {
