@@ -8,11 +8,11 @@ This project was bootstrapped with a Python script. It contains a complete, runn
 - `lib/`: Should contain the MySQL JDBC driver JAR file.
 - `public/`: Contains all frontend assets (HTML, CSS, JS).
 - `build/`: Will contain compiled `.class` files after running the compile script.
-- `database_setup.sql`: SQL script to initialize the database.
+- `autorepairpro_db.sql`: SQL script to initialize the database (schema and sample data).
 - `compile.sh`/`compile.bat`: Scripts to compile the Java code.
 - `run.sh`/`run.bat`: Scripts to run the Java web server.
 
-## How to Run the Project
+## How to Set Up and Run the Project
 
 ### Step 1: Prerequisites
 
@@ -27,12 +27,13 @@ This project was bootstrapped with a Python script. It contains a complete, runn
     - **IMPORTANT**: Rename the file to `mysql-connector-j-8.0.33.jar` or update the `compile` and `run` scripts to match your file's name.
 
 2.  **Configure Database Connection**:
-    - Open `AutoRepairPro/src/com/autorepairpro/db/DatabaseConnector.java`.
+    - Open `src/com/autorepairpro/db/DatabaseConnector.java`.
     - Update the `DB_USER` and `DB_PASSWORD` variables with your MySQL credentials.
 
-3.  **Create Database**:
+3.  **Create Database and Tables**:
     - Connect to your MySQL server using a tool like MySQL Workbench or the command-line client.
-    - Execute the contents of the `database_setup.sql` file to create the database, tables, and sample data.
+    - Execute the contents of the `autorepairpro_db.sql` file to create the database, tables, and sample data:
+      - Example command: `mysql -u <username> -p < autorepairpro_db.sql`
 
 ### Step 3: Compile and Run
 
@@ -54,3 +55,17 @@ This project was bootstrapped with a Python script. It contains a complete, runn
 - **Admin**: `admin` / `admin123`
 - **Employee**: `tech1` / `tech123`
 - **Customer**: `johndoe` / `customer123`
+
+---
+
+## Troubleshooting
+
+- **Port Already in Use**: If port 8080 is busy, stop the other service or change the port in `src/com/autorepairpro/server/SimpleHttpServer.java`.
+- **Database Connection Errors**: Double-check your MySQL credentials and that the database is created and running.
+- **JDBC Driver Not Found**: Ensure the `.jar` file is in the `lib/` directory and the filename matches the scripts.
+- **Frontend Not Loading**: Make sure the server is running and you are accessing the correct URL.
+
+---
+
+## Notes
+- The `autorepairpro_db.sql` file is up to date with the current backend and frontend structure. If you make changes to the database schema, update this file accordingly.
