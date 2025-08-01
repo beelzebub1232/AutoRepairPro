@@ -68,4 +68,4 @@ This project was bootstrapped with a Python script. It contains a complete, runn
 ---
 
 ## Notes
-- The `autorepairpro_db.sql` file is up to date with the current backend and frontend structure. If you make changes to the database schema, update this file accordingly.
+- The `autorepairpro_db.sql` file is up to date with the current backend and frontend structure. If you make changes to the database schema, update this file accordingly.~

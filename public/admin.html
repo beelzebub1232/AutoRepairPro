@@ -126,6 +126,18 @@
                             <span>Invoices</span>
                         </a>
                     </li>
+                    <li class="nav-item">
+                        <a href="#" class="nav-link" data-tab="reports">
+                            <svg class="icon" viewBox="0 0 24 24"> <!-- Icon for Reports -->
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                                <polyline points="14,2 14,8 20,8"/>
+                                <line x1="16" y1="13" x2="8" y2="13"/>
+                                <line x1="16" y1="17" x2="8" y2="17"/>
+                                <polyline points="10,9 9,9 8,9"/>
+                            </svg>
+                            <span>Monthly Reports</span>
+                        </a>
+                    </li>
 
                 </ul>
             </nav>
@@ -352,6 +364,105 @@
                 <div id="invoices-content">
                     <!-- Content will be loaded by JS -->
                     <p>Loading invoices data...</p>
+                </div>
+            </div>
+
+            <!-- Reports Tab -->
+            <div id="reports-tab" class="tab-content">
+                <div class="page-header">
+                    <div>
+                        <h1 class="page-title">Monthly Reports</h1>
+                        <p class="page-subtitle">Generate and export comprehensive monthly reports.</p>
+                    </div>
+                    <div class="header-actions">
+                        <button id="generate-report-btn" class="btn btn-primary">
+                            <svg class="icon icon-sm" viewBox="0 0 24 24">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                                <polyline points="14,2 14,8 20,8"/>
+                                <line x1="16" y1="13" x2="8" y2="13"/>
+                                <line x1="16" y1="17" x2="8" y2="17"/>
+                            </svg>
+                            <span>Generate Report</span>
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Report Configuration -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">Report Configuration</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="report-month">Month</label>
+                                <select id="report-month" class="form-control">
+                                    <option value="1">January</option>
+                                    <option value="2">February</option>
+                                    <option value="3">March</option>
+                                    <option value="4">April</option>
+                                    <option value="5">May</option>
+                                    <option value="6">June</option>
+                                    <option value="7">July</option>
+                                    <option value="8">August</option>
+                                    <option value="9">September</option>
+                                    <option value="10">October</option>
+                                    <option value="11">November</option>
+                                    <option value="12">December</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="report-year">Year</label>
+                                <select id="report-year" class="form-control">
+                                    <!-- Will be populated by JS -->
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="report-type">Report Type</label>
+                                <select id="report-type" class="form-control">
+                                    <option value="summary">Summary Report</option>
+                                    <option value="detailed">Detailed Jobs Report</option>
+                                    <option value="financial">Financial Report</option>
+                                    <option value="performance">Performance Report</option>
+                                    <option value="inventory">Inventory Report</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Report Display Area -->
+                <div id="reports-content">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">Report Preview</h3>
+                            <div class="card-actions">
+                                <button id="export-pdf-btn" class="btn btn-secondary" style="display: none;">
+                                    <svg class="icon icon-sm" viewBox="0 0 24 24">
+                                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                                        <polyline points="14,2 14,8 20,8"/>
+                                        <line x1="16" y1="13" x2="8" y2="13"/>
+                                        <line x1="16" y1="17" x2="8" y2="17"/>
+                                    </svg>
+                                    <span>Export PDF</span>
+                                </button>
+                                <button id="export-csv-btn" class="btn btn-secondary" style="display: none;">
+                                    <svg class="icon icon-sm" viewBox="0 0 24 24">
+                                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                                        <polyline points="14,2 14,8 20,8"/>
+                                        <line x1="16" y1="13" x2="8" y2="13"/>
+                                        <line x1="16" y1="17" x2="8" y2="17"/>
+                                    </svg>
+                                    <span>Export CSV</span>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div id="report-preview">
+                                <p class="text-center text-muted">Select a report type and click "Generate Report" to view data.</p>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
 

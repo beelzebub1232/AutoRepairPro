@@ -20,22 +20,6 @@ public class AdminHandler {
             
             String action = pathParts[3];
             
-            // New: Overview metrics and recent jobs endpoints
-            if ("overview-metrics".equals(action)) {
-                return getOverviewMetrics();
-            }
-            if ("recent-jobs".equals(action)) {
-                // Support ?limit=5
-                int limit = 5;
-                if (path.contains("?limit=")) {
-                    try {
-                        String[] parts = path.split("\\?limit=");
-                        limit = Integer.parseInt(parts[1].split("&")[0]);
-                    } catch (Exception e) { /* fallback to default */ }
-                }
-                return getRecentJobs(limit);
-            }
-            
             switch (action) {
                 case "dashboard":
                     return getDashboardStats();
@@ -53,7 +37,18 @@ public class AdminHandler {
                     return handleInvoices(method, requestBody);
                 case "payments":
                     return handlePayments(method, requestBody);
-
+                case "overview-metrics":
+                    return getOverviewMetrics();
+                case "recent-jobs":
+                    // Support ?limit=5
+                    int limit = 5;
+                    if (path.contains("?limit=")) {
+                        try {
+                            String[] parts = path.split("\\?limit=");
+                            limit = Integer.parseInt(parts[1].split("&")[0]);
+                        } catch (Exception e) { /* fallback to default */ }
+                    }
+                    
                 case "settings":
                     return handleSettings(method, requestBody);
                 case "performance":
@@ -1088,7 +1083,7 @@ public class AdminHandler {
             String jobsSql = "SELECT COUNT(*) as total, " +
                     "SUM(CASE WHEN status = 'Booked' THEN 1 ELSE 0 END) as booked, " +
                     "SUM(CASE WHEN status = 'In Progress' THEN 1 ELSE 0 END) as inProgress, " +
-                    "SUM(CASE WHEN status = 'Completed' THEN 1 ELSE 0 END) as completed, " +
+                    "SUM(CASE WHEN status IN ('Completed', 'Invoiced', 'Paid') THEN 1 ELSE 0 END) as completed, " +
                     "SUM(CASE WHEN status = 'Cancelled' THEN 1 ELSE 0 END) as cancelled " +
                     "FROM jobs";
             String revenueSql = "SELECT COALESCE(SUM(total_amount), 0) as totalRevenue FROM invoices WHERE status = 'Paid'";
@@ -1201,7 +1196,27 @@ public class AdminHandler {
         }
         json.append("]");
         return json.toString();
+    }
+    
+    private String convertToJson(Map<String, Object> data) {
+        StringBuilder json = new StringBuilder("{");
+        int i = 0;
+        for (Map.Entry<String, Object> entry : data.entrySet()) {
+            if (i > 0) json.append(",");
+            json.append("\"").append(entry.getKey()).append("\":");
+            if (entry.getValue() instanceof String) {
+                json.append("\"").append(entry.getValue()).append("\"");
+            } else if (entry.getValue() instanceof List) {
+                // Handle nested lists by converting them to JSON arrays
+                json.append(convertToJson((List<Map<String, Object>>) entry.getValue()));
+            } else {
+                json.append(entry.getValue());
             }
+            i++;
+        }
+        json.append("}");
+        return json.toString();
+    }
     
     private String createSuccessResponse(String message) {
         return "{\"status\":\"success\",\"message\":\"" + message + "\"}";
@@ -1270,4 +1285,450 @@ public class AdminHandler {
             return createErrorResponse("Database error deleting branch", 500);
         }
     }
+    
+    // Reports Handler
+    private String handleReports(String path, String method, String requestBody) {
+        Connection conn = null;
+        try {
+            conn = DatabaseConnector.getConnection();
+            
+            if ("GET".equals(method)) {
+                // Parse query parameters for month and year
+                String month = null;
+                String year = null;
+                String reportType = "summary"; // default to summary
+                
+                if (path.contains("?")) {
+                    String queryString = path.substring(path.indexOf("?") + 1);
+                    String[] params = queryString.split("&");
+                    for (String param : params) {
+                        if (param.startsWith("month=")) {
+                            month = param.substring(6);
+                        } else if (param.startsWith("year=")) {
+                            year = param.substring(5);
+                        } else if (param.startsWith("type=")) {
+                            reportType = param.substring(5);
+                        }
+                    }
+                }
+                
+                // If no month/year specified, use current month
+                if (month == null || year == null) {
+                    java.time.LocalDate now = java.time.LocalDate.now();
+                    month = String.valueOf(now.getMonthValue());
+                    year = String.valueOf(now.getYear());
+                }
+                
+                switch (reportType) {
+                    case "summary":
+                        return generateMonthlySummary(conn, month, year);
+                    case "detailed":
+                        return generateMonthlyDetailed(conn, month, year);
+                    case "financial":
+                        return generateMonthlyFinancial(conn, month, year);
+                    case "performance":
+                        return generateMonthlyPerformance(conn, month, year);
+                    case "inventory":
+                        return generateMonthlyInventory(conn, month, year);
+                    default:
+                        return generateMonthlySummary(conn, month, year);
+                }
+            }
+            
+            return createErrorResponse("Method not allowed", 405);
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return createErrorResponse("Database error generating monthly report", 500);
+        } finally {
+            DatabaseConnector.closeConnection(conn);
+        }
+    }
+    
+    private String generateMonthlySummary(Connection conn, String month, String year) throws SQLException {
+        // Generate comprehensive monthly summary
+        Map<String, Object> summary = new HashMap<>();
+        
+        // Basic metrics
+        String jobsSql = "SELECT COUNT(*) as total_jobs, " +
+                        "SUM(CASE WHEN status IN ('Completed', 'Invoiced', 'Paid') THEN 1 ELSE 0 END) as completed_jobs, " +
+                        "SUM(CASE WHEN status = 'In Progress' THEN 1 ELSE 0 END) as in_progress_jobs, " +
+                        "SUM(CASE WHEN status = 'Cancelled' THEN 1 ELSE 0 END) as cancelled_jobs, " +
+                        "SUM(total_cost) as total_revenue " +
+                        "FROM jobs " +
+                        "WHERE MONTH(booking_date) = ? AND YEAR(booking_date) = ?";
+        
+        try (PreparedStatement pstmt = conn.prepareStatement(jobsSql)) {
+            pstmt.setString(1, month);
+            pstmt.setString(2, year);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    summary.put("totalJobs", rs.getInt("total_jobs"));
+                    summary.put("completedJobs", rs.getInt("completed_jobs"));
+                    summary.put("inProgressJobs", rs.getInt("in_progress_jobs"));
+                    summary.put("cancelledJobs", rs.getInt("cancelled_jobs"));
+                    summary.put("totalRevenue", rs.getBigDecimal("total_revenue"));
+                }
+            }
+        }
+        
+        // Revenue from invoices
+        String invoiceSql = "SELECT COALESCE(SUM(total_amount), 0) as total_invoice_revenue " +
+                           "FROM invoices " +
+                           "WHERE MONTH(created_at) = ? AND YEAR(created_at) = ? AND status = 'Paid'";
+        
+        try (PreparedStatement pstmt = conn.prepareStatement(invoiceSql)) {
+            pstmt.setString(1, month);
+            pstmt.setString(2, year);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    summary.put("totalInvoiceRevenue", rs.getBigDecimal("total_invoice_revenue"));
+                }
+            }
+        }
+        
+        // Top services
+        String topServicesSql = "SELECT s.service_name, COUNT(*) as job_count, SUM(j.total_cost) as total_revenue " +
+                               "FROM jobs j " +
+                               "JOIN services s ON j.service_id = s.id " +
+                               "WHERE MONTH(j.booking_date) = ? AND YEAR(j.booking_date) = ? " +
+                               "GROUP BY s.id, s.service_name " +
+                               "ORDER BY job_count DESC " +
+                               "LIMIT 5";
+        
+        List<Map<String, Object>> topServices = new ArrayList<>();
+        try (PreparedStatement pstmt = conn.prepareStatement(topServicesSql)) {
+            pstmt.setString(1, month);
+            pstmt.setString(2, year);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                while (rs.next()) {
+                    Map<String, Object> service = new HashMap<>();
+                    service.put("serviceName", rs.getString("service_name"));
+                    service.put("jobCount", rs.getInt("job_count"));
+                    service.put("totalRevenue", rs.getBigDecimal("total_revenue"));
+                    topServices.add(service);
+                }
+            }
+        }
+        summary.put("topServices", topServices);
+        
+        // Branch performance
+        String branchSql = "SELECT b.name as branch_name, COUNT(j.id) as job_count, SUM(j.total_cost) as total_revenue " +
+                          "FROM jobs j " +
+                          "JOIN branches b ON j.branch_id = b.id " +
+                          "WHERE MONTH(j.booking_date) = ? AND YEAR(j.booking_date) = ? " +
+                          "GROUP BY b.id, b.name " +
+                          "ORDER BY total_revenue DESC";
+        
+        List<Map<String, Object>> branchPerformance = new ArrayList<>();
+        try (PreparedStatement pstmt = conn.prepareStatement(branchSql)) {
+            pstmt.setString(1, month);
+            pstmt.setString(2, year);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                while (rs.next()) {
+                    Map<String, Object> branch = new HashMap<>();
+                    branch.put("branchName", rs.getString("branch_name"));
+                    branch.put("jobCount", rs.getInt("job_count"));
+                    branch.put("totalRevenue", rs.getBigDecimal("total_revenue"));
+                    branchPerformance.add(branch);
+                }
+            }
+        }
+        summary.put("branchPerformance", branchPerformance);
+        
+        // Employee performance
+        String employeeSql = "SELECT u.full_name as employee_name, COUNT(j.id) as job_count, SUM(j.total_cost) as total_revenue " +
+                            "FROM jobs j " +
+                            "JOIN users u ON j.assigned_employee_id = u.id " +
+                            "WHERE MONTH(j.booking_date) = ? AND YEAR(j.booking_date) = ? AND u.role = 'employee' " +
+                            "GROUP BY u.id, u.full_name " +
+                            "ORDER BY total_revenue DESC";
+        
+        List<Map<String, Object>> employeePerformance = new ArrayList<>();
+        try (PreparedStatement pstmt = conn.prepareStatement(employeeSql)) {
+            pstmt.setString(1, month);
+            pstmt.setString(2, year);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                while (rs.next()) {
+                    Map<String, Object> employee = new HashMap<>();
+                    employee.put("employeeName", rs.getString("employee_name"));
+                    employee.put("jobCount", rs.getInt("job_count"));
+                    employee.put("totalRevenue", rs.getBigDecimal("total_revenue"));
+                    employeePerformance.add(employee);
+                }
+            }
+        }
+        summary.put("employeePerformance", employeePerformance);
+        
+        // Report metadata
+        summary.put("reportMonth", month);
+        summary.put("reportYear", year);
+        summary.put("reportType", "summary");
+        summary.put("generatedAt", new java.sql.Timestamp(System.currentTimeMillis()).toString());
+        
+        return convertToJson(summary);
+    }
+    
+    private String generateMonthlyDetailed(Connection conn, String month, String year) throws SQLException {
+        // Generate detailed job report
+        String sql = "SELECT j.id as job_id, j.status, j.booking_date, j.total_cost, j.notes, " +
+                    "u.full_name as customer_name, v.make, v.model, v.year, v.vin, " +
+                    "s.service_name, b.name as branch_name, e.full_name as employee_name " +
+                    "FROM jobs j " +
+                    "JOIN users u ON j.customer_id = u.id " +
+                    "JOIN vehicles v ON j.vehicle_id = v.id " +
+                    "JOIN services s ON j.service_id = s.id " +
+                    "JOIN branches b ON j.branch_id = b.id " +
+                    "LEFT JOIN users e ON j.assigned_employee_id = e.id " +
+                    "WHERE MONTH(j.booking_date) = ? AND YEAR(j.booking_date) = ? " +
+                    "ORDER BY j.booking_date DESC";
+        
+        List<Map<String, Object>> jobs = new ArrayList<>();
+        try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, month);
+            pstmt.setString(2, year);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                while (rs.next()) {
+                    Map<String, Object> job = new HashMap<>();
+                    job.put("jobId", rs.getInt("job_id"));
+                    job.put("status", rs.getString("status"));
+                    job.put("bookingDate", rs.getTimestamp("booking_date").toString());
+                    job.put("totalCost", rs.getBigDecimal("total_cost"));
+                    job.put("notes", rs.getString("notes"));
+                    job.put("customerName", rs.getString("customer_name"));
+                    job.put("vehicle", rs.getString("make") + " " + rs.getString("model") + " (" + rs.getInt("year") + ")");
+                    job.put("vin", rs.getString("vin"));
+                    job.put("serviceName", rs.getString("service_name"));
+                    job.put("branchName", rs.getString("branch_name"));
+                    job.put("employeeName", rs.getString("employee_name"));
+                    jobs.add(job);
+                }
+            }
+        }
+        
+        Map<String, Object> report = new HashMap<>();
+        report.put("jobs", jobs);
+        report.put("reportMonth", month);
+        report.put("reportYear", year);
+        report.put("reportType", "detailed");
+        report.put("generatedAt", new java.sql.Timestamp(System.currentTimeMillis()).toString());
+        
+        return convertToJson(report);
+    }
+    
+    private String generateMonthlyFinancial(Connection conn, String month, String year) throws SQLException {
+        // Generate financial report
+        Map<String, Object> financial = new HashMap<>();
+        
+        // Invoice summary
+        String invoiceSql = "SELECT COUNT(*) as total_invoices, " +
+                           "SUM(CASE WHEN status = 'Paid' THEN 1 ELSE 0 END) as paid_invoices, " +
+                           "SUM(CASE WHEN status = 'Sent' THEN 1 ELSE 0 END) as pending_invoices, " +
+                           "SUM(total_amount) as total_amount, " +
+                           "SUM(CASE WHEN status = 'Paid' THEN total_amount ELSE 0 END) as paid_amount " +
+                           "FROM invoices " +
+                           "WHERE MONTH(created_at) = ? AND YEAR(created_at) = ?";
+        
+        try (PreparedStatement pstmt = conn.prepareStatement(invoiceSql)) {
+            pstmt.setString(1, month);
+            pstmt.setString(2, year);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    financial.put("totalInvoices", rs.getInt("total_invoices"));
+                    financial.put("paidInvoices", rs.getInt("paid_invoices"));
+                    financial.put("pendingInvoices", rs.getInt("pending_invoices"));
+                    financial.put("totalAmount", rs.getBigDecimal("total_amount"));
+                    financial.put("paidAmount", rs.getBigDecimal("paid_amount"));
+                }
+            }
+        }
+        
+        // Payment methods breakdown
+        String paymentSql = "SELECT p.payment_method, COUNT(*) as count, SUM(p.amount) as total " +
+                           "FROM payments p " +
+                           "JOIN invoices i ON p.invoice_id = i.id " +
+                           "WHERE MONTH(p.payment_date) = ? AND YEAR(p.payment_date) = ? " +
+                           "GROUP BY p.payment_method";
+        
+        List<Map<String, Object>> paymentMethods = new ArrayList<>();
+        try (PreparedStatement pstmt = conn.prepareStatement(paymentSql)) {
+            pstmt.setString(1, month);
+            pstmt.setString(2, year);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                while (rs.next()) {
+                    Map<String, Object> payment = new HashMap<>();
+                    payment.put("method", rs.getString("payment_method"));
+                    payment.put("count", rs.getInt("count"));
+                    payment.put("total", rs.getBigDecimal("total"));
+                    paymentMethods.add(payment);
+                }
+            }
+        }
+        financial.put("paymentMethods", paymentMethods);
+        
+        // Daily revenue breakdown
+        String dailySql = "SELECT DATE(j.booking_date) as date, COUNT(*) as jobs, SUM(j.total_cost) as revenue " +
+                         "FROM jobs j " +
+                         "WHERE MONTH(j.booking_date) = ? AND YEAR(j.booking_date) = ? " +
+                         "GROUP BY DATE(j.booking_date) " +
+                         "ORDER BY date";
+        
+        List<Map<String, Object>> dailyRevenue = new ArrayList<>();
+        try (PreparedStatement pstmt = conn.prepareStatement(dailySql)) {
+            pstmt.setString(1, month);
+            pstmt.setString(2, year);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                while (rs.next()) {
+                    Map<String, Object> daily = new HashMap<>();
+                    daily.put("date", rs.getDate("date").toString());
+                    daily.put("jobs", rs.getInt("jobs"));
+                    daily.put("revenue", rs.getBigDecimal("revenue"));
+                    dailyRevenue.add(daily);
+                }
+            }
+        }
+        financial.put("dailyRevenue", dailyRevenue);
+        
+        financial.put("reportMonth", month);
+        financial.put("reportYear", year);
+        financial.put("reportType", "financial");
+        financial.put("generatedAt", new java.sql.Timestamp(System.currentTimeMillis()).toString());
+        
+        return convertToJson(financial);
+    }
+    
+    private String generateMonthlyPerformance(Connection conn, String month, String year) throws SQLException {
+        // Generate performance metrics report
+        Map<String, Object> performance = new HashMap<>();
+        
+        // Employee performance metrics
+        String employeeSql = "SELECT u.full_name as employee_name, " +
+                            "COUNT(j.id) as total_jobs, " +
+                            "SUM(CASE WHEN j.status IN ('Completed', 'Invoiced', 'Paid') THEN 1 ELSE 0 END) as completed_jobs, " +
+                            "SUM(CASE WHEN j.status IN ('Completed', 'Invoiced', 'Paid') THEN j.total_cost ELSE 0 END) as total_revenue, " +
+                            "AVG(CASE WHEN j.status IN ('Completed', 'Invoiced', 'Paid') THEN j.total_cost END) as avg_job_value " +
+                            "FROM jobs j " +
+                            "JOIN users u ON j.assigned_employee_id = u.id " +
+                            "WHERE MONTH(j.booking_date) = ? AND YEAR(j.booking_date) = ? AND u.role = 'employee' " +
+                            "GROUP BY u.id, u.full_name " +
+                            "ORDER BY total_revenue DESC";
+        
+        List<Map<String, Object>> employeeMetrics = new ArrayList<>();
+        try (PreparedStatement pstmt = conn.prepareStatement(employeeSql)) {
+            pstmt.setString(1, month);
+            pstmt.setString(2, year);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                while (rs.next()) {
+                    Map<String, Object> employee = new HashMap<>();
+                    employee.put("employeeName", rs.getString("employee_name"));
+                    employee.put("totalJobs", rs.getInt("total_jobs"));
+                    employee.put("completedJobs", rs.getInt("completed_jobs"));
+                    employee.put("totalRevenue", rs.getBigDecimal("total_revenue"));
+                    employee.put("avgJobValue", rs.getBigDecimal("avg_job_value"));
+                    employee.put("completionRate", rs.getInt("total_jobs") > 0 ? 
+                        (double) rs.getInt("completed_jobs") / rs.getInt("total_jobs") * 100 : 0);
+                    employeeMetrics.add(employee);
+                }
+            }
+        }
+        performance.put("employeeMetrics", employeeMetrics);
+        
+        // Service performance
+        String serviceSql = "SELECT s.service_name, " +
+                           "COUNT(j.id) as job_count, " +
+                           "SUM(CASE WHEN j.status IN ('Completed', 'Invoiced', 'Paid') THEN j.total_cost ELSE 0 END) as total_revenue, " +
+                           "AVG(CASE WHEN j.status IN ('Completed', 'Invoiced', 'Paid') THEN j.total_cost END) as avg_revenue " +
+                           "FROM jobs j " +
+                           "JOIN services s ON j.service_id = s.id " +
+                           "WHERE MONTH(j.booking_date) = ? AND YEAR(j.booking_date) = ? " +
+                           "GROUP BY s.id, s.service_name " +
+                           "ORDER BY total_revenue DESC";
+        
+        List<Map<String, Object>> serviceMetrics = new ArrayList<>();
+        try (PreparedStatement pstmt = conn.prepareStatement(serviceSql)) {
+            pstmt.setString(1, month);
+            pstmt.setString(2, year);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                while (rs.next()) {
+                    Map<String, Object> service = new HashMap<>();
+                    service.put("serviceName", rs.getString("service_name"));
+                    service.put("jobCount", rs.getInt("job_count"));
+                    service.put("totalRevenue", rs.getBigDecimal("total_revenue"));
+                    service.put("avgRevenue", rs.getBigDecimal("avg_revenue"));
+                    serviceMetrics.add(service);
+                }
+            }
+        }
+        performance.put("serviceMetrics", serviceMetrics);
+        
+        performance.put("reportMonth", month);
+        performance.put("reportYear", year);
+        performance.put("reportType", "performance");
+        performance.put("generatedAt", new java.sql.Timestamp(System.currentTimeMillis()).toString());
+        
+        return convertToJson(performance);
+    }
+    
+    private String generateMonthlyInventory(Connection conn, String month, String year) throws SQLException {
+        // Generate inventory usage report
+        Map<String, Object> inventory = new HashMap<>();
+        
+        // Parts usage
+        String partsSql = "SELECT p.part_name, " +
+                         "SUM(up.quantity_used) as total_used, " +
+                         "SUM(up.quantity_used * p.price_per_unit) as total_cost " +
+                         "FROM used_parts up " +
+                         "JOIN parts p ON up.part_id = p.id " +
+                         "JOIN jobs j ON up.job_id = j.id " +
+                         "WHERE MONTH(j.booking_date) = ? AND YEAR(j.booking_date) = ? " +
+                         "GROUP BY p.id, p.part_name " +
+                         "ORDER BY total_cost DESC";
+        
+        List<Map<String, Object>> partsUsage = new ArrayList<>();
+        try (PreparedStatement pstmt = conn.prepareStatement(partsSql)) {
+            pstmt.setString(1, month);
+            pstmt.setString(2, year);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                while (rs.next()) {
+                    Map<String, Object> part = new HashMap<>();
+                    part.put("partName", rs.getString("part_name"));
+                    part.put("totalUsed", rs.getInt("total_used"));
+                    part.put("totalCost", rs.getBigDecimal("total_cost"));
+                    partsUsage.add(part);
+                }
+            }
+        }
+        inventory.put("partsUsage", partsUsage);
+        
+        // Current inventory status
+        String currentSql = "SELECT part_name, quantity, min_quantity, price_per_unit, " +
+                           "CASE WHEN quantity <= min_quantity THEN 'Low Stock' ELSE 'In Stock' END as status " +
+                           "FROM inventory " +
+                           "WHERE is_active = true " +
+                           "ORDER BY quantity ASC";
+        
+        List<Map<String, Object>> currentInventory = new ArrayList<>();
+        try (PreparedStatement pstmt = conn.prepareStatement(currentSql)) {
+            try (ResultSet rs = pstmt.executeQuery()) {
+                while (rs.next()) {
+                    Map<String, Object> item = new HashMap<>();
+                    item.put("partName", rs.getString("part_name"));
+                    item.put("quantity", rs.getInt("quantity"));
+                    item.put("minQuantity", rs.getInt("min_quantity"));
+                    item.put("pricePerUnit", rs.getBigDecimal("price_per_unit"));
+                    item.put("status", rs.getString("status"));
+                    currentInventory.add(item);
+                }
+            }
+        }
+        inventory.put("currentInventory", currentInventory);
+        
+        inventory.put("reportMonth", month);
+        inventory.put("reportYear", year);
+        inventory.put("reportType", "inventory");
+        inventory.put("generatedAt", new java.sql.Timestamp(System.currentTimeMillis()).toString());
+        
+        return convertToJson(inventory);
+    }
+    
+    // Utility methods
 }

@@ -115,8 +115,8 @@ public class EmployeeHandler {
         String sql = "SELECT j.id, u.full_name as customer_name, u.phone as customer_phone, " +
                      "v.make, v.model, v.year, v.vin, v.color, v.license_plate, " +
                      "s.service_name, s.description as service_description, s.estimated_duration, " +
-                     "j.status, j.booking_date, j.estimated_completion_date, j.actual_completion_date, " +
-                     "j.total_cost, j.labor_cost, j.parts_cost, j.notes, j.customer_notes, " +
+                     "j.status, j.booking_date, j.completion_date, " +
+                     "j.total_cost, j.parts_cost, j.notes, " +
                      "b.name as branch_name, b.address as branch_address " +
                      "FROM jobs j " +
                      "JOIN users u ON j.customer_id = u.id " +
@@ -153,12 +153,10 @@ public class EmployeeHandler {
                 jsonBuilder.append("\"estimatedDuration\":").append(rs.getInt("estimated_duration") != 0 ? rs.getInt("estimated_duration") : "null").append(",");
                 jsonBuilder.append("\"status\":\"").append(rs.getString("status")).append("\",");
                 jsonBuilder.append("\"bookingDate\":\"").append(rs.getTimestamp("booking_date")).append("\",");
-                jsonBuilder.append("\"estimatedCompletionDate\":").append(rs.getTimestamp("estimated_completion_date") != null ? "\"" + rs.getTimestamp("estimated_completion_date") + "\"" : "null").append(",");
-                jsonBuilder.append("\"actualCompletionDate\":").append(rs.getTimestamp("actual_completion_date") != null ? "\"" + rs.getTimestamp("actual_completion_date") + "\"" : "null").append(",");
+                jsonBuilder.append("\"completionDate\":").append(rs.getTimestamp("completion_date") != null ? "\"" + rs.getTimestamp("completion_date") + "\"" : "null").append(",");
                 jsonBuilder.append("\"totalCost\":").append(rs.getBigDecimal("total_cost") != null ? rs.getBigDecimal("total_cost") : "null").append(",");
-                jsonBuilder.append("\"laborCost\":").append(rs.getBigDecimal("labor_cost") != null ? rs.getBigDecimal("labor_cost") : "null").append(",");
+                jsonBuilder.append("\"partsCost\":").append(rs.getBigDecimal("parts_cost") != null ? rs.getBigDecimal("parts_cost") : "null").append(",");
                 jsonBuilder.append("\"notes\":\"").append(rs.getString("notes") != null ? rs.getString("notes") : "").append("\",");
-                jsonBuilder.append("\"customerNotes\":\"").append(rs.getString("customer_notes") != null ? rs.getString("customer_notes") : "").append("\",");
                 jsonBuilder.append("\"branchName\":\"").append(rs.getString("branch_name") != null ? rs.getString("branch_name") : "").append("\",");
                 jsonBuilder.append("\"branchAddress\":\"").append(rs.getString("branch_address") != null ? rs.getString("branch_address") : "").append("\"");
                 jsonBuilder.append("}");
@@ -189,7 +187,7 @@ public class EmployeeHandler {
         
         String sql;
         if (status.equals("Completed")) {
-            sql = "UPDATE jobs SET status = ?, actual_completion_date = NOW()";
+            sql = "UPDATE jobs SET status = ?, completion_date = NOW()";
             if (notes != null && !notes.trim().isEmpty()) {
                 sql += ", notes = CONCAT(COALESCE(notes, ''), ' | ', ?)";
             }

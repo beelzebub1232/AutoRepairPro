@@ -123,14 +123,12 @@ async function loadOverviewData() {
     const userName = urlParams.get('name');
     
     try {
-        // Load assigned jobs
-        const jobsResponse = await fetch(`http://localhost:8080/api/admin/jobs`);
+        // Load assigned jobs for the specific employee
+        const jobsResponse = await fetch(`http://localhost:8080/api/employee/jobs/${userId}`);
         if (!jobsResponse.ok) throw new Error('Failed to fetch jobs data');
         
-        const allJobs = await jobsResponse.json();
-        const assignedJobs = allJobs.filter(job => String(job.assignedEmployeeId) === String(userId));
-        
-        updateEmployeeMetrics(assignedJobs);
+        const jobs = await jobsResponse.json();
+        updateEmployeeMetrics(jobs);
         
         // Load inventory data for the inventory tab
         const inventoryResponse = await fetch('http://localhost:8080/api/admin/inventory');
@@ -203,14 +201,12 @@ async function loadAssignedJobs() {
     const userId = urlParams.get('id');
     
     try {
-        const response = await fetch(`http://localhost:8080/api/admin/jobs`);
+        const response = await fetch(`http://localhost:8080/api/employee/jobs/${userId}`);
         if (!response.ok) throw new Error('Failed to fetch jobs');
         
-        const allJobs = await response.json();
-        const assignedJobs = allJobs.filter(job => String(job.assignedEmployeeId) === String(userId));
-        
-        renderAssignedJobsTable(assignedJobs);
-        updateEmployeeMetrics(assignedJobs); // Update metrics when jobs are loaded
+        const jobs = await response.json();
+        renderAssignedJobsTable(jobs);
+        updateEmployeeMetrics(jobs); // Update metrics when jobs are loaded
     } catch (error) {
         console.error('Error loading assigned jobs:', error);
         showNotification('Failed to load assigned jobs', 'error');
@@ -320,7 +316,7 @@ document.getElementById('update-status-form').onsubmit = async function(e) {
         totalCost: job.totalCost
     };
     try {
-        const response = await fetch(`http://localhost:8080/api/admin/jobs`, {
+        const response = await fetch(`http://localhost:8080/api/employee/jobs/${job.jobId}/status`, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json'

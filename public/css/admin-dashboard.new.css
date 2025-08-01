@@ -872,3 +872,233 @@
 .modal.show .modal-content {
     animation: modalSlideIn 0.4s cubic-bezier(0.4,0,0.2,1) forwards;
 }
+
+/* Reports Styles */
+.report-summary,
+.report-detailed,
+.report-financial,
+.report-performance,
+.report-inventory {
+    margin-bottom: var(--space-6);
+}
+
+.report-summary h2,
+.report-detailed h2,
+.report-financial h2,
+.report-performance h2,
+.report-inventory h2 {
+    font-size: var(--text-xl);
+    font-weight: 600;
+    color: var(--secondary-800);
+    margin-bottom: var(--space-2);
+}
+
+.report-section {
+    margin-bottom: var(--space-6);
+}
+
+.report-section h3 {
+    font-size: var(--text-lg);
+    font-weight: 600;
+    color: var(--secondary-700);
+    margin-bottom: var(--space-4);
+    padding-bottom: var(--space-2);
+    border-bottom: 2px solid var(--primary-200);
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: var(--space-4);
+    margin-bottom: var(--space-4);
+}
+
+.card-actions {
+    display: flex;
+    gap: var(--space-3);
+}
+
+.status-badge.status-low-stock {
+    background-color: var(--warning-100);
+    color: var(--warning-700);
+    border: 1px solid var(--warning-300);
+}
+
+.status-badge.status-in-stock {
+    background-color: var(--success-100);
+    color: var(--success-700);
+    border: 1px solid var(--success-300);
+}
+
+/* Report metrics grid */
+.report-summary .metrics-grid,
+.report-financial .metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: var(--space-4);
+    margin: var(--space-6) 0;
+}
+
+.report-summary .metric-card,
+.report-financial .metric-card {
+    background: white;
+    border-radius: var(--radius-lg);
+    padding: var(--space-4);
+    box-shadow: var(--shadow-sm);
+    border: 1px solid var(--secondary-200);
+    text-align: center;
+}
+
+.report-summary .metric-title,
+.report-financial .metric-title {
+    font-size: var(--text-sm);
+    font-weight: 500;
+    color: var(--secondary-600);
+    margin-bottom: var(--space-2);
+}
+
+.report-summary .metric-value,
+.report-financial .metric-value {
+    font-size: var(--text-2xl);
+    font-weight: 700;
+    color: var(--primary-600);
+}
+
+/* Custom Dropdown Styles */
+.form-control {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    background: var(--white);
+    border: 2px solid var(--secondary-200);
+    border-radius: var(--radius-lg);
+    padding: var(--space-3) var(--space-4);
+    font-size: var(--text-sm);
+    font-weight: 500;
+    color: var(--secondary-800);
+    transition: all var(--transition-normal);
+    cursor: pointer;
+    position: relative;
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right var(--space-3) center;
+    background-size: 16px 16px;
+    padding-right: calc(var(--space-4) + 24px);
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: var(--primary-500);
+    box-shadow: 0 0 0 3px var(--primary-100);
+    transform: translateY(-1px);
+}
+
+.form-control:hover {
+    border-color: var(--primary-300);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-sm);
+}
+
+.form-control:disabled {
+    background-color: var(--secondary-50);
+    color: var(--secondary-500);
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+/* Form Group Enhancements */
+.form-group {
+    margin-bottom: var(--space-4);
+}
+
+.form-group label {
+    display: block;
+    font-size: var(--text-sm);
+    font-weight: 600;
+    color: var(--secondary-700);
+    margin-bottom: var(--space-2);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+/* Form Row Enhancements */
+.form-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: var(--space-4);
+    margin-bottom: var(--space-6);
+    align-items: end;
+}
+
+/* Card Actions Enhancements */
+.card-actions {
+    display: flex;
+    gap: var(--space-3);
+    align-items: center;
+}
+
+.card-actions .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-4);
+    font-size: var(--text-sm);
+    font-weight: 600;
+    border-radius: var(--radius-lg);
+    transition: all var(--transition-normal);
+    text-decoration: none;
+    cursor: pointer;
+    border: none;
+    box-shadow: var(--shadow-sm);
+}
+
+.card-actions .btn:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
+.card-actions .btn-secondary {
+    background: var(--secondary-100);
+    color: var(--secondary-700);
+    border: 1px solid var(--secondary-300);
+}
+
+.card-actions .btn-secondary:hover {
+    background: var(--secondary-200);
+    color: var(--secondary-800);
+    border-color: var(--secondary-400);
+}
+
+/* Responsive adjustments for reports */
+@media (max-width: 768px) {
+    .form-row {
+        grid-template-columns: 1fr;
+        gap: var(--space-3);
+    }
+    
+    .card-actions {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .card-actions .btn {
+        justify-content: center;
+    }
+    
+    .form-control {
+        font-size: var(--text-base);
+        padding: var(--space-3) var(--space-4);
+    }
+    
+    .report-summary .metrics-grid,
+    .report-financial .metrics-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 480px) {
+    .report-summary .metrics-grid,
+    .report-financial .metrics-grid {
+        grid-template-columns: 1fr;
+    }
+}

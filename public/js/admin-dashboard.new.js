@@ -97,6 +97,12 @@ function loadTabData(tab) {
         console.error(`Content area for tab ${tab} not found!`);
         return;
     }
+    
+    // Special handling for reports tab
+    if (tab === 'reports') {
+        initializeReportsTab();
+        return;
+    }
 
     // Clear previous content only if it's not the main overview tab structure
     if (tab !== 'overview') {
@@ -1789,7 +1795,7 @@ function initializeHeaderActionButtons() {
     if(refreshInvoicesBtn) refreshInvoicesBtn.addEventListener('click', () => loadTabData('invoices'));
 
     const generateReportBtn = document.getElementById('generate-report-btn');
-    if(generateReportBtn) generateReportBtn.addEventListener('click', () => alert('Generate Report functionality (Not implemented yet)'));
+    if(generateReportBtn) generateReportBtn.addEventListener('click', generateReport);
 }
 
 // Add showDeleteBranchModal and deleteBranch functions
@@ -1826,4 +1832,580 @@ async function deleteBranch(branchId, modalId) {
     }
 }
 
+// Monthly Reports Functionality
+function initializeReportsTab() {
+    // Populate year dropdown
+    const yearSelect = document.getElementById('report-year');
+    const currentYear = new Date().getFullYear();
+    yearSelect.innerHTML = '';
+    
+    for (let year = currentYear; year >= currentYear - 5; year--) {
+        const option = document.createElement('option');
+        option.value = year;
+        option.textContent = year;
+        yearSelect.appendChild(option);
+    }
+    
+    // Set current month and year as default
+    const currentMonth = new Date().getMonth() + 1;
+    document.getElementById('report-month').value = currentMonth;
+    yearSelect.value = currentYear;
+    
+    // Add event listeners
+    document.getElementById('export-pdf-btn').addEventListener('click', exportToPDF);
+    document.getElementById('export-csv-btn').addEventListener('click', exportToCSV);
+}
 
+async function generateReport() {
+    const month = document.getElementById('report-month').value;
+    const year = document.getElementById('report-year').value;
+    const reportType = document.getElementById('report-type').value;
+    
+    if (!month || !year) {
+        showAdminNotification('Please select both month and year', 'error');
+        return;
+    }
+    
+    try {
+        showAdminNotification('Generating report...', 'info');
+        
+        const response = await fetch(`/api/admin/monthly-reports?month=${month}&year=${year}&type=${reportType}`);
+        
+        if (response.ok) {
+            const reportData = await response.json();
+            displayReport(reportData, reportType);
+            showAdminNotification('Report generated successfully', 'success');
+        } else {
+            const error = await response.json();
+            showAdminNotification(error.message || 'Failed to generate report', 'error');
+        }
+    } catch (error) {
+        console.error('Error generating report:', error);
+        showAdminNotification('Error generating report', 'error');
+    }
+}
+
+function displayReport(reportData, reportType) {
+    const previewDiv = document.getElementById('report-preview');
+    const exportPdfBtn = document.getElementById('export-pdf-btn');
+    const exportCsvBtn = document.getElementById('export-csv-btn');
+    
+    // Show export buttons
+    exportPdfBtn.style.display = 'inline-flex';
+    exportCsvBtn.style.display = 'inline-flex';
+    
+    let html = '';
+    
+    switch (reportType) {
+        case 'summary':
+            html = generateSummaryReportHTML(reportData);
+            break;
+        case 'detailed':
+            html = generateDetailedReportHTML(reportData);
+            break;
+        case 'financial':
+            html = generateFinancialReportHTML(reportData);
+            break;
+        case 'performance':
+            html = generatePerformanceReportHTML(reportData);
+            break;
+        case 'inventory':
+            html = generateInventoryReportHTML(reportData);
+            break;
+        default:
+            html = '<p class="text-center text-muted">Unknown report type</p>';
+    }
+    
+    previewDiv.innerHTML = html;
+}
+
+function generateSummaryReportHTML(data) {
+    const monthNames = ['', 'January', 'February', 'March', 'April', 'May', 'June', 
+                       'July', 'August', 'September', 'October', 'November', 'December'];
+    
+    return `
+        <div class="report-summary">
+            <h2>Monthly Summary Report - ${monthNames[parseInt(data.reportMonth)]} ${data.reportYear}</h2>
+            <p class="text-muted">Generated on: ${new Date(data.generatedAt).toLocaleString()}</p>
+            
+            <div class="metrics-grid" style="margin: 2rem 0;">
+                <div class="metric-card">
+                    <div class="metric-title">Total Jobs</div>
+                    <div class="metric-value">${data.totalJobs || 0}</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-title">Completed Jobs</div>
+                    <div class="metric-value">${data.completedJobs || 0}</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-title">Total Revenue</div>
+                    <div class="metric-value">₹${(data.totalRevenue || 0).toFixed(2)}</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-title">Invoice Revenue</div>
+                    <div class="metric-value">₹${(data.totalInvoiceRevenue || 0).toFixed(2)}</div>
+                </div>
+            </div>
+            
+            ${data.topServices && data.topServices.length > 0 ? `
+                <div class="report-section">
+                    <h3>Top Services</h3>
+                    <div class="table-container">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Service</th>
+                                    <th>Jobs</th>
+                                    <th>Revenue</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${data.topServices.map(service => `
+                                    <tr>
+                                        <td>${service.serviceName}</td>
+                                        <td>${service.jobCount}</td>
+                                        <td>₹${service.totalRevenue.toFixed(2)}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            ` : ''}
+            
+            ${data.branchPerformance && data.branchPerformance.length > 0 ? `
+                <div class="report-section">
+                    <h3>Branch Performance</h3>
+                    <div class="table-container">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Branch</th>
+                                    <th>Jobs</th>
+                                    <th>Revenue</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${data.branchPerformance.map(branch => `
+                                    <tr>
+                                        <td>${branch.branchName}</td>
+                                        <td>${branch.jobCount}</td>
+                                        <td>₹${branch.totalRevenue.toFixed(2)}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            ` : ''}
+            
+            ${data.employeePerformance && data.employeePerformance.length > 0 ? `
+                <div class="report-section">
+                    <h3>Employee Performance</h3>
+                    <div class="table-container">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Employee</th>
+                                    <th>Jobs</th>
+                                    <th>Revenue</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${data.employeePerformance.map(employee => `
+                                    <tr>
+                                        <td>${employee.employeeName}</td>
+                                        <td>${employee.jobCount}</td>
+                                        <td>₹${employee.totalRevenue.toFixed(2)}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            ` : ''}
+        </div>
+    `;
+}
+
+function generateDetailedReportHTML(data) {
+    const monthNames = ['', 'January', 'February', 'March', 'April', 'May', 'June', 
+                       'July', 'August', 'September', 'October', 'November', 'December'];
+    
+    return `
+        <div class="report-detailed">
+            <h2>Detailed Jobs Report - ${monthNames[parseInt(data.reportMonth)]} ${data.reportYear}</h2>
+            <p class="text-muted">Generated on: ${new Date(data.generatedAt).toLocaleString()}</p>
+            
+            <div class="table-container">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Job ID</th>
+                            <th>Customer</th>
+                            <th>Vehicle</th>
+                            <th>Service</th>
+                            <th>Branch</th>
+                            <th>Employee</th>
+                            <th>Status</th>
+                            <th>Date</th>
+                            <th>Cost</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${data.jobs && data.jobs.length > 0 ? data.jobs.map(job => `
+                            <tr>
+                                <td>${job.jobId}</td>
+                                <td>${job.customerName}</td>
+                                <td>${job.vehicle}</td>
+                                <td>${job.serviceName}</td>
+                                <td>${job.branchName}</td>
+                                <td>${job.employeeName || 'Unassigned'}</td>
+                                <td><span class="status-badge status-${job.status.toLowerCase().replace(' ', '-')}">${job.status}</span></td>
+                                <td>${new Date(job.bookingDate).toLocaleDateString()}</td>
+                                <td>₹${job.totalCost.toFixed(2)}</td>
+                            </tr>
+                        `).join('') : '<tr><td colspan="9" class="text-center">No jobs found for this period</td></tr>'}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    `;
+}
+
+function generateFinancialReportHTML(data) {
+    const monthNames = ['', 'January', 'February', 'March', 'April', 'May', 'June', 
+                       'July', 'August', 'September', 'October', 'November', 'December'];
+    
+    return `
+        <div class="report-financial">
+            <h2>Financial Report - ${monthNames[parseInt(data.reportMonth)]} ${data.reportYear}</h2>
+            <p class="text-muted">Generated on: ${new Date(data.generatedAt).toLocaleString()}</p>
+            
+            <div class="metrics-grid" style="margin: 2rem 0;">
+                <div class="metric-card">
+                    <div class="metric-title">Total Invoices</div>
+                    <div class="metric-value">${data.totalInvoices || 0}</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-title">Paid Invoices</div>
+                    <div class="metric-value">${data.paidInvoices || 0}</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-title">Total Amount</div>
+                    <div class="metric-value">₹${(data.totalAmount || 0).toFixed(2)}</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-title">Paid Amount</div>
+                    <div class="metric-value">₹${(data.paidAmount || 0).toFixed(2)}</div>
+                </div>
+            </div>
+            
+            ${data.paymentMethods && data.paymentMethods.length > 0 ? `
+                <div class="report-section">
+                    <h3>Payment Methods</h3>
+                    <div class="table-container">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Method</th>
+                                    <th>Count</th>
+                                    <th>Total</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${data.paymentMethods.map(payment => `
+                                    <tr>
+                                        <td>${payment.method}</td>
+                                        <td>${payment.count}</td>
+                                        <td>₹${payment.total.toFixed(2)}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            ` : ''}
+            
+            ${data.dailyRevenue && data.dailyRevenue.length > 0 ? `
+                <div class="report-section">
+                    <h3>Daily Revenue Breakdown</h3>
+                    <div class="table-container">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Jobs</th>
+                                    <th>Revenue</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${data.dailyRevenue.map(daily => `
+                                    <tr>
+                                        <td>${daily.date}</td>
+                                        <td>${daily.jobs}</td>
+                                        <td>₹${daily.revenue.toFixed(2)}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            ` : ''}
+        </div>
+    `;
+}
+
+function generatePerformanceReportHTML(data) {
+    const monthNames = ['', 'January', 'February', 'March', 'April', 'May', 'June', 
+                       'July', 'August', 'September', 'October', 'November', 'December'];
+    
+    return `
+        <div class="report-performance">
+            <h2>Performance Report - ${monthNames[parseInt(data.reportMonth)]} ${data.reportYear}</h2>
+            <p class="text-muted">Generated on: ${new Date(data.generatedAt).toLocaleString()}</p>
+            
+            ${data.employeeMetrics && data.employeeMetrics.length > 0 ? `
+                <div class="report-section">
+                    <h3>Employee Performance</h3>
+                    <div class="table-container">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Employee</th>
+                                    <th>Total Jobs</th>
+                                    <th>Completed</th>
+                                    <th>Completion Rate</th>
+                                    <th>Total Revenue</th>
+                                    <th>Avg Job Value</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${data.employeeMetrics.map(employee => `
+                                    <tr>
+                                        <td>${employee.employeeName}</td>
+                                        <td>${employee.totalJobs}</td>
+                                        <td>${employee.completedJobs}</td>
+                                        <td>${employee.completionRate.toFixed(1)}%</td>
+                                        <td>₹${employee.totalRevenue.toFixed(2)}</td>
+                                        <td>₹${employee.avgJobValue.toFixed(2)}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            ` : ''}
+            
+            ${data.serviceMetrics && data.serviceMetrics.length > 0 ? `
+                <div class="report-section">
+                    <h3>Service Performance</h3>
+                    <div class="table-container">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Service</th>
+                                    <th>Job Count</th>
+                                    <th>Total Revenue</th>
+                                    <th>Average Revenue</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${data.serviceMetrics.map(service => `
+                                    <tr>
+                                        <td>${service.serviceName}</td>
+                                        <td>${service.jobCount}</td>
+                                        <td>₹${service.totalRevenue.toFixed(2)}</td>
+                                        <td>₹${service.avgRevenue.toFixed(2)}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            ` : ''}
+        </div>
+    `;
+}
+
+function generateInventoryReportHTML(data) {
+    const monthNames = ['', 'January', 'February', 'March', 'April', 'May', 'June', 
+                       'July', 'August', 'September', 'October', 'November', 'December'];
+    
+    return `
+        <div class="report-inventory">
+            <h2>Inventory Report - ${monthNames[parseInt(data.reportMonth)]} ${data.reportYear}</h2>
+            <p class="text-muted">Generated on: ${new Date(data.generatedAt).toLocaleString()}</p>
+            
+            ${data.partsUsage && data.partsUsage.length > 0 ? `
+                <div class="report-section">
+                    <h3>Parts Usage This Month</h3>
+                    <div class="table-container">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Part Name</th>
+                                    <th>Total Used</th>
+                                    <th>Total Cost</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${data.partsUsage.map(part => `
+                                    <tr>
+                                        <td>${part.partName}</td>
+                                        <td>${part.totalUsed}</td>
+                                        <td>₹${part.totalCost.toFixed(2)}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            ` : ''}
+            
+            ${data.currentInventory && data.currentInventory.length > 0 ? `
+                <div class="report-section">
+                    <h3>Current Inventory Status</h3>
+                    <div class="table-container">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Part Name</th>
+                                    <th>Quantity</th>
+                                    <th>Min Quantity</th>
+                                    <th>Price Per Unit</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${data.currentInventory.map(item => `
+                                    <tr>
+                                        <td>${item.partName}</td>
+                                        <td>${item.quantity}</td>
+                                        <td>${item.minQuantity}</td>
+                                        <td>₹${item.pricePerUnit.toFixed(2)}</td>
+                                        <td><span class="status-badge status-${item.status.toLowerCase().replace(' ', '-')}">${item.status}</span></td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            ` : ''}
+        </div>
+    `;
+}
+
+function exportToPDF() {
+    const reportContent = document.getElementById('report-preview').innerHTML;
+    const month = document.getElementById('report-month').value;
+    const year = document.getElementById('report-year').value;
+    const reportType = document.getElementById('report-type').value;
+    
+    // Create a new window for PDF generation
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>${reportType.charAt(0).toUpperCase() + reportType.slice(1)} Report - ${month}/${year}</title>
+            <style>
+                body { font-family: Arial, sans-serif; margin: 20px; }
+                .report-summary, .report-detailed, .report-financial, .report-performance, .report-inventory { margin-bottom: 20px; }
+                .metrics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin: 20px 0; }
+                .metric-card { border: 1px solid #ddd; padding: 15px; text-align: center; }
+                .metric-title { font-weight: bold; margin-bottom: 10px; }
+                .metric-value { font-size: 24px; color: #007bff; }
+                table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+                th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+                th { background-color: #f8f9fa; }
+                .status-badge { padding: 4px 8px; border-radius: 4px; font-size: 12px; }
+                .status-completed { background-color: #d4edda; color: #155724; }
+                .status-in-progress { background-color: #fff3cd; color: #856404; }
+                .status-booked { background-color: #cce5ff; color: #004085; }
+                .status-cancelled { background-color: #f8d7da; color: #721c24; }
+                .status-low-stock { background-color: #f8d7da; color: #721c24; }
+                .status-in-stock { background-color: #d4edda; color: #155724; }
+                @media print { body { margin: 0; } }
+            </style>
+        </head>
+        <body>
+            ${reportContent}
+        </body>
+        </html>
+    `);
+    printWindow.document.close();
+    printWindow.print();
+}
+
+function exportToCSV() {
+    const month = document.getElementById('report-month').value;
+    const year = document.getElementById('report-year').value;
+    const reportType = document.getElementById('report-type').value;
+    
+    // Generate CSV based on report type
+    let csvContent = '';
+    let filename = '';
+    
+    switch (reportType) {
+        case 'summary':
+            csvContent = generateSummaryCSV();
+            filename = `summary_report_${month}_${year}.csv`;
+            break;
+        case 'detailed':
+            csvContent = generateDetailedCSV();
+            filename = `detailed_jobs_${month}_${year}.csv`;
+            break;
+        case 'financial':
+            csvContent = generateFinancialCSV();
+            filename = `financial_report_${month}_${year}.csv`;
+            break;
+        case 'performance':
+            csvContent = generatePerformanceCSV();
+            filename = `performance_report_${month}_${year}.csv`;
+            break;
+        case 'inventory':
+            csvContent = generateInventoryCSV();
+            filename = `inventory_report_${month}_${year}.csv`;
+            break;
+    }
+    
+    // Download the CSV file
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    if (link.download !== undefined) {
+        const url = URL.createObjectURL(blob);
+        link.setAttribute('href', url);
+        link.setAttribute('download', filename);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+}
+
+function generateSummaryCSV() {
+    // This would need to be implemented based on the actual data structure
+    // For now, return a basic CSV structure
+    return `Service,Job Count,Revenue\nSample Service,10,1500.00\n`;
+}
+
+function generateDetailedCSV() {
+    // This would need to be implemented based on the actual data structure
+    return `Job ID,Customer,Vehicle,Service,Branch,Employee,Status,Date,Cost\n`;
+}
+
+function generateFinancialCSV() {
+    // This would need to be implemented based on the actual data structure
+    return `Date,Jobs,Revenue\n`;
+}
+
+function generatePerformanceCSV() {
+    // This would need to be implemented based on the actual data structure
+    return `Employee,Total Jobs,Completed,Completion Rate,Total Revenue,Avg Job Value\n`;
+}
+
+function generateInventoryCSV() {
+    // This would need to be implemented based on the actual data structure
+    return `Part Name,Quantity,Min Quantity,Price Per Unit,Status\n`;
+}
