@@ -53,6 +53,8 @@ public class AdminHandler {
                     return handleSettings(method, requestBody);
                 case "performance":
                     return handlePerformance(method, requestBody);
+                case "monthly-reports":
+                    return handleReports(path, method, requestBody);
                 default:
                     return createErrorResponse("Admin route not found", 404);
             }
