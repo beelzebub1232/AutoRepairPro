@@ -19,6 +19,7 @@ public class AdminHandler {
             }
             
             String action = pathParts[3];
+            System.out.println("AdminHandler: action=" + action + ", path=" + path);
             
             switch (action) {
                 case "dashboard":
@@ -39,16 +40,23 @@ public class AdminHandler {
                     return handlePayments(method, requestBody);
                 case "overview-metrics":
                     return getOverviewMetrics();
-                case "recent-jobs":
-                    // Support ?limit=5
+                case "recent-jobs": {
                     int limit = 5;
-                    if (path.contains("?limit=")) {
-                        try {
-                            String[] parts = path.split("\\?limit=");
-                            limit = Integer.parseInt(parts[1].split("&")[0]);
-                        } catch (Exception e) { /* fallback to default */ }
+                    try {
+                        String[] pathAndQuery = path.split("\\?", 2);
+                        if (pathAndQuery.length == 2) {
+                            String query = pathAndQuery[1];
+                            for (String param : query.split("&")) {
+                                String[] kv = param.split("=", 2);
+                                if (kv.length == 2 && "limit".equals(kv[0])) {
+                                    limit = Integer.parseInt(kv[1]);
+                                }
+                            }
+                        }
+                    } catch (Exception ignore) {
                     }
-                    
+                    return getRecentJobs(limit);
+                }
                 case "settings":
                     return handleSettings(method, requestBody);
                 case "performance":
@@ -1181,23 +1189,14 @@ public class AdminHandler {
         StringBuilder json = new StringBuilder("[");
         for (int i = 0; i < data.size(); i++) {
             if (i > 0) json.append(",");
-            json.append("{");
-            Map<String, Object> item = data.get(i);
-            int j = 0;
-            for (Map.Entry<String, Object> entry : item.entrySet()) {
-                if (j > 0) json.append(",");
-                json.append("\"").append(entry.getKey()).append("\":");
-                if (entry.getValue() instanceof String) {
-                    json.append("\"").append(entry.getValue()).append("\"");
-                } else {
-                    json.append(entry.getValue());
-                }
-                j++;
-            }
-            json.append("}");
+            json.append(convertToJson(data.get(i)));
         }
         json.append("]");
         return json.toString();
+    }
+
+    private String jsonEscape(String str) {
+        return str.replace("\\", "\\").replace("\"", "\"").replace("\b", "\b").replace("\f", "\f").replace("\n", "\n").replace("\r", "\r").replace("\t", "\t");
     }
     
     private String convertToJson(Map<String, Object> data) {
@@ -1207,7 +1206,7 @@ public class AdminHandler {
             if (i > 0) json.append(",");
             json.append("\"").append(entry.getKey()).append("\":");
             if (entry.getValue() instanceof String) {
-                json.append("\"").append(entry.getValue()).append("\"");
+                json.append("\"").append(jsonEscape((String) entry.getValue())).append("\"");
             } else if (entry.getValue() instanceof List) {
                 // Handle nested lists by converting them to JSON arrays
                 json.append(convertToJson((List<Map<String, Object>>) entry.getValue()));
